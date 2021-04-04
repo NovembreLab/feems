@@ -1,0 +1,334 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>feems.utils &mdash; feems  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/style.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html">
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cite.html">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebooks</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks/getting-started.html">Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">feems</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>feems.utils</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for feems.utils</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;The following helper functions are adapted from Ben Peters&#39; code:</span>
+<span class="sd">https://github.com/NovembreLab/eems-around-the-world/blob/master/subsetter/</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">fiona</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">shapely.affinity</span> <span class="kn">import</span> <span class="n">translate</span>
+<span class="kn">from</span> <span class="nn">shapely.geometry</span> <span class="kn">import</span> <span class="n">MultiPoint</span><span class="p">,</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span><span class="p">,</span> <span class="n">shape</span>
+
+
+<span class="k">def</span> <span class="nf">load_tiles</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="n">tiles</span> <span class="o">=</span> <span class="n">fiona</span><span class="o">.</span><span class="n">collection</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">shape</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="s1">&#39;geometry&#39;</span><span class="p">])</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tiles</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">wrap_america</span><span class="p">(</span><span class="n">tile</span><span class="p">):</span>
+    <span class="n">tile</span> <span class="o">=</span> <span class="n">Point</span><span class="p">(</span><span class="n">tile</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">tile</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">40</span> <span class="ow">or</span> \
+            <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">tile</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&lt;</span> <span class="o">-</span><span class="mi">40</span><span class="p">:</span>
+        <span class="n">tile</span> <span class="o">=</span> <span class="n">translate</span><span class="p">(</span><span class="n">tile</span><span class="p">,</span> <span class="n">xoff</span><span class="o">=</span><span class="mf">360.</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tile</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">tile</span><span class="o">.</span><span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">create_tile_dict</span><span class="p">(</span><span class="n">tiles</span><span class="p">,</span> <span class="n">bpoly</span><span class="p">):</span>
+    <span class="n">pts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># dict saving ids</span>
+    <span class="n">rev_pts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+    <span class="n">pts_in</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>  <span class="c1"># dict saving which points are in region</span>
+
+    <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">poly</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tiles</span><span class="p">):</span>
+        <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">poly</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">xy</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="p">[</span><span class="n">wrap_america</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">p</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pts_in</span><span class="p">:</span>
+                <span class="c1"># check if point is in region</span>
+                <span class="n">pts_in</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="n">bpoly</span><span class="o">.</span><span class="n">intersects</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+                <span class="k">if</span> <span class="n">pts_in</span><span class="p">[</span><span class="n">p</span><span class="p">]:</span>
+                    <span class="n">pts</span><span class="p">[</span><span class="n">p</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">pts</span><span class="p">)</span>  <span class="c1"># if so, give id</span>
+                    <span class="n">rev_pts</span><span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">rev_pts</span><span class="p">)]</span> <span class="o">=</span> <span class="n">p</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">3</span><span class="p">):</span>
+            <span class="n">pi</span><span class="p">,</span> <span class="n">pj</span> <span class="o">=</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">points</span><span class="p">[</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">pts_in</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="ow">and</span> <span class="n">pts_in</span><span class="p">[</span><span class="n">pj</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="n">pts</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">pts</span><span class="p">[</span><span class="n">pj</span><span class="p">]:</span>
+                    <span class="n">edges</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">pts</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">pts</span><span class="p">[</span><span class="n">pj</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">edges</span><span class="o">.</span><span class="n">add</span><span class="p">((</span><span class="n">pts</span><span class="p">[</span><span class="n">pj</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">pts</span><span class="p">[</span><span class="n">pi</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+
+    <span class="n">pts</span> <span class="o">=</span> <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">rev_pts</span><span class="p">[</span><span class="n">p</span><span class="p">])</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rev_pts</span><span class="p">))]</span>
+    <span class="k">return</span> <span class="n">pts</span><span class="p">,</span> <span class="n">rev_pts</span><span class="p">,</span> <span class="n">edges</span>
+
+
+<span class="k">def</span> <span class="nf">unique2d</span><span class="p">(</span><span class="n">a</span><span class="p">):</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="n">x</span> <span class="o">+</span> <span class="n">y</span> <span class="o">*</span> <span class="mf">1.0</span><span class="n">j</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">b</span><span class="p">,</span> <span class="n">return_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">a</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+
+<span class="k">def</span> <span class="nf">get_closest_point_to_sample</span><span class="p">(</span><span class="n">points</span><span class="p">,</span> <span class="n">samples</span><span class="p">):</span>
+    <span class="n">usamples</span> <span class="o">=</span> <span class="n">unique2d</span><span class="p">(</span><span class="n">samples</span><span class="p">)</span>
+    <span class="n">dists</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">((</span><span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">([</span><span class="n">Point</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">.</span><span class="n">distance</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">p</span><span class="p">))</span>
+                                       <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">points</span><span class="p">]))</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">usamples</span><span class="p">)</span>
+
+    <span class="n">res</span> <span class="o">=</span> <span class="p">[</span><span class="n">dists</span><span class="p">[</span><span class="nb">tuple</span><span class="p">(</span><span class="n">s</span><span class="p">)]</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">samples</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">res</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="prepare_graph_inputs"><a class="viewcode-back" href="../../feems.html#feems.utils.prepare_graph_inputs">[docs]</a><span class="k">def</span> <span class="nf">prepare_graph_inputs</span><span class="p">(</span><span class="n">coord</span><span class="p">,</span> <span class="n">ggrid</span><span class="p">,</span> <span class="n">translated</span><span class="p">,</span> <span class="n">buffer</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">outer</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Prepares the graph input files for feems adapted from Ben Peters</span>
+<span class="sd">    eems-around-the-world repo</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        sample_pos (:obj:`numpy.ndarray`): spatial positions for samples</span>
+<span class="sd">        ggrid (:obj:`str`): path to global grid shape file</span>
+<span class="sd">        transform (:obj:`bool`): to translate x coordinates</span>
+<span class="sd">        buffer (:obj:`float`) buffer on the convex hull of sample pts</span>
+<span class="sd">        outer (:obj:`numpy.ndarray`): q x 2 matrix of coordinates of outer</span>
+<span class="sd">            polygon</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># no outer so construct with buffer</span>
+    <span class="k">if</span> <span class="n">outer</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">points</span> <span class="o">=</span> <span class="n">MultiPoint</span><span class="p">([(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">coord</span><span class="p">])</span>
+        <span class="n">xy</span> <span class="o">=</span> <span class="n">points</span><span class="o">.</span><span class="n">convex_hull</span><span class="o">.</span><span class="n">buffer</span><span class="p">(</span><span class="n">buffer</span><span class="p">)</span><span class="o">.</span><span class="n">exterior</span><span class="o">.</span><span class="n">xy</span>
+        <span class="n">outer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()])</span><span class="o">.</span><span class="n">T</span>
+
+    <span class="k">if</span> <span class="n">translated</span><span class="p">:</span>
+        <span class="n">outer</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">outer</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">360.0</span>
+
+    <span class="c1"># intersect outer with discrete global grid</span>
+    <span class="n">bpoly</span> <span class="o">=</span> <span class="n">Polygon</span><span class="p">(</span><span class="n">outer</span><span class="p">)</span>
+    <span class="n">bpoly2</span> <span class="o">=</span> <span class="n">translate</span><span class="p">(</span><span class="n">bpoly</span><span class="p">,</span> <span class="n">xoff</span><span class="o">=-</span><span class="mf">360.0</span><span class="p">)</span>
+    <span class="n">tiles2</span> <span class="o">=</span> <span class="n">load_tiles</span><span class="p">(</span><span class="n">ggrid</span><span class="p">)</span>
+    <span class="n">tiles3</span> <span class="o">=</span> <span class="p">[</span><span class="n">t</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">tiles2</span> <span class="k">if</span> <span class="n">bpoly</span><span class="o">.</span><span class="n">intersects</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="ow">or</span> <span class="n">bpoly2</span><span class="o">.</span><span class="n">intersects</span><span class="p">(</span><span class="n">t</span><span class="p">)]</span>
+    <span class="n">pts</span><span class="p">,</span> <span class="n">rev_pts</span><span class="p">,</span> <span class="n">e</span> <span class="o">=</span> <span class="n">create_tile_dict</span><span class="p">(</span><span class="n">tiles3</span><span class="p">,</span> <span class="n">bpoly</span><span class="p">)</span>
+
+    <span class="c1"># construct grid array</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">rev_pts</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">grid</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">v</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">v</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+    <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grid</span><span class="p">)</span>
+
+    <span class="k">assert</span> <span class="n">grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;grid is empty changing translation&quot;</span>
+
+    <span class="c1"># un-translate</span>
+    <span class="k">if</span> <span class="n">translated</span><span class="p">:</span>
+        <span class="n">pts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rev_pts</span><span class="p">)):</span>
+            <span class="n">pts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Point</span><span class="p">(</span><span class="n">rev_pts</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">360.0</span><span class="p">,</span> <span class="n">rev_pts</span><span class="p">[</span><span class="n">p</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+        <span class="n">grid</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">grid</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">360.0</span>
+        <span class="n">outer</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">outer</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mf">360.0</span>
+
+    <span class="c1"># construct edge array</span>
+    <span class="n">edges</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">e</span><span class="p">))</span>
+    <span class="n">ipmap</span> <span class="o">=</span> <span class="n">get_closest_point_to_sample</span><span class="p">(</span><span class="n">pts</span><span class="p">,</span> <span class="n">coord</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="n">outer</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">ipmap</span><span class="p">)</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">res</span><span class="p">)</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Joseph Marcus, Wooseok Ha, Rina Foygel Barber and John Novembre
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

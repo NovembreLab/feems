@@ -1,0 +1,593 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>feems.spatial_graph &mdash; feems  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/style.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html">
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cite.html">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebooks</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks/getting-started.html">Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">feems</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>feems.spatial_graph</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for feems.spatial_graph</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">sys</span>
+
+<span class="kn">import</span> <span class="nn">networkx</span> <span class="k">as</span> <span class="nn">nx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">scipy.sparse</span> <span class="k">as</span> <span class="nn">sp</span>
+<span class="kn">import</span> <span class="nn">sksparse.cholmod</span> <span class="k">as</span> <span class="nn">cholmod</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">fmin_l_bfgs_b</span><span class="p">,</span> <span class="n">minimize</span>
+
+<span class="kn">from</span> <span class="nn">.objective</span> <span class="kn">import</span> <span class="n">Objective</span><span class="p">,</span> <span class="n">loss_wrapper</span><span class="p">,</span> <span class="n">neg_log_lik_w0_s2</span>
+
+
+<div class="viewcode-block" id="SpatialGraph"><a class="viewcode-back" href="../../stubs/feems.SpatialGraph.html#feems.SpatialGraph">[docs]</a><span class="k">class</span> <span class="nc">SpatialGraph</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">Graph</span><span class="p">):</span>
+
+<div class="viewcode-block" id="SpatialGraph.__init__"><a class="viewcode-back" href="../../stubs/feems.SpatialGraph.html#feems.SpatialGraph.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">genotypes</span><span class="p">,</span> <span class="n">sample_pos</span><span class="p">,</span> <span class="n">node_pos</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span>
+                 <span class="n">scale_snps</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Represents the spatial network which the data is defined on and</span>
+<span class="sd">        stores relevant matricies / performs linear albegra routines needed for</span>
+<span class="sd">        the model and optimization. Inherits from the networkx Graph object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            genotypes (:obj:`numpy.ndarray`): genotypes for samples</span>
+<span class="sd">            sample_pos (:obj:`numpy.ndarray`): spatial positions for samples</span>
+<span class="sd">            node_pos (:obj:`numpy.ndarray`):  spatial positions of nodes</span>
+<span class="sd">            edges (:obj:`numpy.ndarray`): edge array</span>
+<span class="sd">            scale_snps (:obj:`Bool`): boolean to scale SNPs by SNP specific </span>
+<span class="sd">                Binomial variance estimates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">assert</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">genotypes</span><span class="p">))</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> \
+            <span class="s2">&quot;no missing genotypes are allowed&quot;</span>
+
+        <span class="c1"># inherits from networkx Graph object</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">SpatialGraph</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_graph</span><span class="p">(</span><span class="n">node_pos</span><span class="p">,</span> <span class="n">edges</span><span class="p">)</span>  <span class="c1"># init graph</span>
+
+        <span class="c1"># inputs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sample_pos</span> <span class="o">=</span> <span class="n">sample_pos</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">node_pos</span> <span class="o">=</span> <span class="n">node_pos</span>
+
+        <span class="c1"># signed incidence_matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Delta_q</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">incidence_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">oriented</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+
+        <span class="c1"># track nonzero edges upper traingular</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adj_base</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">triu</span><span class="p">(</span><span class="n">nx</span><span class="o">.</span><span class="n">adjacency_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="n">k</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj_base</span><span class="o">.</span><span class="n">nonzero</span><span class="p">()</span>
+         
+        <span class="c1"># adjacency matrix on the edges</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Delta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_incidence_matrix</span><span class="p">()</span>
+
+        <span class="c1"># vectorization operator on the edges</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">diag_oper</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_vect_matrix</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_assign_samples_to_nodes</span><span class="p">(</span><span class="n">sample_pos</span><span class="p">,</span> <span class="n">node_pos</span><span class="p">)</span>  <span class="c1"># assn samples</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_permute_nodes</span><span class="p">()</span>  <span class="c1"># permute nodes</span>
+        <span class="n">n_samples_per_node</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;n_samples&quot;</span><span class="p">)</span>
+        <span class="n">permuted_idx</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;permuted_idx&quot;</span><span class="p">)</span>
+        <span class="n">n_samps</span> <span class="o">=</span> <span class="n">n_samples_per_node</span><span class="p">[</span><span class="n">permuted_idx</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_samples_per_obs_node_permuted</span> <span class="o">=</span> <span class="n">n_samps</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_create_perm_diag_op</span><span class="p">()</span>  <span class="c1"># create perm operator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="kc">None</span>  <span class="c1"># sparse cholesky factorization of L11</span>
+       
+        <span class="c1"># intialize w</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+
+        <span class="c1"># compute gradient of the graph laplacian with respect to w (dL / dw)</span>
+        <span class="c1"># this only needs to be done once</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_grad_w</span><span class="p">()</span>
+           
+        <span class="c1"># estimate allele frequencies at observed locations (in permuted order)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">genotypes</span> <span class="o">=</span> <span class="n">genotypes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_estimate_allele_frequencies</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">scale_snps</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequencies</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frequencies</span> <span class="o">=</span> <span class="p">(</span>
+                                <span class="bp">self</span><span class="o">.</span><span class="n">frequencies</span> <span class="o">/</span>
+                                <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mu</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu</span><span class="p">))</span>
+                               <span class="p">)</span>
+
+        <span class="c1"># compute precision</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_precision</span><span class="p">(</span><span class="n">s2</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># estimate sample covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequencies</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequencies</span><span class="o">.</span><span class="n">T</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_snps</span></div>
+
+    <span class="k">def</span> <span class="nf">_init_graph</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">node_pos</span><span class="p">,</span> <span class="n">edges</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Intialize the graph and related graph objects</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            node_pos (:obj:`numpy.ndarray`):  spatial positions of nodes</span>
+<span class="sd">            edges (:obj:`numpy.ndarray`): edge array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_nodes_from</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">node_pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_edges_from</span><span class="p">((</span><span class="n">edges</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+        <span class="c1"># add spatial coordinates to node attributes</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;idx&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">i</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;pos&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">node_pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;n_samples&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="s2">&quot;sample_idx&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">def</span> <span class="nf">_create_incidence_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Create a signed incidence matrix on the edges</span>
+<span class="sd">        * note this is computed only once</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">)</span>
+        <span class="n">row_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+        <span class="n">col_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+        <span class="n">n_count</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()):</span>
+            <span class="n">edge1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">i</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">i</span><span class="p">]])</span>
+            <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()):</span>
+                <span class="n">edge2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">j</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">j</span><span class="p">]])</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">intersect1d</span><span class="p">(</span><span class="n">edge1</span><span class="p">,</span> <span class="n">edge2</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                    <span class="n">row_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_idx</span><span class="p">,</span> <span class="n">n_count</span><span class="p">)</span>
+                    <span class="n">col_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">col_idx</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span>
+
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+                    <span class="n">row_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row_idx</span><span class="p">,</span> <span class="n">n_count</span><span class="p">)</span>
+                    <span class="n">col_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">col_idx</span><span class="p">,</span> <span class="n">j</span><span class="p">)</span>
+
+                    <span class="c1"># increment</span>
+                    <span class="n">n_count</span> <span class="o">+=</span> <span class="mi">1</span>
+                    
+        <span class="n">Delta</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">((</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">row_idx</span><span class="p">,</span> <span class="n">col_idx</span><span class="p">)),</span>
+                              <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()))</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">Delta</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">_create_vect_matrix</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Construct matrix operators S so that S*vec(W) is the degree vector</span>
+<span class="sd">        * note this is computed only once</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">row_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
+        <span class="n">col_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">ite</span><span class="p">,</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))):</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span> <span class="o">+</span> <span class="n">ite</span>
+            <span class="n">col_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">col_idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span>
+        <span class="n">S</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">),</span> <span class="p">(</span><span class="n">row_idx</span><span class="p">,</span> <span class="n">col_idx</span><span class="p">)),</span>
+                          <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">))</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_assign_samples_to_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_pos</span><span class="p">,</span> <span class="n">node_pos</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Assigns each sample to a node on the graph by finding the closest</span>
+<span class="sd">        node to that sample</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">n_samples</span> <span class="o">=</span> <span class="n">sample_pos</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_samples</span><span class="p">):</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="p">(</span><span class="n">sample_pos</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">node_pos</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dist</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="s2">&quot;n_samples&quot;</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">nodes</span><span class="p">[</span><span class="n">idx</span><span class="p">][</span><span class="s2">&quot;sample_idx&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+        <span class="n">n_samples_per_node</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;n_samples&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">n_samples_per_node</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_permute_nodes</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Permutes all graph matricies to start with the observed nodes first</span>
+<span class="sd">        and then the unobserved nodes</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># indicies of all nodes</span>
+        <span class="n">node_idx</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;idx&quot;</span><span class="p">)</span>
+        <span class="n">n_samples_per_node</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;n_samples&quot;</span><span class="p">)</span>
+
+        <span class="c1"># set permuted node ids as node attribute</span>
+        <span class="n">ns</span> <span class="o">=</span> <span class="n">n_samples_per_node</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">n_samples_per_node</span> <span class="o">==</span> <span class="mi">0</span>
+        <span class="n">permuted_node_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">([</span><span class="n">node_idx</span><span class="p">[</span><span class="n">ns</span><span class="p">],</span> <span class="n">node_idx</span><span class="p">[</span><span class="n">s</span><span class="p">]])</span>
+        <span class="n">permuted_idx_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">node_idx</span><span class="p">,</span> <span class="n">permuted_node_idx</span><span class="p">))</span>
+        <span class="n">nx</span><span class="o">.</span><span class="n">set_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">permuted_idx_dict</span><span class="p">,</span> <span class="s2">&quot;permuted_idx&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_create_perm_diag_op</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Creates permute diag operator</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># query permuted node ids</span>
+        <span class="n">permuted_node_idx</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;permuted_idx&quot;</span><span class="p">)</span>
+
+        <span class="c1"># construct adj matrix with permuted nodes</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">permuted_node_idx</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="n">permuted_node_idx</span><span class="o">.</span><span class="n">argsort</span><span class="p">()[</span><span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx_perm</span> <span class="o">=</span> <span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">adj_perm</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">coo_matrix</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()),</span> <span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">)),</span>
+                                      <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span>
+
+        <span class="c1"># permute diag operator</span>
+        <span class="n">vect_idx_r</span> <span class="o">=</span> <span class="n">row</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">*</span> <span class="n">col</span>
+        <span class="n">vect_idx_c</span> <span class="o">=</span> <span class="n">col</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">*</span> <span class="n">row</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">diag_oper</span><span class="p">[:,</span> <span class="n">vect_idx_r</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">diag_oper</span><span class="p">[:,</span> <span class="n">vect_idx_c</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">inv_triu</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">perm</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Take upper triangluar vector as input and return symmetric weight</span>
+<span class="sd">        sparse matrix</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">perm</span><span class="p">:</span>
+            <span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj_perm</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">adj_base</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">W</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">w</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">W</span> <span class="o">+</span> <span class="n">W</span><span class="o">.</span><span class="n">T</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">W</span><span class="o">.</span><span class="n">tocsc</span><span class="p">())</span>
+   
+    <span class="k">def</span> <span class="nf">comp_graph_laplacian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weight</span><span class="p">,</span> <span class="n">perm</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes the graph laplacian note this is computed each step of the</span>
+<span class="sd">        optimization so needs to be fast</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;array&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">weight</span><span class="p">))</span> <span class="ow">and</span> <span class="n">weight</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">m</span> <span class="o">=</span> <span class="n">weight</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">m</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_triu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">,</span> <span class="n">perm</span><span class="o">=</span><span class="n">perm</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;array&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">weight</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">weight</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_triu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="p">,</span> <span class="n">perm</span><span class="o">=</span><span class="n">perm</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;matrix&quot;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">weight</span><span class="p">)):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">W</span> <span class="o">=</span> <span class="n">weight</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;inaccurate argument&quot;</span><span class="p">)</span>
+        <span class="n">W_rowsum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">W</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">diags</span><span class="p">(</span><span class="n">W_rowsum</span><span class="p">)</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">D</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">W</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L_block</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;oo&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">],</span>
+            <span class="s2">&quot;dd&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">:],</span>
+            <span class="s2">&quot;do&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">:,</span> <span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">],</span>
+            <span class="s2">&quot;od&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">L</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">:]</span>
+            <span class="p">}</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="c1"># intialize the object if the cholesky factorization has not been</span>
+            <span class="c1"># computed yet. This will perform the fill-in reducing permuation</span>
+            <span class="c1"># and the cholesky factorizaton which is &quot;slow&quot; intially</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="n">cholmod</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L_block</span><span class="p">[</span><span class="s2">&quot;dd&quot;</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># if it has been computed we can quickly update the facortization</span>
+            <span class="c1"># by calling the cholesky method of factor which does not perform</span>
+            <span class="c1"># the fill-in reducing permuation again because the sparsity</span>
+            <span class="c1"># pattern of L11 is fixed throughout the algorithm</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="o">.</span><span class="n">cholesky</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L_block</span><span class="p">[</span><span class="s2">&quot;dd&quot;</span><span class="p">])</span>
+        
+    <span class="k">def</span> <span class="nf">comp_grad_w</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes the derivative of the graph laplacian with respect to the</span>
+<span class="sd">        latent variables (dw / dm) note this is computed only once</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># nonzero indexes</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">nnz_idx_perm</span>
+        
+        <span class="c1"># elements of mat</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+        
+        <span class="c1"># row and columns indicies</span>
+        <span class="n">row</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">col</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">([</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span> <span class="s2">&quot;F&quot;</span><span class="p">)</span>
+        
+        <span class="c1"># construct operator w = B*m</span>
+        <span class="n">sp_tup</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">(</span><span class="n">row</span><span class="p">,</span> <span class="n">col</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">B</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">csc_matrix</span><span class="p">(</span><span class="n">sp_tup</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">idx</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)))</span>
+
+    <span class="c1"># ------------------------- Data -------------------------</span>
+
+    <span class="k">def</span> <span class="nf">_estimate_allele_frequencies</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimates allele frequencies by maximum likelihood on the observed</span>
+<span class="sd">        nodes (in permuted order) of the spatial graph</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            genotypes (:obj:`numpy.ndarray`): array of diploid genoytpes with</span>
+<span class="sd">                no missing data</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_snps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">genotypes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># create the data matrix of means</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">frequencies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_snps</span><span class="p">))</span>
+
+        <span class="c1"># get indicies</span>
+        <span class="n">sample_idx</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;sample_idx&quot;</span><span class="p">)</span>
+        <span class="n">permuted_idx</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;permuted_idx&quot;</span><span class="p">)</span>
+        <span class="n">observed_permuted_idx</span> <span class="o">=</span> <span class="n">permuted_idx</span><span class="p">[:</span><span class="bp">self</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">]</span>
+
+        <span class="c1"># loop of the observed nodes in order of the permuted nodes</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">node_id</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">observed_permuted_idx</span><span class="p">):</span>
+
+            <span class="c1"># find the samples assigned to the ith node</span>
+            <span class="n">s</span> <span class="o">=</span> <span class="n">sample_idx</span><span class="p">[</span><span class="n">node_id</span><span class="p">]</span>
+
+            <span class="c1"># compute mean at each node</span>
+            <span class="n">allele_counts</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">genotypes</span><span class="p">[</span><span class="n">s</span><span class="p">,</span> <span class="p">:],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">frequencies</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="p">:]</span> <span class="o">=</span> <span class="n">allele_counts</span>  <span class="c1">#/ (2.0 * len(s))</span>
+
+    <span class="k">def</span> <span class="nf">comp_precision</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">s2</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes the residual precision matrix</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s2</span> <span class="o">=</span> <span class="n">s2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples_per_obs_node_permuted</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">s2</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_diag</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">diags</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_inv_diag</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">diags</span><span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">q</span><span class="p">)</span><span class="o">.</span><span class="n">tocsc</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">q_inv_grad</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_samples_per_obs_node_permuted</span>
+
+    <span class="c1"># ------------------------- Optimizers -------------------------</span>
+
+    <span class="k">def</span> <span class="nf">fit_null_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimates of the edge weights and residual variance</span>
+<span class="sd">        under the model that all the edge weights have the same value</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">minimize</span><span class="p">(</span><span class="n">neg_log_lik_w0_s2</span><span class="p">,</span>
+                       <span class="p">[</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">],</span>
+                       <span class="n">method</span><span class="o">=</span><span class="s2">&quot;Nelder-Mead&quot;</span><span class="p">,</span>
+                       <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">obj</span><span class="p">))</span>
+        <span class="k">assert</span> <span class="n">res</span><span class="o">.</span><span class="n">success</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;did not converge&quot;</span>
+        <span class="n">w0_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">s2_hat</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">w0</span> <span class="o">=</span> <span class="n">w0_hat</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">s2</span> <span class="o">=</span> <span class="n">s2_hat</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_precision</span><span class="p">(</span><span class="n">s2</span><span class="o">=</span><span class="n">s2_hat</span><span class="p">)</span>
+
+        <span class="c1"># print update</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_loss</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">loss_wrapper</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">w0</span><span class="p">),</span>
+                                                <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">s2</span><span class="p">)],</span> <span class="n">obj</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s2">&quot;constant-w/variance fit, &quot;</span>
+                              <span class="s2">&quot;converged in </span><span class="si">{}</span><span class="s2"> iterations, &quot;</span>
+                              <span class="s2">&quot;train_loss=</span><span class="si">{:.7f}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                              <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">nfev</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_loss</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">fit_quasi_newton</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">w_init</span><span class="p">,</span> <span class="n">lamb_l2</span><span class="p">,</span> <span class="n">lamb_smth</span><span class="p">,</span> <span class="n">lamb_log</span><span class="p">,</span>
+                         <span class="n">lamb_q_smth</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lamb_q_log</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">lamb_q</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                         <span class="n">s2_init</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">factr</span><span class="o">=</span><span class="mf">1e7</span><span class="p">,</span> <span class="n">maxls</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">m</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">lb</span><span class="o">=-</span><span class="n">np</span><span class="o">.</span><span class="n">Inf</span><span class="p">,</span>
+                         <span class="n">ub</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">Inf</span><span class="p">,</span> <span class="n">maxiter</span><span class="o">=</span><span class="mi">15000</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Estimates the edge weights of the full model holding the residual</span>
+<span class="sd">        variance fixed using a quasi-newton algorithim, specifically L-BFGS</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">lamb_l2</span> <span class="o">=</span> <span class="n">lamb_l2</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">lamb_smth</span> <span class="o">=</span> <span class="n">lamb_smth</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">lamb_log</span> <span class="o">=</span> <span class="n">lamb_log</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="o">=</span> <span class="n">lamb_q_smth</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="o">=</span> <span class="n">lamb_q_log</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">lamb_q</span> <span class="o">=</span> <span class="n">lamb_q</span>
+        
+        <span class="c1"># init point</span>
+        <span class="k">if</span> <span class="n">s2_init</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">w_init</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">s2_init</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">x0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">w_init</span><span class="p">)</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">fmin_l_bfgs_b</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="n">loss_wrapper</span><span class="p">,</span>
+                            <span class="n">x0</span><span class="o">=</span><span class="n">x0</span><span class="p">,</span>
+                            <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">obj</span><span class="p">],</span>
+                            <span class="n">factr</span><span class="o">=</span><span class="n">factr</span><span class="p">,</span>
+                            <span class="n">m</span><span class="o">=</span><span class="n">m</span><span class="p">,</span>
+                            <span class="n">maxls</span><span class="o">=</span><span class="n">maxls</span><span class="p">,</span>
+                            <span class="n">maxiter</span><span class="o">=</span><span class="n">maxiter</span><span class="p">,</span>
+                            <span class="n">approx_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                            <span class="n">bounds</span><span class="o">=</span><span class="p">[(</span><span class="n">lb</span><span class="p">,</span> <span class="n">ub</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">x0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+        <span class="k">if</span> <span class="n">maxiter</span> <span class="o">&gt;=</span> <span class="mi">100</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">res</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;warnflag&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">&quot;did not converge&quot;</span>
+        <span class="k">if</span> <span class="n">s2_init</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">][:</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">()])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">s2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">size</span><span class="p">():])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="c1"># print update</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_loss</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">loss_wrapper</span><span class="p">(</span><span class="n">res</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">obj</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">write</span><span class="p">((</span><span class="s2">&quot;lambda_l2=</span><span class="si">{:.7f}</span><span class="s2">, &quot;</span>
+                              <span class="s2">&quot;lambda=</span><span class="si">{:.7f}</span><span class="s2">, &quot;</span>
+                              <span class="s2">&quot;alpha=</span><span class="si">{:.7f}</span><span class="s2">, &quot;</span>
+                              <span class="s2">&quot;converged in </span><span class="si">{}</span><span class="s2"> iterations, &quot;</span>
+                              <span class="s2">&quot;train_loss=</span><span class="si">{:.7f}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                              <span class="p">)</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lamb_l2</span><span class="p">,</span> <span class="n">lamb_smth</span><span class="p">,</span> <span class="n">lamb_log</span><span class="p">,</span>
+                                       <span class="n">res</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="s2">&quot;nit&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_loss</span><span class="p">))</span></div>
+
+
+<span class="k">def</span> <span class="nf">query_node_attributes</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Query the node attributes of a nx graph. This wraps get_node_attributes</span>
+<span class="sd">    and returns an array of values for each node instead of the dict</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">d</span> <span class="o">=</span> <span class="n">nx</span><span class="o">.</span><span class="n">get_node_attributes</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">values</span><span class="p">()))</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Joseph Marcus, Wooseok Ha, Rina Foygel Barber and John Novembre
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

@@ -1,0 +1,521 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>feems.objective &mdash; feems  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/style.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+        <script src="../../_static/jquery.js"></script>
+        <script src="../../_static/underscore.js"></script>
+        <script src="../../_static/doctools.js"></script>
+        <script src="../../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../index.html">
+          
+
+          
+            
+            <img src="../../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../cite.html">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebooks</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../notebooks/getting-started.html">Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">feems</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../index.html">Module code</a> &raquo;</li>
+        
+      <li>feems.objective</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for feems.objective</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">absolute_import</span><span class="p">,</span> <span class="n">division</span><span class="p">,</span> <span class="n">print_function</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="Objective"><a class="viewcode-back" href="../../stubs/feems.Objective.html#feems.Objective">[docs]</a><span class="k">class</span> <span class="nc">Objective</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+
+<div class="viewcode-block" id="Objective.__init__"><a class="viewcode-back" href="../../stubs/feems.Objective.html#feems.Objective.__init__">[docs]</a>    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluations and gradient of the feems objective function</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            sp_graph (:obj:`feems.SpatialGraph`): feems spatial graph object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># spatial graph</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span> <span class="o">=</span> <span class="n">sp_graph</span>
+
+        <span class="c1"># reg params</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q</span> <span class="o">=</span> <span class="kc">None</span></div>
+
+    <span class="k">def</span> <span class="nf">_rank_one_solver</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank</span>
+<span class="sd">        ones update equation</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># dims</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="p">)</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span>
+
+        <span class="c1"># vector of ones with size d-o</span>
+        <span class="n">ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">d</span> <span class="o">-</span> <span class="n">o</span><span class="p">)</span>
+
+        <span class="c1"># sparse cholesky factorization</span>
+        <span class="c1"># solve the systems</span>
+        <span class="c1"># L_block{dd}\B</span>
+        <span class="c1"># TODO: how to handle when B is sparse</span>
+        <span class="n">U</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">factor</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
+
+        <span class="c1"># L_block{dd}\ones</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">factor</span><span class="p">(</span><span class="n">ones</span><span class="p">)</span>
+
+        <span class="c1"># denominator</span>
+        <span class="n">denom</span> <span class="o">=</span> <span class="n">d</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">U</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">v</span> <span class="o">@</span> <span class="n">B</span><span class="p">)</span> <span class="o">/</span> <span class="n">denom</span>
+
+        <span class="k">return</span><span class="p">((</span><span class="n">X</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">denom</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_solve_lap_sys</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Solve (L_{d-o,d-o} + ones/d) * X = L_{d-o,o} + ones/d using rank one</span>
+<span class="sd">        solver</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="p">)</span>
+
+        <span class="c1"># set B = L_{d-o,o}</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">L_block</span><span class="p">[</span><span class="s2">&quot;do&quot;</span><span class="p">]</span>
+
+        <span class="c1"># solve (L_{d-o,d-o} + ones/d) \ B</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lap_sol</span><span class="p">,</span> <span class="n">v</span><span class="p">,</span> <span class="n">denom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rank_one_solver</span><span class="p">(</span><span class="n">B</span><span class="o">.</span><span class="n">toarray</span><span class="p">())</span>
+
+        <span class="c1"># compute rank one update for vector of ones</span>
+        <span class="n">ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">o</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lap_sol</span> <span class="o">+=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">ones</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">/</span> <span class="n">d</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">d</span> <span class="o">*</span> <span class="n">denom</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">_comp_mat_block_inv</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes matrix block inversion formula</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="p">)</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span>
+
+        <span class="c1"># Equation (4) in the note</span>
+        <span class="c1"># multiply L_{o,d-o} by solution of lap-system</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">L_block</span><span class="p">[</span><span class="s2">&quot;od&quot;</span><span class="p">]</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">lap_sol</span>
+
+        <span class="c1"># multiply one matrix by solution of lap-system</span>
+        <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">o</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">lap_sol</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">))</span> <span class="o">/</span> <span class="n">d</span>
+
+        <span class="c1"># sum up with L_{o,o} and one matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">L_double_inv</span> <span class="o">=</span> <span class="p">(</span>
+                             <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">L_block</span><span class="p">[</span><span class="s2">&quot;oo&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">+</span>
+                             <span class="mf">1.</span> <span class="o">/</span> <span class="n">d</span> <span class="o">-</span> <span class="n">A</span> <span class="o">-</span> <span class="n">B</span>
+                            <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_comp_inv_lap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes submatrices of inverse of lap</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">B</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">)</span>
+
+        <span class="c1"># inverse of graph laplacian</span>
+        <span class="c1"># compute o-by-o submatrix of inverse of lap</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Linv_block</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Linv_block</span><span class="p">[</span><span class="s2">&quot;oo&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">L_double_inv</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+
+        <span class="c1"># compute (d-o)-by-o submatrix of inverse of lap</span>
+        <span class="c1"># Equation (5) in the note</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Linv_block</span><span class="p">[</span><span class="s2">&quot;do&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lap_sol</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">Linv_block</span><span class="p">[</span><span class="s2">&quot;oo&quot;</span><span class="p">]</span>
+
+        <span class="c1"># stack the submatrices</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Linv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">Linv_block</span><span class="p">[</span><span class="s2">&quot;oo&quot;</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">Linv_block</span><span class="p">[</span><span class="s2">&quot;do&quot;</span><span class="p">]))</span>
+
+    <span class="k">def</span> <span class="nf">_comp_inv_cov</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes inverse of the covariance matrix</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># helper</span>
+        <span class="c1"># Equation (3) in the note</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="p">(</span>
+             <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">q_inv_diag</span><span class="o">.</span><span class="n">toarray</span><span class="p">()</span> <span class="o">-</span>
+             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">q_inv_diag</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">L_double_inv</span><span class="p">)</span> <span class="o">@</span> 
+             <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">q_inv_diag</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">B</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">)</span>
+
+        <span class="c1"># solve o-by-o linear system to get X</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">B</span><span class="p">)</span>
+
+        <span class="c1"># inverse covariance matrix</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov_sum</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">denom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov_sum</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">_comp_grad_obj</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes the gradient of the objective function with respect to the</span>
+<span class="sd">        latent variables dLoss / dL</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="p">)</span>
+
+        <span class="c1"># compute inverses</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comp_inv_lap</span><span class="p">()</span>
+    
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_B</span> <span class="o">=</span> <span class="p">(</span>
+                       <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span> <span class="o">-</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">denom</span><span class="p">)</span> <span class="o">*</span>
+                       <span class="n">np</span><span class="o">.</span><span class="n">outer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inv_cov_sum</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov_sum</span><span class="p">)</span>
+                      <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp_A</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_B</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">S</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_B</span>
+        <span class="n">M</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_A</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp_B</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj_L</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_snps</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">Linv</span> <span class="o">@</span> <span class="n">M</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">Linv</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+        
+        <span class="c1"># grads</span>
+        <span class="n">gradW</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj_L</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">nnz_idx_perm</span><span class="p">]</span>  <span class="c1"># use symmetry</span>
+        <span class="n">gradD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grad_obj_L</span><span class="p">)</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">P</span>
+        <span class="n">gradW</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj_L</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">nnz_idx_perm</span><span class="p">]</span>  <span class="c1"># use symmetry</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj</span> <span class="o">=</span> <span class="n">gradD</span> <span class="o">-</span> <span class="n">gradW</span>
+        
+        <span class="c1"># grad for diag(Jq^-1)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj_q</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj_q</span><span class="p">[:</span><span class="n">o</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                                   <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_snps</span> <span class="o">*</span>
+                                   <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">M</span><span class="p">)</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">q_inv_grad</span><span class="p">)</span>
+                                  <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj_q</span> <span class="o">=</span> <span class="p">(</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_snps</span> <span class="o">*</span>
+                               <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">M</span><span class="p">)</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">q_inv_grad</span><span class="p">)</span>
+                              <span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_comp_grad_reg</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes gradient</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lamb_smth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_smth</span>
+        <span class="n">lamb_log</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_log</span>
+
+        <span class="c1"># gradient of l2norm</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grad_obj</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_l2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span>
+
+        <span class="c1"># gradient of pens</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">grad_pen</span> <span class="o">=</span> <span class="p">(</span>
+                         <span class="n">lamb_smth</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">Delta</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span>
+                         <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">Delta</span> <span class="o">@</span>
+                         <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">lamb_log</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">))</span>
+                        <span class="p">)</span>
+    
+        <span class="c1"># gradient of pen on q</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">lamb_q_log_s2</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grad_pen_q</span> <span class="o">=</span> <span class="p">(</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">Delta_q</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span>
+                               <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">Delta_q</span> <span class="o">@</span>
+                               <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span> <span class="o">+</span> <span class="n">lamb_q_log_s2</span><span class="p">)</span>
+                              <span class="p">)</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grad_pen_q</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q</span> <span class="o">*</span> <span class="p">(</span><span class="o">-</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+    
+    <span class="k">def</span> <span class="nf">inv</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes relevant inverses for gradient computations</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># compute inverses</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_solve_lap_sys</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comp_mat_block_inv</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comp_inv_cov</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">grad</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">reg</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Computes relevent gradients the objective</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># compute derivatives</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_comp_grad_obj</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">reg</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_comp_grad_reg</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">neg_log_lik</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the negative log-likelihood function given the current</span>
+<span class="sd">        params</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">o</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trA</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">S</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov</span>
+
+        <span class="c1"># trace</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">trB</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">inv_cov_sum</span> <span class="o">@</span> <span class="bp">self</span><span class="o">.</span><span class="n">trA</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">trace</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">trA</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">trB</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">denom</span>
+
+        <span class="c1"># det</span>
+        <span class="n">E</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">X</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">q</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">det</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">det</span><span class="p">(</span><span class="n">E</span><span class="p">)</span> <span class="o">*</span> <span class="n">o</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">denom</span>
+
+        <span class="c1"># negative log-likelihood</span>
+        <span class="n">nll</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_snps</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tr</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">det</span><span class="p">))</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">nll</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">loss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the loss function given the current params</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lik</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">neg_log_lik</span><span class="p">()</span>
+        <span class="n">pen</span> <span class="o">=</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_l2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="n">diffs</span> <span class="o">=</span> <span class="p">(</span>
+                 <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">Delta</span> <span class="o">@</span>
+                 <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_log</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">))</span>
+                <span class="p">)</span>
+        <span class="n">pen</span> <span class="o">+=</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_smth</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">diffs</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">if</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">diffs</span> <span class="o">=</span> <span class="p">(</span>
+                     <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">Delta_q</span> <span class="o">@</span>
+                     <span class="p">(</span>
+                      <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="o">*</span>
+                      <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span><span class="p">)</span>
+                     <span class="p">)</span>
+                    <span class="p">)</span>
+            <span class="n">pen</span> <span class="o">+=</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">diffs</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pen</span> <span class="o">+=</span> <span class="o">.</span><span class="mi">5</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">lamb_q</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+      
+        <span class="c1"># loss</span>
+        <span class="n">loss</span> <span class="o">=</span> <span class="n">lik</span> <span class="o">+</span> <span class="n">pen</span>
+        <span class="k">return</span><span class="p">(</span><span class="n">loss</span><span class="p">)</span></div>
+
+
+<span class="k">def</span> <span class="nf">neg_log_lik_w0_s2</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Computes negative log likelihood for a constant w and residual variance</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">lamb_l2</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">lamb_smth</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">lamb_log</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">theta</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">size</span><span class="p">())</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_graph_laplacian</span><span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_precision</span><span class="p">(</span><span class="n">s2</span><span class="o">=</span><span class="n">theta</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">inv</span><span class="p">()</span>
+    <span class="n">nll</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">neg_log_lik</span><span class="p">()</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">nll</span><span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">loss_wrapper</span><span class="p">(</span><span class="n">z</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Wrapper function to optimize z=log(w) which returns the loss and gradient</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="n">theta0</span> <span class="o">=</span> <span class="n">theta</span><span class="p">[:</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">size</span><span class="p">()]</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_graph_laplacian</span><span class="p">(</span><span class="n">theta0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">theta0</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="n">theta</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+        <span class="n">theta1</span> <span class="o">=</span> <span class="n">theta</span><span class="p">[</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">size</span><span class="p">():][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_precision</span><span class="p">(</span><span class="n">s2</span><span class="o">=</span><span class="n">theta1</span><span class="p">)</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">inv</span><span class="p">()</span>
+    <span class="n">obj</span><span class="o">.</span><span class="n">grad</span><span class="p">()</span>
+
+    <span class="c1"># loss / grad</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">loss</span><span class="p">()</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">lamb_q_smth</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">g</span><span class="p">[:</span><span class="n">obj</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">edge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+                                       <span class="n">obj</span><span class="o">.</span><span class="n">grad_obj</span> <span class="o">*</span> <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span>
+                                       <span class="n">obj</span><span class="o">.</span><span class="n">grad_pen</span> <span class="o">*</span>
+                                       <span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">obj</span><span class="o">.</span><span class="n">lamb_log</span><span class="p">)</span>
+                                      <span class="p">)</span>
+        <span class="n">one_p_lamb_s2</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">+</span> <span class="n">obj</span><span class="o">.</span><span class="n">lamb_q_log</span> <span class="o">/</span> <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span><span class="p">)</span>
+        <span class="n">g</span><span class="p">[</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">edge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:]</span> <span class="o">=</span> <span class="p">(</span>
+                                          <span class="n">obj</span><span class="o">.</span><span class="n">grad_obj_q</span> <span class="o">*</span> <span class="n">obj</span><span class="o">.</span><span class="n">s2</span> <span class="o">+</span>
+                                          <span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">grad_pen_q</span> <span class="o">*</span> <span class="n">one_p_lamb_s2</span><span class="p">)</span> <span class="o">*</span>
+                                          <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span>
+                                         <span class="p">)</span>
+    <span class="k">elif</span> <span class="n">obj</span><span class="o">.</span><span class="n">lamb_q</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+        <span class="n">g</span><span class="p">[:</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">edge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">=</span> <span class="p">(</span>
+                                          <span class="n">obj</span><span class="o">.</span><span class="n">grad_obj</span> <span class="o">*</span> <span class="n">obj</span><span class="o">.</span><span class="n">graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span>
+                                          <span class="n">obj</span><span class="o">.</span><span class="n">grad_pen</span> <span class="o">*</span>
+                                          <span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">obj</span><span class="o">.</span><span class="n">lamb_log</span><span class="p">)</span>
+                                         <span class="p">)</span>
+        <span class="n">g</span><span class="p">[</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">edge</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:]</span> <span class="o">=</span> <span class="p">(</span>
+                                          <span class="n">obj</span><span class="o">.</span><span class="n">grad_obj_q</span> <span class="o">*</span> <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span> <span class="o">+</span>
+                                          <span class="n">obj</span><span class="o">.</span><span class="n">grad_pen_q</span> <span class="o">*</span> <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">s2</span>
+                                         <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="p">(</span>
+             <span class="n">obj</span><span class="o">.</span><span class="n">grad_obj</span> <span class="o">*</span> <span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">obj</span><span class="o">.</span><span class="n">grad_pen</span> <span class="o">*</span>
+             <span class="p">(</span><span class="n">obj</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span> <span class="o">+</span> <span class="n">obj</span><span class="o">.</span><span class="n">lamb_log</span><span class="p">)</span>
+            <span class="p">)</span>
+    <span class="k">return</span><span class="p">((</span><span class="n">l</span><span class="p">,</span> <span class="n">g</span><span class="p">))</span>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Joseph Marcus, Wooseok Ha, Rina Foygel Barber and John Novembre
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

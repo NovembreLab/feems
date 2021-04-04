@@ -1,0 +1,432 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>feems.SpatialGraph &mdash; feems  documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../_static/style.css" type="text/css" />
+
+  
+  
+  
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/language_data.js"></script>
+        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    
+    <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="feems.Objective" href="feems.Objective.html" />
+    <link rel="prev" title="Public API: feems package" href="../feems.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../index.html">
+          
+
+          
+            
+            <img src="../_static/logo.png" class="logo" alt="Logo"/>
+          
+          </a>
+
+          
+            
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cite.html">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">Notebooks</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../notebooks/getting-started.html">Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption"><span class="caption-text">API Documentation</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../feems.html#classes">Classes</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">feems.SpatialGraph</a></li>
+<li class="toctree-l3"><a class="reference internal" href="feems.Objective.html">feems.Objective</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../feems.html#submodules">Submodules</a></li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">feems</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a> &raquo;</li>
+        
+      <li>feems.SpatialGraph</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/stubs/feems.SpatialGraph.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  
+<style>
+/* CSS overrides for sphinx_rtd_theme */
+
+/* 24px margin */
+.nbinput.nblast.container,
+.nboutput.nblast.container {
+    margin-bottom: 19px;  /* padding has already 5px */
+}
+
+/* ... except between code cells! */
+.nblast.container + .nbinput.container {
+    margin-top: -19px;
+}
+
+.admonition > p:before {
+    margin-right: 4px;  /* make room for the exclamation icon */
+}
+
+/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
+.math {
+    text-align: unset;
+}
+</style>
+<div class="section" id="feems-spatialgraph">
+<h1>feems.SpatialGraph<a class="headerlink" href="#feems-spatialgraph" title="Permalink to this headline">¶</a></h1>
+<dl class="py class">
+<dt id="feems.SpatialGraph">
+<em class="property">class </em><code class="sig-prename descclassname">feems.</code><code class="sig-name descname">SpatialGraph</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">genotypes</span></em>, <em class="sig-param"><span class="n">sample_pos</span></em>, <em class="sig-param"><span class="n">node_pos</span></em>, <em class="sig-param"><span class="n">edges</span></em>, <em class="sig-param"><span class="n">scale_snps</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/feems/spatial_graph.html#SpatialGraph"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#feems.SpatialGraph" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="py method">
+<dt id="feems.SpatialGraph.__init__">
+<code class="sig-name descname">__init__</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">genotypes</span></em>, <em class="sig-param"><span class="n">sample_pos</span></em>, <em class="sig-param"><span class="n">node_pos</span></em>, <em class="sig-param"><span class="n">edges</span></em>, <em class="sig-param"><span class="n">scale_snps</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/feems/spatial_graph.html#SpatialGraph.__init__"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#feems.SpatialGraph.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Represents the spatial network which the data is defined on and
+stores relevant matricies / performs linear albegra routines needed for
+the model and optimization. Inherits from the networkx Graph object.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>genotypes</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.20)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – genotypes for samples</p></li>
+<li><p><strong>sample_pos</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.20)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – spatial positions for samples</p></li>
+<li><p><strong>node_pos</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.20)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – spatial positions of nodes</p></li>
+<li><p><strong>edges</strong> (<a class="reference external" href="https://numpy.org/doc/stable/reference/generated/numpy.ndarray.html#numpy.ndarray" title="(in NumPy v1.20)"><code class="xref py py-obj docutils literal notranslate"><span class="pre">numpy.ndarray</span></code></a>) – edge array</p></li>
+<li><p><strong>scale_snps</strong> (<code class="xref py py-obj docutils literal notranslate"><span class="pre">Bool</span></code>) – boolean to scale SNPs by SNP specific
+Binomial variance estimates</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<p class="rubric">Methods</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#feems.SpatialGraph.__init__" title="feems.SpatialGraph.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(genotypes, sample_pos, node_pos, edges)</p></td>
+<td><p>Represents the spatial network which the data is defined on and stores relevant matricies / performs linear albegra routines needed for the model and optimization.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_edge</span></code>(u_of_edge, v_of_edge, **attr)</p></td>
+<td><p>Add an edge between u and v.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_edges_from</span></code>(ebunch_to_add, **attr)</p></td>
+<td><p>Add all the edges in ebunch_to_add.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_node</span></code>(node_for_adding, **attr)</p></td>
+<td><p>Add a single node <cite>node_for_adding</cite> and update node attributes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_nodes_from</span></code>(nodes_for_adding, **attr)</p></td>
+<td><p>Add multiple nodes.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_weighted_edges_from</span></code>(ebunch_to_add[, weight])</p></td>
+<td><p>Add weighted edges in <cite>ebunch_to_add</cite> with specified weight attr</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">adjacency</span></code>()</p></td>
+<td><p>Returns an iterator over (node, adjacency dict) tuples for all nodes.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">clear</span></code>()</p></td>
+<td><p>Remove all nodes and edges from the graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">comp_grad_w</span></code>()</p></td>
+<td><p>Computes the derivative of the graph laplacian with respect to the latent variables (dw / dm) note this is computed only once</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">comp_graph_laplacian</span></code>(weight[, perm])</p></td>
+<td><p>Computes the graph laplacian note this is computed each step of the optimization so needs to be fast</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">comp_precision</span></code>(s2)</p></td>
+<td><p>Computes the residual precision matrix</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy</span></code>([as_view])</p></td>
+<td><p>Returns a copy of the graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">edge_subgraph</span></code>(edges)</p></td>
+<td><p>Returns the subgraph induced by the specified edges.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_null_model</span></code>([verbose])</p></td>
+<td><p>Estimates of the edge weights and residual variance under the model that all the edge weights have the same value</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_quasi_newton</span></code>(w_init, lamb_l2, lamb_smth, …)</p></td>
+<td><p>Estimates the edge weights of the full model holding the residual variance fixed using a quasi-newton algorithim, specifically L-BFGS</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_edge_data</span></code>(u, v[, default])</p></td>
+<td><p>Returns the attribute dictionary associated with edge (u, v).</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_edge</span></code>(u, v)</p></td>
+<td><p>Returns True if the edge (u, v) is in the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">has_node</span></code>(n)</p></td>
+<td><p>Returns True if the graph contains the node n.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">inv_triu</span></code>(w[, perm])</p></td>
+<td><p>Take upper triangluar vector as input and return symmetric weight sparse matrix</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_directed</span></code>()</p></td>
+<td><p>Returns True if graph is directed, False otherwise.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">is_multigraph</span></code>()</p></td>
+<td><p>Returns True if graph is a multigraph, False otherwise.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">nbunch_iter</span></code>([nbunch])</p></td>
+<td><p>Returns an iterator over nodes contained in nbunch that are also in the graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">neighbors</span></code>(n)</p></td>
+<td><p>Returns an iterator over all neighbors of node n.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_edges</span></code>([u, v])</p></td>
+<td><p>Returns the number of edges between two nodes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">number_of_nodes</span></code>()</p></td>
+<td><p>Returns the number of nodes in the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">order</span></code>()</p></td>
+<td><p>Returns the number of nodes in the graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_edge</span></code>(u, v)</p></td>
+<td><p>Remove the edge between u and v.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_edges_from</span></code>(ebunch)</p></td>
+<td><p>Remove all edges specified in ebunch.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_node</span></code>(n)</p></td>
+<td><p>Remove node n.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">remove_nodes_from</span></code>(nodes)</p></td>
+<td><p>Remove multiple nodes.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">size</span></code>([weight])</p></td>
+<td><p>Returns the number of edges or total of all edge weights.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">subgraph</span></code>(nodes)</p></td>
+<td><p>Returns a SubGraph view of the subgraph induced on <cite>nodes</cite>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_directed</span></code>([as_view])</p></td>
+<td><p>Returns a directed representation of the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_directed_class</span></code>()</p></td>
+<td><p>Returns the class to use for empty directed copies.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_undirected</span></code>([as_view])</p></td>
+<td><p>Returns an undirected copy of the graph.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_undirected_class</span></code>()</p></td>
+<td><p>Returns the class to use for empty undirected copies.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code>([edges, nodes])</p></td>
+<td><p>Update the graph using nodes/edges/graphs as input.</p></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Attributes</p>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">adj</span></code></p></td>
+<td><p>Graph adjacency object holding the neighbors of each node.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">degree</span></code></p></td>
+<td><p>A DegreeView for the Graph as G.degree or G.degree().</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">edges</span></code></p></td>
+<td><p>An EdgeView of the Graph as G.edges or G.edges().</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>String identifier of the graph.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">nodes</span></code></p></td>
+<td><p>A NodeView of the Graph as G.nodes or G.nodes().</p></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="feems.Objective.html" class="btn btn-neutral float-right" title="feems.Objective" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../feems.html" class="btn btn-neutral float-left" title="Public API: feems package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        
+        &copy; Copyright 2020, Joseph Marcus, Wooseok Ha, Rina Foygel Barber and John Novembre
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
