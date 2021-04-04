@@ -144,13 +144,16 @@ class SpatialGraph(nx.Graph):
         node to that sample
         """
         n_samples = sample_pos.shape[0]
+        assned_node_idx = np.zeros(n, "int")
         for i in range(n_samples):
             dist = (sample_pos[i, :] - node_pos) ** 2
             idx = np.argmin(np.sum(dist, axis=1))
+            assned_node_idx[i] = idx
             self.nodes[idx]["n_samples"] += 1
             self.nodes[idx]["sample_idx"].append(i)
         n_samples_per_node = query_node_attributes(self, "n_samples")
         self.n_observed_nodes = np.sum(n_samples_per_node != 0)
+        self.assned_node_idx = assned_node_idx
 
     def _permute_nodes(self):
         """Permutes all graph matrices to start with the observed nodes first
