@@ -25,7 +25,14 @@ class SpatialGraph(nx.Graph):
             scale_snps (:obj:`Bool`): boolean to scale SNPs by SNP specific
                 Binomial variance estimates
         """
-        assert np.sum(np.isnan(genotypes)) == 0, "no missing genotypes are allowed"
+        # check inputs
+        assert len(genotypes.shape) == 2
+        assert len(sample_pos.shape) == 2
+        assert np.all(~np.isnan(genotypes)), "no missing genotypes are allowed"
+        assert np.all(~np.isinf(genotypes)), "non inf genotypes are allowed"
+        assert (
+            genotypes.shape[0] == sample_pos.shape[0]
+        ), "genotypes and sample positions must be the same size"
 
         # inherits from networkx Graph object
         super(SpatialGraph, self).__init__()
@@ -57,7 +64,7 @@ class SpatialGraph(nx.Graph):
         self._create_perm_diag_op()  # create perm operator
         self.factor = None  # sparse cholesky factorization of L11
 
-        # intialize w
+        # initialize w
         self.w = np.ones(self.size())
 
         # compute gradient of the graph laplacian with respect to w (dL / dw)
@@ -214,6 +221,7 @@ class SpatialGraph(nx.Graph):
         elif "matrix" in str(type(weight)):
             self.W = weight
         else:
+            # TODO: decide to raise error here?
             print("inaccurate argument")
         W_rowsum = np.array(self.W.sum(axis=1)).reshape(-1)
         self.D = sp.diags(W_rowsum).tocsc()
@@ -319,11 +327,11 @@ class SpatialGraph(nx.Graph):
                 ).format(res.nfev, self.train_loss)
             )
 
-    def fit_quasi_newton(
+    def fit(
         self,
-        w_init,
         lamb,
-        alpha,
+        w_init=None,
+        alpha=None,
         factr=1e7,
         maxls=50,
         m=10,
@@ -333,8 +341,54 @@ class SpatialGraph(nx.Graph):
         verbose=True,
     ):
         """Estimates the edge weights of the full model holding the residual
-        variance fixed using a quasi-newton algorithm, specifically L-BFGS
+        variance fixed using a quasi-newton algorithm, specifically L-BFGS.
+
+        Args:
+            lamb (:obj:`float`): penalty strength on weights
+            w_init (:obj:`numpy.ndarray`): initial value for the edge weights
+            alpha (:obj:`float`): penalty strength on log weights
+            factr (:obj:`float`): tolerance for convergence
+            maxls (:obj:`int`): maximum number of line search steps
+            m (:obj:`int`): the maximum number of variable metric corrections
+            lb (:obj:`int`): lower bound of log weights
+            ub (:obj:`int`): upper bound of log weights
+            maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
+            verbose (:obj:`Bool`): boolean to print summary of results
         """
+        # check inputs
+        assert lamb >= 0.0, "lambda must be non-negative"
+        assert type(lamb) == float, "lambda must be float"
+        assert type(factr) == float, "factr must be float"
+        assert maxls > 0, "maxls must be at least 1"
+        assert type(maxls) == int, "maxls must be int"
+        assert type(m) == int, "m must be int"
+        assert type(lb) == float, "lb must be float"
+        assert type(ub) == float, "ub must be float"
+        assert lb < ub, "lb must be less than ub"
+        assert type(maxiter) == int, "maxiter must be int"
+        assert maxiter > 0, "maxiter be at least 1"
+
+        # fit null model to estimate the residual variance and init weights
+        self.fit_null_model()
+
+        # init from null model if no init weights are provided
+        if w_init is None:
+            w_init = self.w0
+        else:
+            # check initial edge weights
+            assert w_init.shape == self.w.shape, (
+                "weights must have shape of edges"
+            )
+            assert np.all(w_init > 0.0), "weights must be non-negative"
+
+        # prefix alpha if not provided
+        if alpha is None:
+            alpha = 1.0 / self.w0.mean()
+        else:
+            assert type(alpha) == float, "alpha must be float"
+            assert alpha >= 0.0, "alpha must be non-negative"
+
+        # run l-bfgs
         obj = Objective(self)
         obj.lamb = lamb
         obj.alpha = alpha
