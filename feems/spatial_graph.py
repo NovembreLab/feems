@@ -144,7 +144,7 @@ class SpatialGraph(nx.Graph):
         node to that sample
         """
         n_samples = sample_pos.shape[0]
-        assned_node_idx = np.zeros(n, "int")
+        assned_node_idx = np.zeros(n_samples, "int")
         for i in range(n_samples):
             dist = (sample_pos[i, :] - node_pos) ** 2
             idx = np.argmin(np.sum(dist, axis=1))
