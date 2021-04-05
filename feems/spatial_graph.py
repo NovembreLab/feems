@@ -41,6 +41,7 @@ class SpatialGraph(nx.Graph):
         # inputs
         self.sample_pos = sample_pos
         self.node_pos = node_pos
+        self.scale_snps = scale_snps
 
         # signed incidence_matrix
         self.Delta_q = nx.incidence_matrix(self, oriented=True).T.tocsc()
