@@ -332,6 +332,7 @@ class SpatialGraph(nx.Graph):
         self,
         lamb,
         w_init=None,
+        s2_init=None,
         alpha=None,
         factr=1e7,
         maxls=50,
@@ -347,6 +348,7 @@ class SpatialGraph(nx.Graph):
         Args:
             lamb (:obj:`float`): penalty strength on weights
             w_init (:obj:`numpy.ndarray`): initial value for the edge weights
+            s2_init (:obj:`int`): initial value for s2
             alpha (:obj:`float`): penalty strength on log weights
             factr (:obj:`float`): tolerance for convergence
             maxls (:obj:`int`): maximum number of line search steps
@@ -369,11 +371,10 @@ class SpatialGraph(nx.Graph):
         assert type(maxiter) == int, "maxiter must be int"
         assert maxiter > 0, "maxiter be at least 1"
 
-        # fit null model to estimate the residual variance and init weights
-        self.fit_null_model()
-
         # init from null model if no init weights are provided
-        if w_init is None:
+        if w_init is None and s2_init is None:
+            # fit null model to estimate the residual variance and init weights
+            self.fit_null_model()            
             w_init = self.w0
         else:
             # check initial edge weights
@@ -381,6 +382,8 @@ class SpatialGraph(nx.Graph):
                 "weights must have shape of edges"
             )
             assert np.all(w_init > 0.0), "weights must be non-negative"
+            self.w0 = w_init
+            self.comp_precision(s2=s2_init)
 
         # prefix alpha if not provided
         if alpha is None:
