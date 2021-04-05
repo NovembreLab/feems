@@ -232,7 +232,9 @@ def comp_mats(obj):
     assert np.allclose(inv_cov, np.linalg.inv(fit_cov)) == True, "fit_cov must be inverse of inv_cov"
     
     n_snps = sp_graph.n_snps
-    mu = 2*sp_graph.mu / np.sqrt(sp_graph.mu*(1-sp_graph.mu))
+    frequencies_ns = sp_graph.frequencies * np.sqrt(sp_graph.mu*(1-sp_graph.mu))
+    mu0 = frequencies_ns.mean(axis=0) / 2 # compute mean of allele frequencies in the original scale
+    mu = 2*mu0 / np.sqrt(sp_graph.mu*(1-sp_graph.mu))
     frequencies_centered = sp_graph.frequencies - mu
     emp_cov = frequencies_centered @ frequencies_centered.T / n_snps
     
