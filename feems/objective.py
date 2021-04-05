@@ -215,3 +215,25 @@ def loss_wrapper(z, obj):
     loss = obj.loss()
     grad = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
     return (loss, grad)
+
+
+def comp_mats(obj):
+    """Compute fitted covariance matrix and its inverse & empirical convariance matrix"""
+    obj.inv()
+    obj.grad()
+    sp_graph = obj.sp_graph
+    d = len(sp_graph)
+    fit_cov = obj.Linv_block['oo'] - 1/d + sp_graph.q_inv_diag.toarray()
+    
+    inv_cov_sum0 = obj.inv_cov.sum(axis=0)
+    inv_cov_sum1 = obj.inv_cov.sum()
+    inv_cov = obj.inv_cov + np.outer(inv_cov_sum0, inv_cov_sum0) / (d - inv_cov_sum1)    
+    
+    assert np.allclose(inv_cov, np.linalg.inv(fit_cov)) == True, "fit_cov must be inverse of inv_cov"
+    
+    n_snps = sp_graph.n_snps
+    mu = 2*sp_graph.mu / np.sqrt(sp_graph.mu*(1-sp_graph.mu))
+    frequencies_centered = sp_graph.frequencies - mu
+    emp_cov = frequencies_centered @ frequencies_centered.T / n_snps
+    
+    return fit_cov, inv_cov, emp_cov
