@@ -220,7 +220,7 @@ def loss_wrapper(z, obj):
 def comp_mats(obj):
     """Compute fitted covariance matrix and its inverse & empirical convariance matrix"""
     obj.inv()
-    obj.grad()
+    obj.grad(reg=False)
     sp_graph = obj.sp_graph
     d = len(sp_graph)
     fit_cov = obj.Linv_block['oo'] - 1/d + sp_graph.q_inv_diag.toarray()
@@ -239,3 +239,4 @@ def comp_mats(obj):
     emp_cov = frequencies_centered @ frequencies_centered.T / n_snps
     
     return fit_cov, inv_cov, emp_cov
+    
