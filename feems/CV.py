@@ -17,10 +17,9 @@ def run_CV(sp_graph,
     """Run cross-valdiation.
     """        
     # s2 initialization
-    sp_graph_ = deepcopy(sp_graph)
-    sp_graph_.fit_null_model()
-    w0 = sp_graph_.w0
-    s2 = sp_graph_.s2
+    sp_graph.fit_null_model()
+    w0 = sp_graph.w0
+    s2 = sp_graph.s2
 
     # setup cv indicies
     is_train = setup_kfold_cv(sp_graph, n_folds, random_state=random_state)    
@@ -35,6 +34,7 @@ def run_CV(sp_graph,
         print('\n fold=', fold)
 
         # partition into train and test sets
+        if sp_graph.factor is not None: sp_graph.factor = None
         sp_graph_train, sp_graph_test = train_test_split(sp_graph, is_train[:,fold])
 
         # set of initialization for warmstart
@@ -57,7 +57,7 @@ def run_CV(sp_graph,
                                    verbose=False)
 
                 # evaluate on the validation set
-                _, err = predict_SNPs(sp_graph_, sp_graph_train, sp_graph_test)
+                _, err = predict_SNPs(sp_graph, sp_graph_train, sp_graph_test)
                 cv_err[fold, i, a] = err
 
                 w_init = deepcopy(sp_graph_train.w)
