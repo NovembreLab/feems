@@ -12,3 +12,4 @@ flake8==3.8.3
 click==7.1.2
 setuptools==49.1.0
 pandas-plink==2.0.4
+msprime==1.0.0
