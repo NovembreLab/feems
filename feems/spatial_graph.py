@@ -374,7 +374,7 @@ class SpatialGraph(nx.Graph):
         # init from null model if no init weights are provided
         if w_init is None and s2_init is None:
             # fit null model to estimate the residual variance and init weights
-            self.fit_null_model()            
+            self.fit_null_model(verbose=verbose)            
             w_init = self.w0
         else:
             # check initial edge weights
