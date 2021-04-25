@@ -17,7 +17,8 @@ def run_cv(
     ub=1e6,
     factr=1e10,
     random_state=500,
-    verbose=True
+    verbose=True,
+    alpha_fact=1.0
 ):
     """Run cross-validation."""
     # s2 initialization
@@ -25,7 +26,7 @@ def run_cv(
     w0 = sp_graph.w0
     s2 = sp_graph.s2
     if alpha_grid is None:
-        alpha_grid = np.array([1.0 / w0[0]])
+        alpha_grid = np.array([alpha_fact / w0[0]])
 
     # setup cv indicies
     is_train = setup_k_fold_cv(sp_graph, n_folds, random_state=random_state)
