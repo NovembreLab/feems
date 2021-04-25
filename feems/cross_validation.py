@@ -17,12 +17,13 @@ def run_cv(
     ub=1e6,
     factr=1e10,
     random_state=500,
-    verbose=True,
+    outer_verbose=True,
+    inner_verbose=False,
     alpha_fact=1.0
 ):
     """Run cross-validation."""
     # s2 initialization
-    sp_graph.fit_null_model(verbose=verbose)
+    sp_graph.fit_null_model(verbose=inner_verbose)
     w0 = sp_graph.w0
     s2 = sp_graph.s2
     if alpha_grid is None:
@@ -38,7 +39,7 @@ def run_cv(
 
     # loop
     for fold in range(n_folds):
-        if verbose:
+        if outer_verbose:
             print("\n fold=", fold)
 
         # partition into train and test sets
@@ -55,7 +56,7 @@ def run_cv(
             w_init = init_list[-1]
             s2_init = s2
             for i, lamb in enumerate(lamb_grid):
-                if verbose:
+                if outer_verbose:
                     print(
                         "\riteration lambda={}/{} alpha={}/{}".format(
                             i + 1, n_lamb, a + 1, n_alpha
@@ -73,7 +74,7 @@ def run_cv(
                     factr=factr,
                     lb=math.log(lb),
                     ub=math.log(ub),
-                    verbose=verbose,
+                    verbose=inner_verbose,
                 )
 
                 # evaluate on the validation set
