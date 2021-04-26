@@ -204,7 +204,7 @@ class Viz(object):
                 obs_grid[:, 1],
                 edgecolors="black",
                 linewidth=self.obs_node_linewidth,
-                s=self.obs_node_size * np.sqrt(self.sp_graph.q),
+                s=self.obs_node_size * np.sqrt(self.sp_graph.n_samples_per_obs_node_permuted),
                 alpha=self.obs_node_alpha,
                 color=self.obs_node_color,
                 zorder=self.obs_node_zorder,
