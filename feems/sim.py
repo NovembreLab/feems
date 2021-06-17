@@ -30,7 +30,7 @@ def setup_graph(
         number of rows in the lattice
 
     n_columns : int
-        number of rows in the lattice
+        number of columns in the lattice
 
     barrier_startpt : float
         geographic position of the starting pt of the barrier from left to right
