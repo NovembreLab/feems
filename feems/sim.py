@@ -120,6 +120,134 @@ def setup_graph(
     coord = grid[pops, :]
     return (graph, coord, grid, edge)
 
+# replicate above function to simulate graph with one long range migration edge
+# (this could be the same rectangular structure as above with connections from a corridor node to a barrier node)
+def setup_graph_long_range(
+    n_rows=4,
+    n_columns=8,
+    barrier_startpt=2.5,
+    barrier_endpt=5.5,
+    anisotropy_scaler=1.0,
+    barrier_w=0.1,
+    corridor_w=0.5,
+    n_samples_per_node=10,
+    barrier_prob=0.1,
+    corridor_left_prob=1,
+    corridor_right_prob=1,
+    sample_prob=1.0,
+    long_range_nodes=[(0,12)],
+    long_range_edges=[0.5]
+):
+    """Setup graph (triangular lattice) for simulation + edges with long range migration
+
+    Arguments
+    ---------
+    n_rows : int
+        number of rows in the lattice
+
+    n_columns : int
+        number of columns in the lattice
+
+    barrier_startpt : float
+        geographic position of the starting pt of the barrier from left to right
+
+    barrier_endpt : float
+        geographic position of the starting pt of the barrier from left to right
+
+    anisotropy_scaler : float
+        scaler on horizontal edge weights to create an anisotropic simulation
+
+    barrier_w : float
+        migration value for nodes in the barrier
+
+    corridor_w : float
+        migration value for nodes in the corridor
+
+    n_samples_per_node : int
+        total number of samples in an node
+
+    barrier_prob : float
+        probability of sampling an individual in the barrier
+
+    corridor_left_prob : float
+        probability of sampling a individual in the left corridor
+
+    corridor_right_prob : float
+        probability of sampling an individual in the right corridor
+
+    sample_prob : float
+        probability of sampling a node
+
+    long_range_nodes : integer list
+        list of 2-tuples -- nodes connected by long range migrations
+
+    long_range_edges : float list
+        corresponding edge weights (migration rates) between the nodes
+
+    Returns
+    -------
+    tuple of graph objects
+    """
+    assert len(long_range_edges) == len(long_range_nodes), "equal number of pairs of nodes and corresponding edges for long range"
+
+    graph = nx.generators.lattice.triangular_lattice_graph(
+        n_rows - 1, 2 * n_columns - 2, with_positions=True
+    )
+    graph = nx.convert_node_labels_to_integers(graph)
+    pos_dict = nx.get_node_attributes(graph, "pos")
+    for i in graph.nodes:
+
+        # node position
+        x, y = graph.nodes[i]["pos"]
+
+        if x <= barrier_startpt:
+            graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
+                n_samples_per_node, corridor_left_prob
+            )
+        elif x >= barrier_endpt:
+            graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
+                n_samples_per_node, corridor_right_prob
+            )
+        else:
+            graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
+                n_samples_per_node, barrier_prob
+            )
+
+        # sample a node or not
+        graph.nodes[i]["sample_size"] = graph.nodes[i][
+            "sample_size"
+        ] * np.random.binomial(1, sample_prob)
+
+    # assign edge weights
+    for i, j in graph.edges():
+        x = np.mean([graph.nodes[i]["pos"][0], graph.nodes[j]["pos"][0]])
+        y = np.mean([graph.nodes[i]["pos"][1], graph.nodes[j]["pos"][1]])
+        if x <= barrier_startpt:
+            graph[i][j]["w"] = corridor_w
+        elif x >= barrier_endpt:
+            graph[i][j]["w"] = corridor_w
+        else:
+            graph[i][j]["w"] = barrier_w
+
+        # if horizontal edge
+        if graph.nodes[i]["pos"][1] == graph.nodes[j]["pos"][1]:
+            graph[i][j]["w"] = anisotropy_scaler * graph[i][j]["w"]
+
+    # adding edge weights (migration rates) to corresponding edges
+    for idx, val in enumerate(long_range_nodes):
+        graph.add_edge(*val)
+        graph[val[0]][val[1]]["w"] = long_range_edges[idx]
+
+    grid = np.array(list(pos_dict.values()))
+    edge = np.array(graph.edges)
+    edge += 1  # 1 indexed nodes for feems
+
+    # create sample coordinates array
+    sample_sizes_dict = nx.get_node_attributes(graph, "sample_size")
+    pops = [[i] * int(sample_sizes_dict[i] / 2) for i in graph.nodes]
+    pops = list(it.chain.from_iterable(pops))
+    coord = grid[pops, :]
+    return (graph, coord, grid, edge)
 
 def simulate_genotypes(
     graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50
@@ -152,6 +280,7 @@ def simulate_genotypes(
         genotype matrix
     """
     assert target_n_snps > n_print, "n_rep must be greater than n_print"
+
 
     # number of nodes
     d = len(graph.nodes)
