@@ -39,13 +39,13 @@ are not necessary for the `feems` package. Once the `conda` environment has
 been setup with these tricky dependencies we can install `feems`:
 
 ```
-pip install git+https://github.com/jhmarcus/feems
+pip install git+https://github.com/NovembreLab/feems
 ```
 
 You can also install `feems` locally by:
 
 ```
-git clone https://github.com/jhmarcus/feems
+git clone https://github.com/NovembreLab/feems
 cd feems/
 pip install .
 ```
