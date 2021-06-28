@@ -31,12 +31,14 @@ def cov_to_dist(S):
 def plot_default_vs_long_range(
     sp_Graph_def, 
     sp_Graph, 
-    lrn
+    lrn, 
+    lamb=1.0
 ):
     """Function to plot default graph with NO long range edges next to full graph with long range edges
     (useful for comparison of feems default fit with extra parameters)
     """
-    fig = plt.figure(dpi=200)
+    fig = plt.figure()
+    sp_Graph_def.fit(lamb = lamb)
     ax = fig.add_subplot(1, 2, 1)  
     v = Viz(ax, sp_Graph_def, edge_width=1.5, 
             edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
@@ -45,7 +47,7 @@ def plot_default_vs_long_range(
     v.draw_edges(use_weights=True)
     v.draw_obs_nodes(use_ids=False) 
 
-    sp_Graph.fit(lamb = 1.0)
+    sp_Graph.fit(lamb = lamb)
     ax = fig.add_subplot(1, 2, 2)  
     v = Viz(ax, sp_Graph, edge_width=1.5, 
             edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
@@ -88,7 +90,7 @@ def comp_genetic_vs_fitted_distance(
     res = mod.fit()
     muhat, betahat = res.params
     if(plotFig):
-        fig = plt.figure(dpi=200)
+        fig = plt.figure()
         ax = fig.add_subplot()
         ax.scatter(fit_dist, emp_dist, 
                 marker=".", alpha=1, zorder=0, color="grey", s=3)
@@ -124,7 +126,7 @@ def plot_estimated_vs_simulated_edges(
     # getting index of long range edges
     lre_idx = [list(sp_Graph.edges).index(val) for val in lrn]
 
-    fig = plt.figure(dpi=200)
+    fig = plt.figure()
     ax = fig.add_subplot()
     ax.scatter(sim_edges, sp_Graph.w, 
             marker=".", alpha=1, zorder=0, color="grey", s=3)
