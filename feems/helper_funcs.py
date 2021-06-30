@@ -32,7 +32,7 @@ def cov_to_dist(S):
 def plot_default_vs_long_range(
     sp_Graph_def, 
     sp_Graph, 
-    lrn, 
+    max_res_nodes, 
     lamb=1.0
 ):
     """Function to plot default graph with NO long range edges next to full graph with long range edges
@@ -40,7 +40,7 @@ def plot_default_vs_long_range(
     """
     assert lamb >= 0.0, "lambda must be non-negative"
     assert type(lamb) == float, "lambda must be float"
-    assert type(lrn) == list, "lrn must be a list of int 2-tuples"
+    assert type(max_res_nodes) == list, "lrn must be a list of int 2-tuples"
 
     fig = plt.figure(dpi=100)
     sp_Graph_def.fit(lamb = lamb)
@@ -60,7 +60,7 @@ def plot_default_vs_long_range(
             cbar_font_size=10)
     v.draw_edges(use_weights=True)
     v.draw_obs_nodes(use_ids=False) 
-    lre_idx = [list(sp_Graph.edges).index(val) for val in lrn]
+    lre_idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
     # paste correlation between the two weights
     ax.text(0.5, 1.0, "cor={:.2f}".format(np.corrcoef(sp_Graph.w[~np.in1d(np.arange(len(sp_Graph.w)), lre_idx)],sp_Graph_def.w)[0,1]), transform=ax.transAxes)
 
@@ -135,21 +135,28 @@ def comp_genetic_vs_fitted_distance(
 def plot_estimated_vs_simulated_edges(
     graph,
     sp_Graph,
-    lrn,
+    lrn=None,
+    max_res_nodes=None, 
     lamb=1.0
 ):
     """Function to plot estimated vs simulated edge weights to look for significant deviations
     """
     assert lamb >= 0.0, "lambda must be non-negative"
     assert type(lamb) == float, "lambda must be float"
+    # both variables below are long range nodes but lrn is from the simulated and max_res_nodes is from the empirical
     assert type(lrn) == list, "lrn must be a list of int 2-tuples"
+    assert type(max_res_nodes) == list, "max_res_nodes must be a list of int 2-tuples"
 
-    # getting edges that are long range in the simulated graph
-    sim_edges = np.array([graph[val[0]][val[1]]["w"] for _, val in enumerate(list(graph.edges))])
+    # getting edges from the simulated graph
+    idx = [list(graph.edges).index(val) for val in lrn]
+    sim_edges = np.append(np.array([graph[val[0]][val[1]]["w"] for i, val in enumerate(graph.edges) if i not in idx]), 
+                          np.array([graph[val[0]][val[1]]["w"] for i, val in enumerate(graph.edges) if i in idx]))
 
-    w_plot = deepcopy(sp_Graph.w[[list(sp_Graph.edges).index(val) for val in list(graph.edges)]])
+    idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
+    w_plot = np.append(sp_Graph.w[[i for i in range(len(sp_Graph.w)) if i not in idx]], sp_Graph.w[idx])
+
     X = sm.add_constant(sim_edges)
-    mod = sm.OLS(w_plot, X)
+    mod = sm.OLS(w_plot[range(len(graph.edges))], X)
     res = mod.fit()
     muhat, betahat = res.params
 
@@ -158,9 +165,9 @@ def plot_estimated_vs_simulated_edges(
 
     fig = plt.figure(dpi=100)
     ax = fig.add_subplot()
-    ax.scatter(sim_edges, w_plot, 
+    ax.scatter(sim_edges, w_plot[range(len(sim_edges))], 
             marker=".", alpha=1, zorder=0, color="grey", s=3)
-    ax.scatter(sim_edges[lre_idx], w_plot[lre_idx], 
+    ax.scatter(sim_edges[-len(lrn)::], w_plot[-len(lrn)::], 
             marker=".", alpha=1, zorder=0, color="black", s=10)
     x_ = np.linspace(np.min(sim_edges), np.max(sim_edges), 20)
     ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
