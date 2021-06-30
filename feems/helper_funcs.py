@@ -4,6 +4,7 @@
 import math
 import numpy as np
 import statsmodels.api as sm
+from copy import deepcopy
 
 # viz
 import matplotlib.pyplot as plt
@@ -37,10 +38,14 @@ def plot_default_vs_long_range(
     """Function to plot default graph with NO long range edges next to full graph with long range edges
     (useful for comparison of feems default fit with extra parameters)
     """
-    fig = plt.figure()
+    assert lamb >= 0.0, "lambda must be non-negative"
+    assert type(lamb) == float, "lambda must be float"
+    assert type(lrn) == list, "lrn must be a list of int 2-tuples"
+
+    fig = plt.figure(dpi=100)
     sp_Graph_def.fit(lamb = lamb)
     ax = fig.add_subplot(1, 2, 1)  
-    v = Viz(ax, sp_Graph_def, edge_width=1.5, 
+    v = Viz(ax, sp_Graph_def, edge_width=2, 
             edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
             obs_node_size=7.5, sample_pt_color="black", 
             cbar_font_size=10)
@@ -49,7 +54,7 @@ def plot_default_vs_long_range(
 
     sp_Graph.fit(lamb = lamb)
     ax = fig.add_subplot(1, 2, 2)  
-    v = Viz(ax, sp_Graph, edge_width=1.5, 
+    v = Viz(ax, sp_Graph, edge_width=2.0, 
             edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
             obs_node_size=7.5, sample_pt_color="black", 
             cbar_font_size=10)
@@ -62,27 +67,30 @@ def plot_default_vs_long_range(
     return(None)
 
 def comp_genetic_vs_fitted_distance(
-    sp_Graph, 
-    lrn, 
+    sp_Graph_def, 
+    lrn=None, 
     lamb=1.0, 
+    n_lre=3, 
     plotFig=True
 ):
-    """Function to plot genetic vs fitted distance to visualize outliers in residual calculations
+    """Function to plot genetic vs fitted distance to visualize outliers in residual calculations, 
+    passes back 3 pairs of nodes (default) with largest residuals if plotFig=False
     """
-    tril_idx = np.tril_indices(sp_Graph.n_observed_nodes, k=-1)
-    
-    sp_Graph.fit(lamb=lamb,
-                lb=math.log(1e-6), 
-                ub=math.log(1e+6))
-    sp_Graph.comp_graph_laplacian(sp_Graph.w)
+    assert lamb >= 0.0, "lambda must be non-negative"
+    assert type(lamb) == float, "lambda must be float"
+    assert type(n_lre) == int, "n_lre must be int"
 
-    obj = Objective(sp_Graph)
+    tril_idx = np.tril_indices(sp_Graph_def.n_observed_nodes, k=-1)
+    
+    sp_Graph_def.fit(lamb=lamb,
+                    lb=math.log(1e-6), 
+                    ub=math.log(1e+6))
+    sp_Graph_def.comp_graph_laplacian(sp_Graph_def.w)
+
+    obj = Objective(sp_Graph_def)
     fit_cov, _, emp_cov = comp_mats(obj)
     fit_dist = cov_to_dist(fit_cov)[tril_idx]
     emp_dist = cov_to_dist(emp_cov)[tril_idx]
-
-    # computing the vector index for lower triangular matrix of long range nodes (i+j(j+1)/2-j for lower triangle)
-    lrn_idx = [np.int(val[0] + 0.5*val[1]*(val[1]+1) - val[1]) if val[0]<val[1] else np.int(val[1] + 0.5*val[0]*(val[0]+1) - val[0]) for val in lrn]
 
     # using code from supp fig 6 of feems-analysis
     X = sm.add_constant(fit_dist)
@@ -90,7 +98,11 @@ def comp_genetic_vs_fitted_distance(
     res = mod.fit()
     muhat, betahat = res.params
     if(plotFig):
-        fig = plt.figure()
+        if lrn is not None:
+            # computing the vector index for lower triangular matrix of long range nodes (i+j(j+1)/2-j for lower triangle)
+            lrn_idx = [np.int(val[0] + 0.5*val[1]*(val[1]+1) - val[1]) if val[0]<val[1] else np.int(val[1] + 0.5*val[0]*(val[0]+1) - val[0]) for val in lrn]
+
+        fig = plt.figure(dpi=100)
         ax = fig.add_subplot()
         ax.scatter(fit_dist, emp_dist, 
                 marker=".", alpha=1, zorder=0, color="grey", s=3)
@@ -102,10 +114,23 @@ def comp_genetic_vs_fitted_distance(
         ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
+
         return(None)
     else:
-        # TODO: return pairs of nodes with absoluate deviations from residuals > 2?
-        return([(1,13)])
+        # extract indices with maximum absolute residuals
+        max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]
+        # np.argpartition does not return indices in order of max to min, so another round of ordering
+        max_idx = max_idx[np.argsort(np.abs(res.resid)[max_idx])][::-1]
+        # can also choose outliers based on z-score
+        #max_idx = np.where(np.abs((res.resid-np.mean(res.resid))/np.std(res.resid))>3)[0]
+        # getting the labels for pairs of nodes from the array index
+        max_res_node = []
+        for k in max_idx:
+            x = np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1
+            y = np.int(k - 0.5*x*(x-1))
+            max_res_node.append(tuple(sorted((x,y))))
+
+        return(max_res_node)
 
 def plot_estimated_vs_simulated_edges(
     graph,
@@ -115,22 +140,27 @@ def plot_estimated_vs_simulated_edges(
 ):
     """Function to plot estimated vs simulated edge weights to look for significant deviations
     """
+    assert lamb >= 0.0, "lambda must be non-negative"
+    assert type(lamb) == float, "lambda must be float"
+    assert type(lrn) == list, "lrn must be a list of int 2-tuples"
+
     # getting edges that are long range in the simulated graph
     sim_edges = np.array([graph[val[0]][val[1]]["w"] for _, val in enumerate(list(graph.edges))])
 
+    w_plot = deepcopy(sp_Graph.w[[list(sp_Graph.edges).index(val) for val in list(graph.edges)]])
     X = sm.add_constant(sim_edges)
-    mod = sm.OLS(sp_Graph.w, X)
+    mod = sm.OLS(w_plot, X)
     res = mod.fit()
     muhat, betahat = res.params
 
     # getting index of long range edges
-    lre_idx = [list(sp_Graph.edges).index(val) for val in lrn]
+    lre_idx = [list(graph.edges).index(val) for val in lrn]
 
-    fig = plt.figure()
+    fig = plt.figure(dpi=100)
     ax = fig.add_subplot()
-    ax.scatter(sim_edges, sp_Graph.w, 
+    ax.scatter(sim_edges, w_plot, 
             marker=".", alpha=1, zorder=0, color="grey", s=3)
-    ax.scatter(sim_edges[lre_idx], sp_Graph.w[lre_idx], 
+    ax.scatter(sim_edges[lre_idx], w_plot[lre_idx], 
             marker=".", alpha=1, zorder=0, color="black", s=10)
     x_ = np.linspace(np.min(sim_edges), np.max(sim_edges), 20)
     ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
