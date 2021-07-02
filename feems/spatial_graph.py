@@ -396,6 +396,13 @@ class SpatialGraph(nx.Graph):
         obj = Objective(self)
         obj.lamb = lamb
         obj.alpha = alpha
+
+        # for computing negative log likelihood
+        obj._solve_lap_sys()
+        obj._comp_mat_block_inv()
+        obj._comp_inv_cov()
+        self.nll = obj.neg_log_lik()
+        
         x0 = np.log(w_init)
         res = fmin_l_bfgs_b(
             func=loss_wrapper,

@@ -106,11 +106,12 @@ def comp_genetic_vs_fitted_distance(
         ax = fig.add_subplot()
         ax.scatter(fit_dist, emp_dist, 
                 marker=".", alpha=1, zorder=0, color="grey", s=3)
-        ax.scatter(fit_dist[lrn_idx], emp_dist[lrn_idx], 
-                marker=".", alpha=1, zorder=0, color="black", s=10)
+        if lrn is not None:
+            ax.scatter(fit_dist[lrn_idx], emp_dist[lrn_idx], 
+                    marker=".", alpha=1, zorder=0, color="black", s=10)
         x_ = np.linspace(np.min(fit_dist), np.max(fit_dist), 20)
         ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
-        ax.text(0.8, 0.15, "$\lambda$={:1.0e}".format(lamb), transform=ax.transAxes)
+        ax.text(0.8, 0.15, "$\lambda$={:.3}".format(lamb), transform=ax.transAxes)
         ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
@@ -172,7 +173,7 @@ def plot_estimated_vs_simulated_edges(
     x_ = np.linspace(np.min(sim_edges), np.max(sim_edges), 20)
     ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
     ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
-    ax.text(0.8, 0.15, "$\lambda$={:1.0e}".format(lamb), transform=ax.transAxes)
+    ax.text(0.8, 0.15, "$\lambda$={:.3}".format(lamb), transform=ax.transAxes)
     ax.set_xlabel("simulated edge weights")
     ax.set_ylabel("estimated edge weights")
 
