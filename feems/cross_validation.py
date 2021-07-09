@@ -12,7 +12,7 @@ def run_cv(
     sp_graph,
     lamb_grid,
     alpha_grid=None,
-    n_folds=5,
+    n_folds=None,
     lb=1e-6,
     ub=1e6,
     factr=1e10,
@@ -29,6 +29,10 @@ def run_cv(
     if alpha_grid is None:
         alpha_grid = np.array([alpha_fact / w0[0]])
 
+    # default is None i.e., leave-one-out CV
+    if n_folds is None:
+        n_folds = sp_graph.n_observed_nodes
+        
     # setup cv indicies
     is_train = setup_k_fold_cv(sp_graph, n_folds, random_state=random_state)
 
