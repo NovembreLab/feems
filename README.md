@@ -49,3 +49,4 @@ git clone https://github.com/NovembreLab/feems
 cd feems/
 pip install .
 ```
+NOTE: Some users have reported a compatibility error arising at this step with the installation of shapely v1.7.1 (specificed in requirements.txt).  If this arises, recreate the `feems_e` conda environment, and run `pip install shapely --no-binary shapely==1.7.1` before the `pip install` feems command above. 
