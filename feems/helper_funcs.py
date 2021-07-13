@@ -15,7 +15,7 @@ from feems.utils import prepare_graph_inputs
 from feems import SpatialGraph, Viz, Objective
 from feems.sim import setup_graph, setup_graph_long_range, simulate_genotypes
 from feems.spatial_graph import query_node_attributes
-from feems.cross_validation import comp_mats
+from feems.cross_validation import comp_mats, run_cv
 
 # change matplotlib fonts
 plt.rcParams["font.family"] = "Arial"
@@ -69,19 +69,30 @@ def plot_default_vs_long_range(
 def comp_genetic_vs_fitted_distance(
     sp_Graph_def, 
     lrn=None, 
-    lamb=1.0, 
+    lamb=None, 
     n_lre=3, 
     plotFig=True
 ):
     """Function to plot genetic vs fitted distance to visualize outliers in residual calculations, 
     passes back 3 pairs of nodes (default) with largest residuals if plotFig=False
     """
-    assert lamb >= 0.0, "lambda must be non-negative"
-    assert type(lamb) == float, "lambda must be float"
+    if lamb is not None:
+        assert lamb >= 0.0, "lambda must be non-negative"
+        assert type(lamb) == float, "lambda must be float"
     assert type(n_lre) == int, "n_lre must be int"
 
     tril_idx = np.tril_indices(sp_Graph_def.n_observed_nodes, k=-1)
     
+    if lamb is None:
+        lamb_grid = np.geomspace(1e-6, 1e2, 20)[::-1]
+        cv_err = run_cv(sp_Graph_def, lamb_grid, n_folds=sp_Graph_def.n_observed_nodes, factr=1e10)
+
+        # average over folds
+        mean_cv_err = np.mean(cv_err, axis=0)
+
+        # argmin of cv error
+        lamb = float(lamb_grid[np.argmin(mean_cv_err)])
+
     sp_Graph_def.fit(lamb=lamb,
                     lb=math.log(1e-6), 
                     ub=math.log(1e+6))
