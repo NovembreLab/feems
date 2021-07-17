@@ -5,6 +5,7 @@ import math
 import numpy as np
 import statsmodels.api as sm
 from copy import deepcopy
+import pandas as pd
 
 # viz
 import matplotlib.pyplot as plt
@@ -32,7 +33,7 @@ def cov_to_dist(S):
 def plot_default_vs_long_range(
     sp_Graph_def, 
     sp_Graph, 
-    max_res_nodes, 
+    max_res_nodes=None, 
     lamb=1.0
 ):
     """Function to plot default graph with NO long range edges next to full graph with long range edges
@@ -40,7 +41,7 @@ def plot_default_vs_long_range(
     """
     assert lamb >= 0.0, "lambda must be non-negative"
     assert type(lamb) == float, "lambda must be float"
-    assert type(max_res_nodes) == list, "lrn must be a list of int 2-tuples"
+    assert type(max_res_nodes) == list, "max_res_nodes must be a list of int 2-tuples"
 
     fig = plt.figure(dpi=100)
     sp_Graph_def.fit(lamb = lamb)
@@ -188,4 +189,25 @@ def plot_estimated_vs_simulated_edges(
     ax.set_xlabel("simulated edge weights")
     ax.set_ylabel("estimated edge weights")
 
+    return(None)
+
+def plot_residual_matrix(
+    sp_Graph,
+    pop_labs_file=None
+):
+    """Function to plot the residual matrix of the pairs of populations 
+    """
+
+    permuted_idx = query_node_attributes(sp_Graph, "permuted_idx")
+    obs_perm_ids = permuted_idx[: sp_Graph.n_observed_nodes]
+
+    # code for mapping nodes back to populations (since multiple pops can be assigned to the same nodes)
+    node_to_pop = pd.DataFrame(index = np.arange(sp_Graph.n_observed_nodes), columns = ['nodes', 'pops'])
+    node_to_pop['nodes'] = obs_perm_ids
+    node_to_pop['pops'] = [np.unique(sample_data['popId'][query_node_attributes(sp_Graph,"sample_idx")[x]]) for x in obs_perm_ids]
+
+    # read in csv file with sample and pop labels
+    samp2pops = pd.read_csv(pop_labs_file, header=0)
+    ## for testing, use sample_data
+    # just plot it...
     return(None)
