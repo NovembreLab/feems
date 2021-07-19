@@ -36,17 +36,16 @@ def plot_default_vs_long_range(
     sp_Graph_def, 
     sp_Graph, 
     max_res_nodes=None, 
-    lamb=1.0
+    lamb=np.array((1.0,1.0))
 ):
     """Function to plot default graph with NO long range edges next to full graph with long range edges
     (useful for comparison of feems default fit with extra parameters)
     """
-    assert lamb >= 0.0, "lambda must be non-negative"
-    assert type(lamb) == float, "lambda must be float"
+    assert all(lamb>=0.0), "lamb must be non-negative"
     assert type(max_res_nodes) == list, "max_res_nodes must be a list of int 2-tuples"
 
     fig = plt.figure(dpi=100)
-    sp_Graph_def.fit(lamb = lamb)
+    #sp_Graph_def.fit(lamb = float(lamb[0]))
     ax = fig.add_subplot(1, 2, 1)  
     v = Viz(ax, sp_Graph_def, edge_width=2, 
             edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
@@ -55,7 +54,7 @@ def plot_default_vs_long_range(
     v.draw_edges(use_weights=True)
     v.draw_obs_nodes(use_ids=False) 
 
-    sp_Graph.fit(lamb = lamb)
+    #sp_Graph.fit(lamb = float(lamb[1]))
     ax = fig.add_subplot(1, 2, 2)  
     v = Viz(ax, sp_Graph, edge_width=2.0, 
             edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
@@ -130,7 +129,20 @@ def comp_genetic_vs_fitted_distance(
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
 
-        return(None)
+        # extract indices with maximum absolute residuals
+        max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]
+        # np.argpartition does not return indices in order of max to min, so another round of ordering
+        max_idx = max_idx[np.argsort(np.abs(res.resid)[max_idx])][::-1]
+        # can also choose outliers based on z-score
+        #max_idx = np.where(np.abs((res.resid-np.mean(res.resid))/np.std(res.resid))>3)[0]
+        # getting the labels for pairs of nodes from the array index
+        max_res_node = []
+        for k in max_idx:
+            x = np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1
+            y = np.int(k - 0.5*x*(x-1))
+            max_res_node.append(tuple(sorted((x,y))))
+
+        return(max_res_node)
     else:
         # extract indices with maximum absolute residuals
         max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]

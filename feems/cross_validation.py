@@ -29,6 +29,10 @@ def run_cv(
     if alpha_grid is None:
         alpha_grid = np.array([alpha_fact / w0[0]])
 
+    # default is None i.e., leave-one-out CV
+    if n_folds is None:
+        n_folds = sp_graph.n_observed_nodes
+
     # setup cv indicies
     is_train = setup_k_fold_cv(sp_graph, n_folds, random_state=random_state)
 
