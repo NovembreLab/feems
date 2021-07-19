@@ -10,13 +10,15 @@ import pandas as pd
 # viz
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import seaborn as sns
 
 # feems
-from feems.utils import prepare_graph_inputs
-from feems import SpatialGraph, Viz, Objective
-from feems.sim import setup_graph, setup_graph_long_range, simulate_genotypes
-from feems.spatial_graph import query_node_attributes
-from feems.cross_validation import comp_mats, run_cv
+from .utils import prepare_graph_inputs
+from .sim import setup_graph, setup_graph_long_range, simulate_genotypes
+from .spatial_graph import SpatialGraph, query_node_attributes
+from .cross_validation import comp_mats, run_cv
+from .objective import Objective
+from .viz import Viz
 
 # change matplotlib fonts
 plt.rcParams["font.family"] = "Arial"
@@ -193,12 +195,17 @@ def plot_estimated_vs_simulated_edges(
 
 def plot_residual_matrix(
     sp_Graph,
+    lamb_cv,
     pop_labs_file=None
 ):
     """Function to plot the residual matrix of the pairs of populations 
     """
+    # TODO: finalize way to map samples to pops and pops to nodes
 
-    permuted_idx = query_node_attributes(sp_Graph, "permuted_idx")
+    # reading in file with sample and pop labels
+    pop_labs_file = pd.read_csv()
+
+    permuted_idx = query_node_attributes(sp_graph, "permuted_idx")
     obs_perm_ids = permuted_idx[: sp_Graph.n_observed_nodes]
 
     # code for mapping nodes back to populations (since multiple pops can be assigned to the same nodes)
@@ -206,8 +213,25 @@ def plot_residual_matrix(
     node_to_pop['nodes'] = obs_perm_ids
     node_to_pop['pops'] = [np.unique(sample_data['popId'][query_node_attributes(sp_Graph,"sample_idx")[x]]) for x in obs_perm_ids]
 
-    # read in csv file with sample and pop labels
-    samp2pops = pd.read_csv(pop_labs_file, header=0)
-    ## for testing, use sample_data
-    # just plot it...
+    tril_idx = np.tril_indices(sp_Graph.n_observed_nodes, k=-1)
+    sp_graph.fit(lamb=lamb_cv)
+    obj = Objective(sp_Graph)
+    fit_cov, _, emp_cov = comp_mats(obj)
+    fit_dist = cov_to_dist(fit_cov)[tril_idx]
+    emp_dist = cov_to_dist(emp_cov)[tril_idx]
+
+    X = sm.add_constant(fit_dist)
+    mod = sm.OLS(emp_dist, X)
+    res = mod.fit()
+    
+    resnode = np.zeros((sp_Graph.n_observed_nodes,sp_Graph.n_observed_nodes))
+    resnode[np.tril_indices_from(resmat, k=-1)] = np.abs(res.resid)
+    mask = np.zeros_like(resnode)
+    mask[np.triu_indices_from(mask)] = True
+    with sns.axes_style("white"):
+        fig = plt.figure(dpi=200)
+        # try clustermap(col_cluster=False)
+        ax = sns.heatmap(resnode, mask=mask, square=True,  cmap=sns.color_palette("crest", as_cmap=True), xticklabels=node_to_pop['pops'])
+        plt.show()
+
     return(None)
