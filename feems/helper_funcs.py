@@ -241,7 +241,7 @@ def plot_residual_matrix(
     mask = np.zeros_like(resnode)
     mask[np.triu_indices_from(mask)] = True
     with sns.axes_style("white"):
-        fig = plt.figure(dpi=200)
+        fig = plt.figure(dpi=100)
         # try clustermap(col_cluster=False)
         ax = sns.heatmap(resnode, mask=mask, square=True,  cmap=sns.color_palette("crest", as_cmap=True), xticklabels=node_to_pop['pops'])
         plt.show()
