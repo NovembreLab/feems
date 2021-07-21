@@ -12,7 +12,8 @@ from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 
 
 class SpatialGraph(nx.Graph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, 
+                long_range_edges=None):
         """Represents the spatial network which the data is defined on and
         stores relevant matrices / performs linear algebra routines needed for
         the model and optimization. Inherits from the networkx Graph object.
@@ -24,6 +25,7 @@ class SpatialGraph(nx.Graph):
             edges (:obj:`numpy.ndarray`): edge array
             scale_snps (:obj:`Bool`): boolean to scale SNPs by SNP specific
                 Binomial variance estimates
+            long_range_edges (:obj:`list`): list of 2-tuples with pairs of nodes
         """
         # check inputs
         assert len(genotypes.shape) == 2
@@ -33,6 +35,7 @@ class SpatialGraph(nx.Graph):
         assert (
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
+        assert type(longe_range_edges) == list, "long_range_edges should be a list of 2-tuples e.g., [(1,10),(4,24)]"
 
         # inherits from networkx Graph object
         super(SpatialGraph, self).__init__()

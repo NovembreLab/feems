@@ -8,6 +8,8 @@ import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from scipy.stats.distributions import chi2
+import itertools as it
+import pandas as pd
 
 from .cross_validation import comp_mats, run_cv
 from .objective import Objective
@@ -111,7 +113,7 @@ class FeemsMix:
                 lamb_cv_lr = float(lamb_grid[np.argmin(np.mean(cv_err, axis=0))])
 
                 # this is where the search functions will go - graph already created, has one max_res_node
-                best_fit_nodes = _search_hull(n, max_res_nodes, lamb_cv_lr)
+                best_fit_nodes = self._search_hull(n, max_res_nodes, lamb_cv_lr)
                 
                 # create a vector of nll fits for best long range edge
                 self.nll.append(best_fit_nodes.loc[1,'nll'])
@@ -147,7 +149,7 @@ class FeemsMix:
         # print nodes connected by THE edge to give lowest negative log likelihood
         return(df.loc[df['nll'].astype(float).idxmin(),'nodes'])
 
-    def _search_hull(n, max_res_nodes):
+    def _search_hull(self, n, max_res_nodes, lamb_cv):
         # TODO: put a progress bar
         spl = dict(nx.all_pairs_shortest_path_length(self.graph[n],cutoff=4))
 
@@ -169,15 +171,15 @@ class FeemsMix:
         obj._solve_lap_sys()
         obj._comp_mat_block_inv()
         obj._comp_inv_cov()
-        df_hull.iloc[len(df_hull), 1] = obj.neg_log_lik()
+        df_hull.iloc[len(df_hull)-1, 1] = obj.neg_log_lik()
         for idx in np.arange(0,len(df_hull)-1)[::-1]:
-            df_hull.iloc[idx, 1] = add_edge_get_nll(n, df_hull.iloc[idx+1, 0], df_hull.iloc[idx, 0], lamb_cv_lr)
+            df_hull.iloc[idx, 1] = self._add_edge_get_nll(n, df_hull.iloc[idx+1, 0], df_hull.iloc[idx, 0], lamb_cv)
             
         # print nodes connected by THE edge to give lowest negative log likelihood
         return(df_hull.loc[(0,df_hull['nll'].astype(float).idxmin()),:])
     
     # function to add an edge and return the negative log-likelihood value
-    def _add_edge_get_nll(n, mrn, new_mrn, lamb):
+    def _add_edge_get_nll(self, n, mrn, new_mrn, lamb):
         self.graph[n].remove_edge(*mrn)
         self.graph[n].add_edge(*new_mrn)
         
