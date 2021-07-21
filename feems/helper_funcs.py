@@ -95,9 +95,9 @@ def comp_genetic_vs_fitted_distance(
         # argmin of cv error
         lamb = float(lamb_grid[np.argmin(mean_cv_err)])
 
-    sp_Graph_def.fit(lamb=lamb,
-                    lb=math.log(1e-6), 
-                    ub=math.log(1e+6))
+    # sp_Graph_def.fit(lamb=lamb,
+    #                 lb=math.log(1e-6), 
+    #                 ub=math.log(1e+6))
     sp_Graph_def.comp_graph_laplacian(sp_Graph_def.w)
 
     obj = Objective(sp_Graph_def)
@@ -187,9 +187,6 @@ def plot_estimated_vs_simulated_edges(
     res = mod.fit()
     muhat, betahat = res.params
 
-    # getting index of long range edges
-    lre_idx = [list(graph.edges).index(val) for val in lrn]
-
     fig = plt.figure(dpi=100)
     ax = fig.add_subplot()
     ax.scatter(sim_edges, w_plot[range(len(sim_edges))], 
@@ -226,7 +223,7 @@ def plot_residual_matrix(
     node_to_pop['pops'] = [np.unique(sample_data['popId'][query_node_attributes(sp_Graph,"sample_idx")[x]]) for x in obs_perm_ids]
 
     tril_idx = np.tril_indices(sp_Graph.n_observed_nodes, k=-1)
-    sp_graph.fit(lamb=lamb_cv)
+    #sp_graph.fit(lamb=lamb_cv)
     obj = Objective(sp_Graph)
     fit_cov, _, emp_cov = comp_mats(obj)
     fit_dist = cov_to_dist(fit_cov)[tril_idx]

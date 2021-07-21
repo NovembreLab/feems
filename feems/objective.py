@@ -141,7 +141,10 @@ class Objective(object):
             1 - np.exp(-alpha * self.sp_graph.w)
         )  # avoid overflow in exp
         self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
-        self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w)))
+        self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w)))  
+        self.grad_pen[self.sp_graph.lre_idx] = np.ones(np.sum(self.sp_graph.lre_idx))
+        # 2.0 * self.graph.w[lre_idx] if Frobenius/L-2 norm
+        # np.sum(lre_idx) if L-1 norm
 
     def inv(self):
         """Computes relevant inverses for gradient computations"""
@@ -182,12 +185,17 @@ class Objective(object):
         alpha = self.alpha
 
         lik = self.neg_log_lik()
-        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w)
-        term_1 = alpha * self.sp_graph.w + np.log(term_0)
-        pen = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
+
+        # index edges that are NOT in lre
+        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
+        term_1 = alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
+        pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
+
+        # lasso penalty for lre, index edges in lre
+        pen2 = np.sum(self.sp_graph.w[self.sp_graph.lre_idx])
 
         # loss
-        loss = lik + pen
+        loss = lik + pen1 + pen2
         return loss
 
 

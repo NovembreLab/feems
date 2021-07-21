@@ -13,7 +13,7 @@ from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 
 class SpatialGraph(nx.Graph):
     def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, 
-                long_range_edges=None):
+                long_range_edges=[(0,0)]):
         """Represents the spatial network which the data is defined on and
         stores relevant matrices / performs linear algebra routines needed for
         the model and optimization. Inherits from the networkx Graph object.
@@ -26,6 +26,7 @@ class SpatialGraph(nx.Graph):
             scale_snps (:obj:`Bool`): boolean to scale SNPs by SNP specific
                 Binomial variance estimates
             long_range_edges (:obj:`list`): list of 2-tuples with pairs of nodes
+                Default is a self pointer to the first node
         """
         # check inputs
         assert len(genotypes.shape) == 2
@@ -35,16 +36,21 @@ class SpatialGraph(nx.Graph):
         assert (
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
-        assert type(longe_range_edges) == list, "long_range_edges should be a list of 2-tuples e.g., [(1,10),(4,24)]"
+        assert type(long_range_edges) == list or long_range_edges is None, "long_range_edges should be a list of 2-tuples"
 
-        # inherits from networkx Graph object
-        super(SpatialGraph, self).__init__()
+        # inherits from networkx Graph object -- changed this to new signature for python3
+        super().__init__()
         self._init_graph(node_pos, edges)  # init graph
 
         # inputs
         self.sample_pos = sample_pos
         self.node_pos = node_pos
         self.scale_snps = scale_snps
+
+        # creating a container to store these edges 
+        self.lre = long_range_edges
+        # mask for indices of edges in lre
+        self.lre_idx = np.array([val in self.lre for val in list(self.edges)])
 
         # signed incidence_matrix
         self.Delta_q = nx.incidence_matrix(self, oriented=True).T.tocsc()
