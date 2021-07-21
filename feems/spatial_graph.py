@@ -12,8 +12,7 @@ from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 
 
 class SpatialGraph(nx.Graph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, 
-                long_range_edges=None):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True):
         """Represents the spatial network which the data is defined on and
         stores relevant matrices / performs linear algebra routines needed for
         the model and optimization. Inherits from the networkx Graph object.
