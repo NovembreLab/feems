@@ -16,6 +16,7 @@ class Objective(object):
         # reg params
         self.lamb = None
         self.alpha = None
+        self.beta = None
 
     def _rank_one_solver(self, B):
         """Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank
@@ -131,6 +132,7 @@ class Objective(object):
         """Computes gradient"""
         lamb = self.lamb
         alpha = self.alpha
+        beta = self.beta
 
         # avoid overflow in exp
         # term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
@@ -142,9 +144,9 @@ class Objective(object):
         )  # avoid overflow in exp
         self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
         self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w)))  
-        self.grad_pen[self.sp_graph.lre_idx] = np.ones(np.sum(self.sp_graph.lre_idx))
+        self.grad_pen[self.sp_graph.lre_idx] = beta * np.ones(np.sum(self.sp_graph.lre_idx))  
         # 2.0 * self.graph.w[lre_idx] if Frobenius/L-2 norm
-        # np.sum(lre_idx) if L-1 norm
+        # np.ones(np.sum(lre_idx)) if L-1 norm
 
     def inv(self):
         """Computes relevant inverses for gradient computations"""
@@ -183,16 +185,17 @@ class Objective(object):
         """Evaluate the loss function given the current params"""
         lamb = self.lamb
         alpha = self.alpha
+        beta = self.beta
 
         lik = self.neg_log_lik()
 
         # index edges that are NOT in lre
-        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
+        term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
         term_1 = alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
         pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
 
         # lasso penalty for lre, index edges in lre
-        pen2 = np.sum(self.sp_graph.w[self.sp_graph.lre_idx])
+        pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx])
 
         # loss
         loss = lik + pen1 + pen2

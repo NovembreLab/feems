@@ -343,6 +343,7 @@ class SpatialGraph(nx.Graph):
         w_init=None,
         s2_init=None,
         alpha=None,
+        beta=None,
         factr=1e7,
         maxls=50,
         m=10,
@@ -359,6 +360,7 @@ class SpatialGraph(nx.Graph):
             w_init (:obj:`numpy.ndarray`): initial value for the edge weights
             s2_init (:obj:`int`): initial value for s2
             alpha (:obj:`float`): penalty strength on log weights
+            beta (:obj:`float`): penalty strength for long range weights
             factr (:obj:`float`): tolerance for convergence
             maxls (:obj:`int`): maximum number of line search steps
             m (:obj:`int`): the maximum number of variable metric corrections
@@ -370,6 +372,7 @@ class SpatialGraph(nx.Graph):
         # check inputs
         assert lamb >= 0.0, "lambda must be non-negative"
         assert type(lamb) == float, "lambda must be float"
+        assert type(beta) == float, "beta must be float"
         assert type(factr) == float, "factr must be float"
         assert maxls > 0, "maxls must be at least 1"
         assert type(maxls) == int, "maxls must be int"
@@ -405,6 +408,7 @@ class SpatialGraph(nx.Graph):
         obj = Objective(self)
         obj.lamb = lamb
         obj.alpha = alpha
+        obj.beta = beta
         
         x0 = np.log(w_init)
         res = fmin_l_bfgs_b(
@@ -427,11 +431,12 @@ class SpatialGraph(nx.Graph):
         if verbose:
             sys.stdout.write(
                 (
-                    "lambda={:.7f}, "
-                    "alpha={:.7f}, "
+                    "lambda={:.5f}, "
+                    "alpha={:.5f}, "
+                    "beta={:.5f}, "
                     "converged in {} iterations, "
-                    "train_loss={:.7f}\n"
-                ).format(lamb, alpha, res[2]["nit"], self.train_loss)
+                    "train_loss={:.5f}\n"
+                ).format(lamb, alpha, beta, res[2]["nit"], self.train_loss)
             )
 
 
