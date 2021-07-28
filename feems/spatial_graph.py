@@ -34,10 +34,9 @@ class SpatialGraph(nx.Graph):
         assert (
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
-        assert type(longe_range_edges) == list, "long_range_edges should be a list of 2-tuples e.g., [(1,10),(4,24)]"
 
         # inherits from networkx Graph object
-        super(SpatialGraph, self).__init__()
+        super().__init__()
         self._init_graph(node_pos, edges)  # init graph
 
         # inputs

@@ -132,9 +132,9 @@ def comp_genetic_vs_fitted_distance(
         # extract indices with most negative residuals
         max_idx = np.argpartition(res.resid, -n_lre)
         # no need to reorder here, since we are looking for highest negative residuals
+        # TODO: include a scaling here to downweight residuals from small pops (sqrt(n1*n2)?)
+        # TODO: find a way to exclude edges already in the graph (super unlikely in empirical analyses tho...)
         max_idx = max_idx[np.argsort(res.resid[max_idx])]
-        # can also choose outliers based on z-score
-        #max_idx = np.where(np.abs((res.resid-np.mean(res.resid))/np.std(res.resid))>3)[0]
         # getting the labels for pairs of nodes from the array index
         max_res_node = []
         for k in max_idx:
