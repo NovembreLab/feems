@@ -13,3 +13,8 @@ click==7.1.2
 setuptools==49.1.0
 pandas-plink==2.0.4
 msprime==1.0.0
+statsmodels==0.12.2
+PyYAML==5.4.1
+xlrd==2.0.1
+statsmodels==0.12.2
+openpyxl==3.0.7
