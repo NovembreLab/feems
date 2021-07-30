@@ -889,7 +889,7 @@ Text(0, 0.5, &#39;genetic distance&#39;)
 <h2>Inspect the observed vs fitted covariances on sampled demes<a class="headerlink" href="#Inspect-the-observed-vs-fitted-covariances-on-sampled-demes" title="Permalink to this headline">¶</a></h2>
 <p>It’s helpful to see what pairs of demes may not be fit by the model well. Let’s look at the fitted and observed demic covariance matrices and plot pairs of demes with the largest residuals. We use the variable <span class="math notranslate nohighlight">\(K\)</span> belowo to affect how many pairs we will look at.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[225]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[227]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -971,7 +971,7 @@ Text(0, 0.5, &#39;genetic distance&#39;)
         <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{:.1f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res_mat</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]])),</span>
         <span class="n">horizontalalignment</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
         <span class="n">verticalalignment</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
-        <span class="n">size</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">obs_node_textsize</span><span class="o">*</span><span class="mf">0.</span>
+        <span class="n">size</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">obs_node_textsize</span><span class="o">*</span><span class="mf">0.7</span>
     <span class="p">)</span>
 
 
