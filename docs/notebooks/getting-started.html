@@ -1,197 +1,75 @@
 
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
-<head>
-  <meta charset="utf-8">
-  
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <title>Getting Started with feems &mdash; feems  documentation</title>
-  
 
-  
-  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-  <link rel="stylesheet" href="../_static/style.css" type="text/css" />
-
-  
-  
-  
-  
-
-  
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-    
-      <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
-        <script src="../_static/language_data.js"></script>
-        <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-        <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
-        <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
-    
-    <script type="text/javascript" src="../_static/js/theme.js"></script>
-
-    
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Getting Started with feems &#8212; feems  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <link rel="stylesheet" href="../_static/style.css" type="text/css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "document", "processHtmlClass": "math|output_area"}}</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Public API: feems package" href="../feems.html" />
-    <link rel="prev" title="Citing feems" href="../cite.html" /> 
-</head>
-
-<body class="wy-body-for-nav">
-
+    <link rel="prev" title="Citing feems" href="../cite.html" />
    
-  <div class="wy-grid-for-nav">
-    
-    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
-      <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
-          
-
-          
-            <a href="../index.html">
-          
-
-          
-            
-            <img src="../_static/logo.png" class="logo" alt="Logo"/>
-          
-          </a>
-
-          
-            
-            
-          
-
-          
-<div role="search">
-  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
-    <input type="hidden" name="check_keywords" value="yes" />
-    <input type="hidden" name="area" value="default" />
-  </form>
-</div>
-
-          
-        </div>
-
-        
-        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
-          
-            
-            
-              
-            
-            
-              <p class="caption"><span class="caption-text">User Guide</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../cite.html">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
-</ul>
-<p class="caption"><span class="caption-text">Notebooks</span></p>
-<ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#Imports">Imports</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Data">Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Setup-the-SpatialGraph-object">Setup the <code class="docutils literal notranslate"><span class="pre">SpatialGraph</span></code> object</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#Fit-feems">Fit <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
-</ul>
-</li>
-</ul>
-<p class="caption"><span class="caption-text">API Documentation</span></p>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a></li>
-</ul>
-
-            
-          
-        </div>
-        
-      </div>
-    </nav>
-
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
-
-      
-      <nav class="wy-nav-top" aria-label="top navigation">
-        
-          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
-          <a href="../index.html">feems</a>
-        
-      </nav>
-
-
-      <div class="wy-nav-content">
-        
-        <div class="rst-content">
-        
-          
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div role="navigation" aria-label="breadcrumbs navigation">
-
-  <ul class="wy-breadcrumbs">
-    
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-        
-      <li>Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></li>
-    
-    
-      <li class="wy-breadcrumbs-aside">
-        
-            
-            <a href="../_sources/notebooks/getting-started.ipynb.txt" rel="nofollow"> View page source</a>
-          
-        
-      </li>
-    
-  </ul>
-
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
-  <hr/>
-</div>
-          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
-           <div itemprop="articleBody">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
             
   
 <style>
 /* CSS for nbsphinx extension */
 
 /* remove conflicting styling from Sphinx themes */
-div.nbinput.container,
-div.nbinput.container div.prompt,
-div.nbinput.container div.input_area,
-div.nbinput.container div[class*=highlight],
-div.nbinput.container div[class*=highlight] pre,
-div.nboutput.container,
-div.nboutput.container div.prompt,
-div.nboutput.container div.output_area,
-div.nboutput.container div[class*=highlight],
-div.nboutput.container div[class*=highlight] pre {
-    background: none;
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
     border: none;
-    padding: 0 0;
+    padding: 0;
     margin: 0;
     box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
 }
 
 /* avoid gaps between output lines */
@@ -292,7 +170,7 @@ div.nboutput.container div.output_area {
 div.nbinput.container div.input_area {
     border: 1px solid #e0e0e0;
     border-radius: 2px;
-    background: #f5f5f5;
+    /*background: #f5f5f5;*/
 }
 
 /* override MathJax center alignment in output cells */
@@ -358,6 +236,7 @@ div.nboutput.container div.output_area.rendered_html,
 div.nboutput.container div.output_area > div.output_javascript,
 div.nboutput.container div.output_area:not(.rendered_html) > img{
     padding: 5px;
+    margin: 0;
 }
 
 /* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
@@ -404,28 +283,6 @@ div.rendered_html tbody tr:nth-child(odd) {
 div.rendered_html tbody tr:hover {
   background: rgba(66, 165, 245, 0.2);
 }
-
-/* CSS overrides for sphinx_rtd_theme */
-
-/* 24px margin */
-.nbinput.nblast.container,
-.nboutput.nblast.container {
-    margin-bottom: 19px;  /* padding has already 5px */
-}
-
-/* ... except between code cells! */
-.nblast.container + .nbinput.container {
-    margin-top: -19px;
-}
-
-.admonition > p:before {
-    margin-right: 4px;  /* make room for the exclamation icon */
-}
-
-/* Fix math alignment, see https://github.com/rtfd/sphinx_rtd_theme/pull/686 */
-.math {
-    text-align: unset;
-}
 </style>
 <div class="section" id="Getting-Started-with-feems">
 <h1>Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code><a class="headerlink" href="#Getting-Started-with-feems" title="Permalink to this headline">¶</a></h1>
@@ -441,16 +298,16 @@ div.rendered_html tbody tr:hover {
 <span></span><span class="c1"># base</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">pkg_resources</span>
-<span class="kn">from</span> <span class="nn">sklearn.impute</span> <span class="kn">import</span> <span class="n">SimpleImputer</span>
-<span class="kn">from</span> <span class="nn">pandas_plink</span> <span class="kn">import</span> <span class="n">read_plink</span>
+<span class="kn">from</span> <span class="nn">sklearn.impute</span> <span class="k">import</span> <span class="n">SimpleImputer</span>
+<span class="kn">from</span> <span class="nn">pandas_plink</span> <span class="k">import</span> <span class="n">read_plink</span>
 
 <span class="c1"># viz</span>
 <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 <span class="kn">import</span> <span class="nn">cartopy.crs</span> <span class="k">as</span> <span class="nn">ccrs</span>
 
 <span class="c1"># feems</span>
-<span class="kn">from</span> <span class="nn">feems.utils</span> <span class="kn">import</span> <span class="n">prepare_graph_inputs</span>
-<span class="kn">from</span> <span class="nn">feems</span> <span class="kn">import</span> <span class="n">SpatialGraph</span><span class="p">,</span> <span class="n">Viz</span>
+<span class="kn">from</span> <span class="nn">feems.utils</span> <span class="k">import</span> <span class="n">prepare_graph_inputs</span>
+<span class="kn">from</span> <span class="nn">feems</span> <span class="k">import</span> <span class="n">SpatialGraph</span><span class="p">,</span> <span class="n">Viz</span>
 
 <span class="c1"># change matplotlib fonts</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
@@ -491,15 +348,23 @@ div.rendered_html tbody tr:hover {
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-Mapping files: 100%|██████████| 3/3 [00:00&lt;00:00, 35.04it/s]
+Mapping files: 100%|█████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:00&lt;00:00, 45.28it/s]
 </pre></div></div>
 </div>
-<div class="nboutput nblast docutils container">
+<div class="nboutput docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 n_samples=111, n_snps=17729
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+
 </pre></div></div>
 </div>
 <p>As we can see we have 111 samples and 17,729 SNPs. For preparing the graph inputs to run <code class="docutils literal notranslate"><span class="pre">feems</span></code> you have two options:</p>
@@ -533,8 +398,8 @@ n_samples=111, n_snps=17729
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-CPU times: user 6.48 s, sys: 128 ms, total: 6.61 s
-Wall time: 6.83 s
+CPU times: user 5.3 s, sys: 85.5 ms, total: 5.39 s
+Wall time: 5.43 s
 </pre></div></div>
 </div>
 <p>Lets take a peek at each of these inputs:</p>
@@ -614,7 +479,7 @@ array([[-166.637,   59.732],
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="o">%%time</span>
-<span class="n">sp_graph</span> <span class="o">=</span> <span class="n">SpatialGraph</span><span class="p">(</span><span class="n">genotypes</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">edges</span><span class="p">)</span>
+<span class="n">sp_graph</span> <span class="o">=</span> <span class="n">SpatialGraph</span><span class="p">(</span><span class="n">genotypes</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">scale_snps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -623,8 +488,8 @@ array([[-166.637,   59.732],
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-CPU times: user 2min 43s, sys: 5.38 s, total: 2min 49s
-Wall time: 2min 55s
+CPU times: user 1min 56s, sys: 3.67 s, total: 1min 59s
+Wall time: 2min
 </pre></div></div>
 </div>
 <p>This might take a few minutes to construct at first b/c it initializing a number of graph matrices that are slow to build. First, before any fitting we’ll visualize the graph and samples. Lets setup the projection we’ll be using for this dataset:</p>
@@ -667,14 +532,14 @@ Wall time: 2min 55s
 </div>
 <div class="section" id="Fit-feems">
 <h2>Fit <code class="docutils literal notranslate"><span class="pre">feems</span></code><a class="headerlink" href="#Fit-feems" title="Permalink to this headline">¶</a></h2>
-<p>First we fit the null model with a single edge-weight parameter <span class="math notranslate nohighlight">\(w_0\)</span> and residual variance parameter <span class="math notranslate nohighlight">\(s^2\)</span>:</p>
+<p>Next we fit a the <code class="docutils literal notranslate"><span class="pre">feems</span></code> model where we allow a weight to be estimated for every edge, which is encoded in a large adjacency matrix <span class="math notranslate nohighlight">\(\mathbf{W}\)</span>, while encouraging nearby edges to be smooth. We initialize at the fit from the null model and fix the estimate of the residual variance for the more complex optimization:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="o">%%time</span>
-<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit_null_model</span><span class="p">()</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">lamb</span> <span class="o">=</span> <span class="mf">20.0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -683,22 +548,28 @@ Wall time: 2min 55s
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-constant-w/variance fit, converged in 144 iterations, train_loss=-20603.5130079
-CPU times: user 1.91 s, sys: 156 ms, total: 2.07 s
-Wall time: 1.3 s
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+lambda=20.0000000, alpha=0.8354260, converged in 63 iterations, train_loss=2783594.6685242
+CPU times: user 6.02 s, sys: 995 ms, total: 7.01 s
+Wall time: 1.82 s
 </pre></div></div>
 </div>
-<p>Next we fit a more flexible model where we allow a weight to be estimated for every edge, which is encoded in a large adjacency matrix <span class="math notranslate nohighlight">\(\mathbf{W}\)</span>, while enforcing nearby edges to be smooth. We initialize at the fit from the null model and fix the estimate of the residual variance for the more complex optimization:</p>
+<p>Now we can visualize the weighted graph:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="o">%%time</span>
-<span class="n">lamb_l2</span> <span class="o">=</span> <span class="mf">0.0</span>
-<span class="n">lamb</span> <span class="o">=</span> <span class="o">.</span><span class="mi">01</span>
-<span class="n">alpha</span> <span class="o">=</span> <span class="mi">50</span>
-<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit_quasi_newton</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w0</span><span class="p">,</span> <span class="n">lamb_l2</span><span class="p">,</span> <span class="n">lamb</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">Viz</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span> <span class="n">edge_width</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">edge_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">edge_zorder</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sample_pt_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">obs_node_size</span><span class="o">=</span><span class="mf">7.5</span><span class="p">,</span> <span class="n">sample_pt_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">cbar_font_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_map</span><span class="p">()</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edges</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_obs_nodes</span><span class="p">(</span><span class="n">use_ids</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edge_colorbar</span><span class="p">()</span>
 </pre></div>
 </div>
 </div>
@@ -706,48 +577,17 @@ Wall time: 1.3 s
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<div class="highlight"><pre>
-lambda_l2=0.0000000, lambda=0.0100000, alpha=50.0000000, converged in 66 iterations, train_loss=-35395.6437752
-CPU times: user 2.49 s, sys: 208 ms, total: 2.7 s
-Wall time: 1.48 s
-</pre></div></div>
+<img alt="../_images/notebooks_getting-started_27_0.png" src="../_images/notebooks_getting-started_27_0.png" />
 </div>
-<p>Now we can visualize the weighted graph:</p>
+</div>
+<p>Lets now try a different regularization setting that isn’t as smooth:</p>
 <div class="nbinput docutils container">
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
-<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">)</span>
-<span class="n">v</span> <span class="o">=</span> <span class="n">Viz</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span> <span class="n">edge_width</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span>
-        <span class="n">edge_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">edge_zorder</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sample_pt_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
-        <span class="n">obs_node_size</span><span class="o">=</span><span class="mf">7.5</span><span class="p">,</span> <span class="n">sample_pt_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
-        <span class="n">cbar_font_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
-<span class="n">v</span><span class="o">.</span><span class="n">draw_map</span><span class="p">()</span>
-<span class="n">v</span><span class="o">.</span><span class="n">draw_edges</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">v</span><span class="o">.</span><span class="n">draw_obs_nodes</span><span class="p">(</span><span class="n">use_ids</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-<span class="n">v</span><span class="o">.</span><span class="n">draw_edge_colorbar</span><span class="p">()</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt empty docutils container">
-</div>
-<div class="output_area docutils container">
-<img alt="../_images/notebooks_getting-started_29_0.png" src="../_images/notebooks_getting-started_29_0.png" />
-</div>
-</div>
-<p>Lets now try a different regularization setting that isn’t as smooth:</p>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="o">%%time</span>
-<span class="n">lamb</span> <span class="o">=</span> <span class="o">.</span><span class="mi">001</span>
-<span class="n">alpha</span> <span class="o">=</span> <span class="mi">50</span>
-<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit_quasi_newton</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w0</span><span class="p">,</span> <span class="n">lamb_l2</span><span class="p">,</span> <span class="n">lamb</span><span class="p">,</span> <span class="n">alpha</span><span class="p">)</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">lamb</span> <span class="o">=</span> <span class="mf">2.0</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
@@ -756,14 +596,15 @@ Wall time: 1.48 s
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-lambda_l2=0.0000000, lambda=0.0010000, alpha=50.0000000, converged in 87 iterations, train_loss=-53973.4689275
-CPU times: user 3.37 s, sys: 276 ms, total: 3.64 s
-Wall time: 1.97 s
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+lambda=2.0000000, alpha=0.8354260, converged in 86 iterations, train_loss=2767069.6406216
+CPU times: user 7.76 s, sys: 1.32 s, total: 9.07 s
+Wall time: 2.38 s
 </pre></div></div>
 </div>
 <p>Make the viz:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -784,7 +625,7 @@ Wall time: 1.97 s
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../_images/notebooks_getting-started_33_0.png" src="../_images/notebooks_getting-started_33_0.png" />
+<img alt="../_images/notebooks_getting-started_31_0.png" src="../_images/notebooks_getting-started_31_0.png" />
 </div>
 </div>
 <p>Great … now we see our first <code class="docutils literal notranslate"><span class="pre">feems</span></code> plot! We essentially provided these results interactively! For more interpretation of these figures and method please see our pre-print :)</p>
@@ -792,59 +633,84 @@ Wall time: 1.97 s
 </div>
 
 
-           </div>
-           
           </div>
-          <footer>
-  
-    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
-      
-        <a href="../feems.html" class="btn btn-neutral float-right" title="Public API: feems package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
-      
-      
-        <a href="../cite.html" class="btn btn-neutral float-left" title="Citing feems" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
-      
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">feems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cite.html">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebooks</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="../cite.html" title="previous chapter">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+      <li>Next: <a href="../feems.html" title="next chapter">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
     </div>
-  
+</div>
+<script>$('#searchbox').show(0);</script>
 
-  <hr/>
 
-  <div role="contentinfo">
-    <p>
-        
-        &copy; Copyright 2020, Joseph Marcus, Wooseok Ha, Rina Foygel Barber and John Novembre
 
-    </p>
-  </div>
-    
-    
-    
-    Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a
-    
-    <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a>
-    
-    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
 
-</footer>
+
+
+
 
         </div>
       </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Joseph Marcus, Wooseok Ha, Rina Foygel Barber and John Novembre.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/notebooks/getting-started.ipynb.txt"
+          rel="nofollow">Page source</a>
+    </div>
 
-    </section>
-
-  </div>
-  
-
-  <script type="text/javascript">
-      jQuery(function () {
-          SphinxRtdTheme.Navigation.enable(true);
-      });
-  </script>
-
-  
-  
     
-   
 
-</body>
+    
+  </body>
 </html>

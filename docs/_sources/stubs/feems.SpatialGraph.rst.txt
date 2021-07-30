@@ -26,8 +26,8 @@ feems.SpatialGraph
       ~SpatialGraph.comp_precision
       ~SpatialGraph.copy
       ~SpatialGraph.edge_subgraph
+      ~SpatialGraph.fit
       ~SpatialGraph.fit_null_model
-      ~SpatialGraph.fit_quasi_newton
       ~SpatialGraph.get_edge_data
       ~SpatialGraph.has_edge
       ~SpatialGraph.has_node
