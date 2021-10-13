@@ -129,11 +129,11 @@ def comp_genetic_vs_fitted_distance(
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
 
+        # TODO: include a scaling here to downweight residuals from small pops - sqrt(n1*n2)?
+        # TODO: find a way to exclude edges already in the graph (super unlikely in empirical analyses tho...)
         # extract indices with most negative residuals
         max_idx = np.argpartition(res.resid, -n_lre)
         # no need to reorder here, since we are looking for highest negative residuals
-        # TODO: include a scaling here to downweight residuals from small pops (sqrt(n1*n2)?)
-        # TODO: find a way to exclude edges already in the graph (super unlikely in empirical analyses tho...)
         max_idx = max_idx[np.argsort(res.resid[max_idx])]
         # getting the labels for pairs of nodes from the array index
         max_res_node = []
@@ -145,9 +145,9 @@ def comp_genetic_vs_fitted_distance(
         return(max_res_node)
     else:
         # extract indices with maximum absolute residuals
-        max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]
+        max_idx = np.argpartition(res.resid, -n_lre)
         # np.argpartition does not return indices in order of max to min, so another round of ordering
-        max_idx = max_idx[np.argsort(np.abs(res.resid)[max_idx])][::-1]
+        max_idx = max_idx[np.argsort(res.resid[max_idx])]
         # can also choose outliers based on z-score
         #max_idx = np.where(np.abs((res.resid-np.mean(res.resid))/np.std(res.resid))>3)[0]
         # getting the labels for pairs of nodes from the array index
@@ -215,9 +215,9 @@ def plot_residual_matrix(
     # TODO: finalize way to map samples to pops and pops to nodes
 
     # reading in file with sample and pop labels
-    pop_labs_file = pd.read_csv()
+    #pop_labs_file = pd.read_csv()
 
-    permuted_idx = query_node_attributes(sp_graph, "permuted_idx")
+    permuted_idx = query_node_attributes(sp_Graph, "permuted_idx")
     obs_perm_ids = permuted_idx[: sp_Graph.n_observed_nodes]
 
     # code for mapping nodes back to populations (since multiple pops can be assigned to the same nodes)
@@ -226,7 +226,7 @@ def plot_residual_matrix(
     node_to_pop['pops'] = [np.unique(sample_data['popId'][query_node_attributes(sp_Graph,"sample_idx")[x]]) for x in obs_perm_ids]
 
     tril_idx = np.tril_indices(sp_Graph.n_observed_nodes, k=-1)
-    sp_graph.fit(lamb=lamb_cv)
+    sp_Graph.fit(lamb=lamb_cv)
     obj = Objective(sp_Graph)
     fit_cov, _, emp_cov = comp_mats(obj)
     fit_dist = cov_to_dist(fit_cov)[tril_idx]
