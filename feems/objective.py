@@ -18,6 +18,8 @@ class Objective(object):
         self.alpha = None
         self.beta = None
 
+        self.pen1 = 0.0
+
     def _rank_one_solver(self, B):
         """Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank
         ones update equation
@@ -190,12 +192,17 @@ class Objective(object):
         lik = self.neg_log_lik()
 
         # index edges that are NOT in lre
-        term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
-        term_1 = alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
-        pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
+        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
+        term_1 = self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
+        pen1 = 0.5 * self.lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
+
+        #self.pen1 = pen1
 
         # lasso penalty for lre, index edges in lre
         pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx])
+        ## relative scaling: by the inverse of the graph Laplacian?
+        # larger the absolute value (lower the inverse), the lower the scaling coefficient - prompts a lower beta?
+        #pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx]/np.abs([self.sp_graph.L[i] for i in self.sp_graph.lre]))
 
         # loss
         loss = lik + pen1 + pen2

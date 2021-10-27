@@ -145,9 +145,10 @@ def comp_genetic_vs_fitted_distance(
         return(max_res_node)
     else:
         # extract indices with maximum absolute residuals
-        max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]
+        # max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]
+        max_idx = np.argpartition(res.resid, n_lre)[:n_lre]
         # np.argpartition does not return indices in order of max to min, so another round of ordering
-        max_idx = max_idx[np.argsort(np.abs(res.resid)[max_idx])][::-1]
+        max_idx = max_idx[np.argsort(res.resid[max_idx])]
         # can also choose outliers based on z-score
         #max_idx = np.where(np.abs((res.resid-np.mean(res.resid))/np.std(res.resid))>3)[0]
         # getting the labels for pairs of nodes from the array index

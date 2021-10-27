@@ -343,7 +343,7 @@ class SpatialGraph(nx.Graph):
         w_init=None,
         s2_init=None,
         alpha=None,
-        beta=None,
+        beta=0.0, 
         factr=1e7,
         maxls=50,
         m=10,
@@ -372,7 +372,7 @@ class SpatialGraph(nx.Graph):
         # check inputs
         assert lamb >= 0.0, "lambda must be non-negative"
         assert type(lamb) == float, "lambda must be float"
-        assert type(beta) == float, "beta must be float"
+        assert beta >= 0.0, "beta must be non-negative"
         assert type(factr) == float, "factr must be float"
         assert maxls > 0, "maxls must be at least 1"
         assert type(maxls) == int, "maxls must be int"
