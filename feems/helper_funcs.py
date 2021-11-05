@@ -161,11 +161,13 @@ def comp_genetic_vs_fitted_distance(
         return(max_res_node)
 
 def plot_estimated_vs_simulated_edges(
-    graph,
+    # graph,
     sp_Graph,
+    w_true, 
     lrn=None,
-    max_res_nodes=None, 
-    lamb=1.0
+    # max_res_nodes=None, 
+    lamb=1.0, 
+    beta=0.0
 ):
     """Function to plot estimated vs simulated edge weights to look for significant deviations
     """
@@ -173,33 +175,59 @@ def plot_estimated_vs_simulated_edges(
     assert type(lamb) == float, "lambda must be float"
     # both variables below are long range nodes but lrn is from the simulated and max_res_nodes is from the empirical
     assert type(lrn) == list, "lrn must be a list of int 2-tuples"
-    assert type(max_res_nodes) == list, "max_res_nodes must be a list of int 2-tuples"
+    # assert type(max_res_nodes) == list, "max_res_nodes must be a list of int 2-tuples"
 
     # getting edges from the simulated graph
-    idx = [list(graph.edges).index(val) for val in lrn]
-    sim_edges = np.append(np.array([graph[val[0]][val[1]]["w"] for i, val in enumerate(graph.edges) if i not in idx]), 
-                          np.array([graph[val[0]][val[1]]["w"] for i, val in enumerate(graph.edges) if i in idx]))
+    # idx = [list(graph.edges).index(val) for val in lrn]
+    # sim_edges = np.append(np.array([graph[val[0]][val[1]]["w"] for i, val in enumerate(graph.edges) if i not in idx]), 
+    #                       np.array([graph[val[0]][val[1]]["w"] for i, val in enumerate(graph.edges) if i in idx]))
 
-    idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
-    w_plot = np.append(sp_Graph.w[[i for i in range(len(sp_Graph.w)) if i not in idx]], sp_Graph.w[idx])
+    # idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
+    # w_plot = np.append(sp_Graph.w[[i for i in range(len(sp_Graph.w)) if i not in idx]], sp_Graph.w[idx])
 
-    X = sm.add_constant(sim_edges)
-    mod = sm.OLS(w_plot[range(len(graph.edges))], X)
-    res = mod.fit()
-    muhat, betahat = res.params
+    # sp_Graph.fit(lamb = lamb, beta=beta)
+
+    # X = sm.add_constant(sim_edges)
+    # mod = sm.OLS(w_plot[range(len(graph.edges))], X)
+    # res = mod.fit()
+    # muhat, betahat = res.params
 
     fig = plt.figure(dpi=100)
-    ax = fig.add_subplot()
-    ax.scatter(sim_edges, w_plot[range(len(sim_edges))], 
-            marker=".", alpha=1, zorder=0, color="grey", s=3)
-    ax.scatter(sim_edges[-len(lrn)::], w_plot[-len(lrn)::], 
-            marker=".", alpha=1, zorder=0, color="black", s=10)
-    x_ = np.linspace(np.min(sim_edges), np.max(sim_edges), 20)
-    ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
-    ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
-    ax.text(0.8, 0.15, "$\lambda$={:.3}".format(lamb), transform=ax.transAxes)
-    ax.set_xlabel("simulated edge weights")
-    ax.set_ylabel("estimated edge weights")
+    ax = fig.add_subplot(2, 2, (1,3))
+    v = Viz(ax, sp_Graph, edge_width=2.0, 
+            edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
+            obs_node_size=7.5, sample_pt_color="black", 
+            cbar_font_size=10)
+    v.draw_edges(use_weights=True)
+    v.draw_obs_nodes(use_ids=False) 
+    # lre_idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
+    # paste correlation between the two weights
+    # ax.text(0.5, 1.0, "cor={:.2f}".format(np.corrcoef(sp_Graph.w[~sp_Graph.lre_idx],w_true[~sp_Graph.lre_idx])[0,1]), transform=ax.transAxes)
+
+    ax = fig.add_subplot(2, 2, 2)
+    # ax.scatter(sim_edges, w_plot[range(len(sim_edges))], 
+    #         marker=".", alpha=1, zorder=0, color="grey", s=15)
+    # ax.scatter(sim_edges[-len(lrn)::], w_plot[-len(lrn)::], 
+    #         marker=".", alpha=1, zorder=0, color="black", s=15)
+    # x_ = np.linspace(np.min(sim_edges), np.max(sim_edges), 20)
+    # ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
+    # ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
+    if len(sp_Graph.w)==len(w_true):
+        ax.scatter(w_true, sp_Graph.w, color='black', alpha=0.8)
+    else:
+        ax.scatter(np.delete(w_true,list(sp_Graph.edges).index(lrn[0])), sp_Graph.w[~sp_Graph.lre_idx], color='black', alpha=0.8)
+    ax.set_xlabel('true weights')
+    ax.set_ylabel('estimated weights')
+    ax.set_title('λ = {:.1f}, β = {:.1f}'.format(lamb, beta))
+    ax.grid()
+
+    ax = fig.add_subplot(2, 2, 4)
+    ax.hist(sp_Graph.w[sp_Graph.lre_idx], color='grey', alpha=0.8)
+    ax.set_xlabel('long range edge weights')
+    # ax.text(0.8, 0.15, "$\lambda$={:.1}".format(lamb), transform=ax.transAxes)
+    # ax.text(0.8, 0.25, "$\beta$={:.1}".format(beta), transform=ax.transAxes)
+    # ax.set_xlabel("simulated edge weights")
+    # ax.set_ylabel("estimated edge weights")
 
     return(None)
 
