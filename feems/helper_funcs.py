@@ -145,7 +145,6 @@ def comp_genetic_vs_fitted_distance(
         return(max_res_node)
     else:
         # extract indices with maximum absolute residuals
-        # max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]
         max_idx = np.argpartition(res.resid, n_lre)[:n_lre]
         # np.argpartition does not return indices in order of max to min, so another round of ordering
         max_idx = max_idx[np.argsort(res.resid[max_idx])]
@@ -195,8 +194,8 @@ def plot_estimated_vs_simulated_edges(
     fig = plt.figure(dpi=100)
     ax = fig.add_subplot(2, 2, (1,3))
     v = Viz(ax, sp_Graph, edge_width=2.0, 
-            edge_alpha=1, edge_zorder=100, sample_pt_size=20, 
-            obs_node_size=7.5, sample_pt_color="black", 
+            edge_alpha=1, edge_zorder=100, sample_pt_size=10, 
+            obs_node_size=4.5, sample_pt_color="black", 
             cbar_font_size=10)
     v.draw_edges(use_weights=True)
     v.draw_obs_nodes(use_ids=False) 
