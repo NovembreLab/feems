@@ -10,7 +10,6 @@ import pandas as pd
 # viz
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-import seaborn as sns
 
 # feems
 from .utils import prepare_graph_inputs
@@ -265,10 +264,10 @@ def plot_residual_matrix(
     resnode[np.tril_indices_from(resmat, k=-1)] = np.abs(res.resid)
     mask = np.zeros_like(resnode)
     mask[np.triu_indices_from(mask)] = True
-    with sns.axes_style("white"):
-        fig = plt.figure(dpi=100)
-        # try clustermap(col_cluster=False)
-        ax = sns.heatmap(resnode, mask=mask, square=True,  cmap=sns.color_palette("crest", as_cmap=True), xticklabels=node_to_pop['pops'])
-        plt.show()
+    # with sns.axes_style("white"):
+    #     fig = plt.figure(dpi=100)
+    #     # try clustermap(col_cluster=False)
+    #     ax = sns.heatmap(resnode, mask=mask, square=True,  cmap=sns.color_palette("crest", as_cmap=True), xticklabels=node_to_pop['pops'])
+    #     plt.show()
 
     return(None)
