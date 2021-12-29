@@ -155,3 +155,10 @@ sandbox/
 # Private data in AEA/WEA
 feems/data/AEA/c1global1nfd*
 feems/data/WEA/c1eumedi1nf*
+
+# TreeMix files
+feems/data/AEA/tmfiles/outfiles/*.llik
+feems/data/AEA/tmfiles/outfiles/*.gz
+
+# subset1 files (mostly data files)
+feems/data/AEA/subset1/*
