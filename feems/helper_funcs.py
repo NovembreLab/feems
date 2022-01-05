@@ -110,24 +110,6 @@ def comp_genetic_vs_fitted_distance(
     res = mod.fit()
     muhat, betahat = res.params
     if(plotFig):
-        if lrn is not None:
-            # computing the vector index for lower triangular matrix of long range nodes (i+j(j+1)/2-j for lower triangle)
-            lrn_idx = [np.int(val[0] + 0.5*val[1]*(val[1]+1) - val[1]) if val[0]<val[1] else np.int(val[1] + 0.5*val[0]*(val[0]+1) - val[0]) for val in lrn]
-
-        fig = plt.figure(dpi=100)
-        ax = fig.add_subplot()
-        ax.scatter(fit_dist, emp_dist, 
-                marker=".", alpha=1, zorder=0, color="grey", s=3)
-        if lrn is not None:
-            ax.scatter(fit_dist[lrn_idx], emp_dist[lrn_idx], 
-                    marker=".", alpha=1, zorder=0, color="black", s=10)
-        x_ = np.linspace(np.min(fit_dist), np.max(fit_dist), 20)
-        ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
-        ax.text(0.8, 0.15, "$\lambda$={:.3}".format(lamb), transform=ax.transAxes)
-        ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
-        ax.set_ylabel("genetic distance")
-        ax.set_xlabel("fitted distance")
-
         # extract indices with maximum absolute residuals
         max_idx = np.argpartition(np.abs(res.resid), -n_lre)[-n_lre:]
         # np.argpartition does not return indices in order of max to min, so another round of ordering
@@ -140,6 +122,21 @@ def comp_genetic_vs_fitted_distance(
             x = np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1
             y = np.int(k - 0.5*x*(x-1))
             max_res_node.append(tuple(sorted((x,y))))
+
+        
+        # computing the vector index for lower triangular matrix of long range nodes (i+j(j+1)/2-j for lower triangle)
+        lrn_idx = [np.int(val[0] + 0.5*val[1]*(val[1]+1) - val[1]) if val[0]<val[1] else np.int(val[1] + 0.5*val[0]*(val[0]+1) - val[0]) for val in max_res_node]
+
+        fig = plt.figure(dpi=100)
+        ax = fig.add_subplot()
+        ax.scatter(fit_dist, emp_dist, marker=".", alpha=0.75, zorder=0, color="grey", s=3)
+        ax.scatter(fit_dist[lrn_idx], emp_dist[lrn_idx], marker=".", alpha=1, zorder=0, color="black", s=10)
+        x_ = np.linspace(np.min(fit_dist), np.max(fit_dist), 20)
+        ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
+        ax.text(0.8, 0.15, "$\lambda$={:.3}".format(lamb), transform=ax.transAxes)
+        ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
+        ax.set_ylabel("genetic distance")
+        ax.set_xlabel("fitted distance")
 
         return(max_res_node)
     else:
