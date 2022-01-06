@@ -21,6 +21,8 @@ def setup_graph(
     corridor_left_prob=1,
     corridor_right_prob=1,
     sample_prob=1.0,
+    option=0,
+    ss=None,
 ):
     """Setup graph (triangular lattice) for simulation
 
@@ -76,19 +78,32 @@ def setup_graph(
         # node position
         x, y = graph.nodes[i]["pos"]
 
-        if x <= barrier_startpt:
-            graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
-                n_samples_per_node, corridor_left_prob
-            )
-        elif x >= barrier_endpt:
-            graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
-                n_samples_per_node, corridor_right_prob
-            )
+        if option == 0:
+            if x <= barrier_startpt:
+                graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
+                    n_samples_per_node, corridor_left_prob
+                )
+            elif x >= barrier_endpt:
+                graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
+                    n_samples_per_node, corridor_right_prob
+                )
+            else:
+                graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
+                    n_samples_per_node, barrier_prob
+                )
+        ## changing the simulation code to take in exact value of individuals (as proportions)
+        elif option == 1:
+            if x <= barrier_startpt:
+                graph.nodes[i]["sample_size"] = int(2 * n_samples_per_node * corridor_left_prob)
+            elif x >= barrier_endpt:
+                graph.nodes[i]["sample_size"] = int(2 * n_samples_per_node * corridor_right_prob)
+            else:
+                graph.nodes[i]["sample_size"] = int(2 * n_samples_per_node * barrier_prob)
+        ## setting sample sizes explicitly for each node separately
         else:
-            graph.nodes[i]["sample_size"] = 2 * np.random.binomial(
-                n_samples_per_node, barrier_prob
-            )
+            graph.nodes[i]["sample_size"] = ss[i]
 
+              
         # sample a node or not
         graph.nodes[i]["sample_size"] = graph.nodes[i][
             "sample_size"
