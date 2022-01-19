@@ -245,6 +245,7 @@ def plot_estimated_vs_simulated_edges(
 def plot_residual_matrix(
     sp_Graph,
     lamb_cv,
+    node_to_pop=None,
     pop_labs_file=None
 ):
     """Function to plot the residual matrix of the pairs of populations 
@@ -252,16 +253,12 @@ def plot_residual_matrix(
     # TODO: finalize way to map samples to pops and pops to nodes
 
     # reading in file with sample and pop labels
-    pop_labs_file = pd.read_csv()
+    if pop_labs_file is not None:
+        pop_labs_file = pd.read_csv()
 
-    permuted_idx = query_node_attributes(sp_graph, "permuted_idx")
+    permuted_idx = query_node_attributes(sp_Graph, "permuted_idx")
     obs_perm_ids = permuted_idx[: sp_Graph.n_observed_nodes]
-
-    # code for mapping nodes back to populations (since multiple pops can be assigned to the same nodes)
-    node_to_pop = pd.DataFrame(index = np.arange(sp_Graph.n_observed_nodes), columns = ['nodes', 'pops'])
-    node_to_pop['nodes'] = obs_perm_ids
-    node_to_pop['pops'] = [np.unique(sample_data['popId'][query_node_attributes(sp_Graph,"sample_idx")[x]]) for x in obs_perm_ids]
-
+    
     tril_idx = np.tril_indices(sp_Graph.n_observed_nodes, k=-1)
     #sp_graph.fit(lamb=lamb_cv)
     obj = Objective(sp_Graph)
@@ -274,7 +271,7 @@ def plot_residual_matrix(
     res = mod.fit()
     
     resnode = np.zeros((sp_Graph.n_observed_nodes,sp_Graph.n_observed_nodes))
-    resnode[np.tril_indices_from(resmat, k=-1)] = np.abs(res.resid)
+    resnode[np.tril_indices_from(resnode, k=-1)] = np.abs(res.resid)
     mask = np.zeros_like(resnode)
     mask[np.triu_indices_from(mask)] = True
     # with sns.axes_style("white"):
@@ -283,4 +280,4 @@ def plot_residual_matrix(
     #     ax = sns.heatmap(resnode, mask=mask, square=True,  cmap=sns.color_palette("crest", as_cmap=True), xticklabels=node_to_pop['pops'])
     #     plt.show()
 
-    return(None)
+    return(resnode)

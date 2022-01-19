@@ -233,19 +233,6 @@ def setup_graph_long_range(
         if i not in np.ravel(long_range_nodes):
             graph.nodes[i]["sample_size"] = graph.nodes[i]["sample_size"] * np.random.binomial(1, sample_prob) 
 
-    # # add check to ensure that the requested long_range_nodes have been sampled
-    # # if not, assign to a new pair of nodes in the vicinity 
-    # zero_nodes = [(idxz, val) for idxz, val in enumerate(list(np.ravel(long_range_nodes))) if graph.nodes[val]["sample_size"]==0]
-    # if len(zero_nodes)!=0:
-    #     for vz in zero_nodes:
-    #         for neighbor in graph.neighbors(vz[1]):
-    #             if(graph.nodes[neighbor]["sample_size"]!=0):
-    #                 # break out of for loop after finding nearest neighbor
-    #                 print("Node %d not sampled, replaced with Node %d"%(vz[1],neighbor))
-    #                 idx = np.floor(vz[0]/2).astype("int")
-    #                 long_range_nodes[idx] = (neighbor,long_range_nodes[idx][1]) if vz[0]%2==0 else (long_range_nodes[idx][0],neighbor)
-    #                 break
-
     # assign edge weights
     for i, j in graph.edges():
         x = np.mean([graph.nodes[i]["pos"][0], graph.nodes[j]["pos"][0]])
