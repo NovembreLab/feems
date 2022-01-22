@@ -304,9 +304,14 @@ def simulate_genotypes(
     sample_sizes = list(nx.get_node_attributes(graph, "sample_size").values())
 
     # population config
-    population_configurations = [
-        msprime.PopulationConfiguration(sample_size=sample_sizes[i]) for i in range(d)
-    ]
+    if hasattr(n_e, "__len__"):
+        population_configurations = [
+            msprime.PopulationConfiguration(sample_size=sample_sizes[i], initial_size=n_e[i]) for i in range(d)
+        ]
+    else:
+        population_configurations = [
+            msprime.PopulationConfiguration(sample_size=sample_sizes[i]) for i in range(d)
+        ]
 
     # tree sequences
     ts = msprime.simulate(
@@ -315,7 +320,7 @@ def simulate_genotypes(
         length=chrom_length,
         mutation_rate=mu,
         num_replicates=target_n_snps,
-        Ne=n_e,
+        Ne=1,
     )
 
     # simulate haplotypes

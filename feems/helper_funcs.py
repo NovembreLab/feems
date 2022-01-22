@@ -129,7 +129,7 @@ def comp_genetic_vs_fitted_distance(
         # computing the vector index for lower triangular matrix of long range nodes (i+j(j+1)/2-j for lower triangle)
         lrn_idx = [np.int(val[0] + 0.5*val[1]*(val[1]+1) - val[1]) if val[0]<val[1] else np.int(val[1] + 0.5*val[0]*(val[0]+1) - val[0]) for val in max_res_node]
 
-        fig = plt.figure(dpi=100)
+        fig = plt.figure(dpi=80)
         ax = fig.add_subplot()
         ax.scatter(fit_dist, emp_dist, marker=".", alpha=0.75, zorder=0, color="grey", s=3)
         ax.scatter(fit_dist[lrn_idx], emp_dist[lrn_idx], marker=".", alpha=1, zorder=0, color="black", s=10)
@@ -139,6 +139,9 @@ def comp_genetic_vs_fitted_distance(
         ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
+
+        fig = plt.figure(dpi=80)
+        plt.imshow(fit_cov-emp_cov); plt.colorbar(); plt.title('fit_cov_lr - emp_cov_lr')
 
         return(max_res_node)
     else:
@@ -240,6 +243,8 @@ def plot_estimated_vs_simulated_edges(
         ax.hist(sp_Graph.w[sp_Graph.lre_idx], color='grey', alpha=0.8)
         ax.set_xlabel('long range edge weights')
 
+    comp_genetic_vs_fitted_distance(sp_Graph, lrn=lrn, n_lre=len(lrn), lamb=lamb, plotFig=True)
+
     return(None)
 
 def plot_residual_matrix(
@@ -258,7 +263,7 @@ def plot_residual_matrix(
 
     permuted_idx = query_node_attributes(sp_Graph, "permuted_idx")
     obs_perm_ids = permuted_idx[: sp_Graph.n_observed_nodes]
-    
+
     tril_idx = np.tril_indices(sp_Graph.n_observed_nodes, k=-1)
     #sp_graph.fit(lamb=lamb_cv)
     obj = Objective(sp_Graph)
