@@ -14,10 +14,11 @@ from matplotlib import gridspec
 # feems
 from .utils import prepare_graph_inputs
 from .sim import setup_graph, setup_graph_long_range, simulate_genotypes
-from .spatial_graph import SpatialGraph, query_node_attributes
+from .spatial_graph import query_node_attributes
 from .cross_validation import comp_mats, run_cv
 from .objective import Objective
 from .viz import Viz
+from .joint_ver import Joint_Objective
 
 # change matplotlib fonts
 plt.rcParams["font.family"] = "Arial"
@@ -72,7 +73,8 @@ def comp_genetic_vs_fitted_distance(
     lrn=None,
     lamb=None, 
     n_lre=3, 
-    plotFig=True
+    plotFig=True, 
+    joint=False,
 ):
     """Function to plot genetic vs fitted distance to visualize outliers in residual calculations, 
     passes back 3 pairs of nodes (default) with largest residuals if plotFig=False
@@ -99,7 +101,10 @@ def comp_genetic_vs_fitted_distance(
     #                 ub=math.log(1e+6))
     sp_Graph_def.comp_graph_laplacian(sp_Graph_def.w)
 
-    obj = Objective(sp_Graph_def)
+    if(joint):
+        obj = Joint_Objective(sp_Graph_def)
+    else:
+        obj = Objective(sp_Graph_def)
     fit_cov, _, emp_cov = comp_mats(obj)
     fit_dist = cov_to_dist(fit_cov)[tril_idx]
     emp_dist = cov_to_dist(emp_cov)[tril_idx]
@@ -165,7 +170,8 @@ def plot_estimated_vs_simulated_edges(
     lrn=None,
     # max_res_nodes=None, 
     lamb=1.0, 
-    beta=0.0
+    beta=0., 
+    joint=False
 ):
     """Function to plot estimated vs simulated edge weights to look for significant deviations
     """
@@ -243,7 +249,7 @@ def plot_estimated_vs_simulated_edges(
         ax.hist(sp_Graph.w[sp_Graph.lre_idx], color='grey', alpha=0.8)
         ax.set_xlabel('long range edge weights')
 
-    comp_genetic_vs_fitted_distance(sp_Graph, lrn=lrn, n_lre=len(lrn), lamb=lamb, plotFig=True)
+    comp_genetic_vs_fitted_distance(sp_Graph, lrn=lrn, n_lre=len(lrn), lamb=lamb, plotFig=True, joint=joint)
 
     return(None)
 
