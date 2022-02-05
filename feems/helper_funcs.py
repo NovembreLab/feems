@@ -96,10 +96,8 @@ def comp_genetic_vs_fitted_distance(
         # argmin of cv error
         lamb = float(lamb_grid[np.argmin(mean_cv_err)])
 
-    # sp_Graph_def.fit(lamb=lamb,
-    #                 lb=math.log(1e-6), 
-    #                 ub=math.log(1e+6))
-    sp_Graph_def.comp_graph_laplacian(sp_Graph_def.w)
+    # sp_Graph_def.fit(lamb=lamb,lb=math.log(1e-6),ub=math.log(1e+6))
+    # sp_Graph_def.comp_graph_laplacian(sp_Graph_def.w)
 
     if(joint):
         obj = Joint_Objective(sp_Graph_def)
@@ -189,12 +187,23 @@ def plot_estimated_vs_simulated_edges(
     # idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
     # w_plot = np.append(sp_Graph.w[[i for i in range(len(sp_Graph.w)) if i not in idx]], sp_Graph.w[idx])
 
-    sp_Graph.fit(lamb = lamb, beta=beta)
+    # sp_Graph.fit(lamb = lamb, beta=beta)
 
-    # X = sm.add_constant(sim_edges)
-    # mod = sm.OLS(w_plot[range(len(graph.edges))], X)
-    # res = mod.fit()
-    # muhat, betahat = res.params
+    if(joint):
+        obj = Joint_Objective(sp_Graph)
+    else:
+        obj = Objective(sp_Graph)
+
+    tril_idx = np.tril_indices(sp_Graph.n_observed_nodes, k=-1)
+    fit_cov, _, emp_cov = comp_mats(obj)
+    fit_dist = cov_to_dist(fit_cov)[tril_idx]
+    emp_dist = cov_to_dist(emp_cov)[tril_idx]
+
+    # using code from supp fig 6 of feems-analysis
+    X = sm.add_constant(fit_dist)
+    mod = sm.OLS(emp_dist, X)
+    res = mod.fit()
+    muhat, betahat = res.params
 
     if lrn is None:
         fig = plt.figure(dpi=100)
@@ -210,13 +219,6 @@ def plot_estimated_vs_simulated_edges(
         # ax.text(0.5, 1.0, "cor={:.2f}".format(np.corrcoef(sp_Graph.w[~sp_Graph.lre_idx],w_true[~sp_Graph.lre_idx])[0,1]), transform=ax.transAxes)
 
         ax = fig.add_subplot(2, 2, 3)
-        # ax.scatter(sim_edges, w_plot[range(len(sim_edges))], 
-        #         marker=".", alpha=1, zorder=0, color="grey", s=15)
-        # ax.scatter(sim_edges[-len(lrn)::], w_plot[-len(lrn)::], 
-        #         marker=".", alpha=1, zorder=0, color="black", s=15)
-        # x_ = np.linspace(np.min(sim_edges), np.max(sim_edges), 20)
-        # ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
-        # ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
         if len(sp_Graph.w)==len(w_true):
             ax.scatter(w_true, sp_Graph.w, color='black', alpha=0.8)
         else:
@@ -225,6 +227,15 @@ def plot_estimated_vs_simulated_edges(
         ax.set_ylabel('estimated weights')
         ax.set_title('λ = {:.1f}, β = {:.1f}'.format(lamb, beta))
         ax.grid()
+        
+        ax = fig.add_subplot(2, 2, 4)
+        ax.scatter(fit_dist, emp_dist, marker=".", alpha=0.75, zorder=0, color="grey", s=3)
+        x_ = np.linspace(np.min(fit_dist), np.max(fit_dist), 20)
+        ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
+        ax.text(0.8, 0.15, "$\lambda$={:.3}".format(lamb), transform=ax.transAxes)
+        ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
+        ax.set_ylabel("genetic distance")
+        ax.set_xlabel("fitted distance")
     else:
         fig = plt.figure(dpi=100)
         ax = fig.add_subplot(2, 2, (1,2))
@@ -248,8 +259,6 @@ def plot_estimated_vs_simulated_edges(
         ax = fig.add_subplot(2, 2, 4)
         ax.hist(sp_Graph.w[sp_Graph.lre_idx], color='grey', alpha=0.8)
         ax.set_xlabel('long range edge weights')
-
-    comp_genetic_vs_fitted_distance(sp_Graph, lrn=lrn, n_lre=len(lrn), lamb=lamb, plotFig=True, joint=joint)
 
     return(None)
 
