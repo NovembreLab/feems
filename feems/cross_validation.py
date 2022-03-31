@@ -73,7 +73,7 @@ def run_cv(
                 sp_graph_train.fit(
                     lamb=lamb,
                     w_init=w_init,
-                    s2_init=s2_init,
+                    s2_init=s2_init, optimize_q='n-dim', lamb_q=1., alpha_q=1., 
                     alpha=alpha,
                     factr=factr,
                     lb=math.log(lb),

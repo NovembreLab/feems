@@ -204,7 +204,7 @@ def setup_graph_long_range(
     tuple of graph objects
     """
     assert type(long_range_nodes) == list, "long_range_nodes must be a list of 2-tuples"
-    assert len(long_range_edges) == len(long_range_nodes), "equal number of pairs of nodes and corresponding edges for long range"
+    assert len(long_range_edges) == len(long_range_nodes), "unequal number of pairs of nodes and corresponding edges for long range"
 
     graph = nx.generators.lattice.triangular_lattice_graph(
         n_rows - 1, 2 * n_columns - 2, with_positions=True

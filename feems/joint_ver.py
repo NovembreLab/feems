@@ -129,7 +129,7 @@ def loss_wrapper(z, obj):
 
 
 class Joint_SpatialGraph(SpatialGraph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, long_range_edges=[(0,0)]):
         """Inherit from the feems object SpatialGraph and overwrite some methods for 
         estimation of edge weights and residual variance jointly
         """               
@@ -137,7 +137,8 @@ class Joint_SpatialGraph(SpatialGraph):
                          sample_pos=sample_pos,
                          node_pos=node_pos,
                          edges=edges,
-                         scale_snps=scale_snps) 
+                         scale_snps=scale_snps,
+                         long_range_edges=long_range_edges) 
         
     # ------------------------- Data -------------------------        
         
