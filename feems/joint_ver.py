@@ -173,7 +173,7 @@ class Joint_SpatialGraph(SpatialGraph):
         w0_hat = np.exp(res.x[0])
         s2_hat = np.exp(res.x[1])
         self.w0 = w0_hat * np.ones(self.w.shape[0])
-        self.s2 = s2_hat
+        self.s2 = s2_hat * np.ones(len(self))
         self.comp_precision(s2=s2_hat)
 
         # print update
@@ -203,6 +203,7 @@ class Joint_SpatialGraph(SpatialGraph):
         ub=np.Inf,
         maxiter=15000,
         verbose=True,
+        constrained=False,
     ):
         """Estimates the edge weights of the full model holding the residual
         variance fixed using a quasi-newton algorithm, specifically L-BFGS.
@@ -267,6 +268,12 @@ class Joint_SpatialGraph(SpatialGraph):
             obj.alpha_q = alpha_q
             s2_init = self.s2 if obj.optimize_q=="1-dim" else self.s2*np.ones(len(self))
             x0 = np.r_[np.log(w_init), np.log(s2_init)]
+            if constrained:
+                # print("performing constrained optimization...\n")
+                bounds = np.r_[[(x-0.01, x+0.01) for x in x0[:len(w_init)]],[(lb, ub) for _ in range(len(s2_init))]]
+            else: 
+                bounds = [(lb, ub) for _ in range(x0.shape[0])]
+                # print("performing unconstrained optimization...\n")
         res = fmin_l_bfgs_b(
             func=loss_wrapper,
             x0=x0,
@@ -276,7 +283,7 @@ class Joint_SpatialGraph(SpatialGraph):
             maxls=maxls,
             maxiter=maxiter,
             approx_grad=False,
-            bounds=[(lb, ub) for _ in range(x0.shape[0])],
+            bounds=bounds,
         )
         if maxiter >= 100:
             assert res[2]["warnflag"] == 0, "did not converge"

@@ -243,7 +243,7 @@ class Viz(object):
     def draw_edge_colorbar(self):
         """Draws colorbar"""
         self.edge_sm = plt.cm.ScalarMappable(cmap=self.edge_cmap, norm=self.edge_norm)
-        self.edge_sm._A = []
+        # self.edge_sm._A = []
         self.edge_tick_locator = ticker.LogLocator(base=10, numticks=self.cbar_nticks)
         self.edge_axins = inset_axes(
             self.ax,
