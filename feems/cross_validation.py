@@ -4,7 +4,7 @@ from copy import deepcopy
 import numpy as np
 from sklearn.model_selection import KFold
 
-from .objective import Objective, comp_mats
+from .objective import comp_mats
 from .spatial_graph import query_node_attributes
 
 
@@ -198,7 +198,7 @@ def train_test_split(sp_graph, is_train):
 
 def predict_snps(sp_graph, sp_graph_train, sp_graph_test):
     # create obj
-    obj = Objective(sp_graph)
+    obj = Joint_Objective(sp_graph)
 
     # update graph laplacian
     obj.sp_graph.comp_graph_laplacian(sp_graph_train.w)
