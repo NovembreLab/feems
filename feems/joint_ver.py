@@ -3,8 +3,8 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.optimize import fmin_l_bfgs_b, minimize
 
-from feems import SpatialGraph, Objective
-from .objective import neg_log_lik_w0_s2
+from .spatial_graph import SpatialGraph
+from .objective import Objective, neg_log_lik_w0_s2
 
 class Joint_Objective(Objective): 
     def __init__(self, sp_graph):

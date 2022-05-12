@@ -53,6 +53,7 @@ def plot_default_vs_long_range(
             cbar_font_size=10)
     v.draw_edges(use_weights=True)
     v.draw_obs_nodes(use_ids=False) 
+    v.draw_edge_colorbar()
 
     #sp_Graph.fit(lamb = float(lamb[1]))
     ax = fig.add_subplot(1, 2, 2)  
@@ -62,6 +63,7 @@ def plot_default_vs_long_range(
             cbar_font_size=10)
     v.draw_edges(use_weights=True)
     v.draw_obs_nodes(use_ids=False) 
+    v.draw_edge_colorbar()
     lre_idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
     # paste correlation between the two weights
     ax.text(0.5, 1.0, "cor={:.2f}".format(np.corrcoef(sp_Graph.w[~np.in1d(np.arange(len(sp_Graph.w)), lre_idx)],sp_Graph_def.w)[0,1]), transform=ax.transAxes)
@@ -143,8 +145,8 @@ def comp_genetic_vs_fitted_distance(
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
 
-        fig = plt.figure(dpi=80)
-        plt.imshow(fit_cov-emp_cov); plt.colorbar(); plt.title('fit_cov_lr - emp_cov_lr')
+        # fig = plt.figure(dpi=80)
+        # plt.imshow(fit_cov-emp_cov); plt.colorbar(); plt.title('fit_cov_lr - emp_cov_lr')
 
         return(max_res_node)
     else:
@@ -206,7 +208,7 @@ def plot_estimated_vs_simulated_edges(
     muhat, betahat = res.params
 
     if lrn is None:
-        fig = plt.figure(dpi=100)
+        fig = plt.figure(dpi=200)
         ax = fig.add_subplot(2, 2, (1,2))
         v = Viz(ax, sp_Graph, edge_width=2.0, 
                 edge_alpha=1, edge_zorder=100, sample_pt_size=10, 
@@ -214,6 +216,7 @@ def plot_estimated_vs_simulated_edges(
                 cbar_font_size=10)
         v.draw_edges(use_weights=True)
         v.draw_obs_nodes(use_ids=False) 
+        v.draw_edge_colorbar()
         # lre_idx = [list(sp_Graph.edges).index(val) for val in max_res_nodes]
         # paste correlation between the two weights
         # ax.text(0.5, 1.0, "cor={:.2f}".format(np.corrcoef(sp_Graph.w[~sp_Graph.lre_idx],w_true[~sp_Graph.lre_idx])[0,1]), transform=ax.transAxes)
@@ -237,7 +240,7 @@ def plot_estimated_vs_simulated_edges(
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
     else:
-        fig = plt.figure(dpi=100)
+        fig = plt.figure(dpi=200)
         ax = fig.add_subplot(2, 2, (1,2))
         v = Viz(ax, sp_Graph, edge_width=2.0, 
                 edge_alpha=1, edge_zorder=100, sample_pt_size=10, 
@@ -245,6 +248,7 @@ def plot_estimated_vs_simulated_edges(
                 cbar_font_size=10)
         v.draw_edges(use_weights=True)
         v.draw_obs_nodes(use_ids=False) 
+        v.draw_edge_colorbar()
 
         ax = fig.add_subplot(2, 2, 3)
         if len(sp_Graph.w)==len(w_true):

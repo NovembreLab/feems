@@ -178,11 +178,12 @@ class Objective(object):
         self.tr = np.trace(self.trA) - self.trB / self.denom
 
         # det
-        E = self.X + np.diag(self.sp_graph.q)
-        self.det = np.linalg.det(E) * o / self.denom
+        # E = self.X + np.diag(self.sp_graph.q)
+        self.det = np.linalg.det(self.inv_cov) * o / self.denom
 
         # negative log-likelihood
         nll = self.sp_graph.n_snps * (self.tr - np.log(self.det))
+
         return nll
 
     def loss(self):
@@ -194,9 +195,9 @@ class Objective(object):
         lik = self.neg_log_lik()
 
         # index edges that are NOT in lre
-        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
-        term_1 = self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
-        pen1 = 0.5 * self.lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
+        term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
+        term_1 = alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
+        pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
 
         self.pen1 = pen1
 
@@ -233,7 +234,7 @@ def loss_wrapper(z, obj):
     obj.inv()
     obj.grad()
 
-    # loss / grad
+    #  s / grad
     loss = obj.loss()
     grad = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
     return (loss, grad)

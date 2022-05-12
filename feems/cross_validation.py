@@ -4,7 +4,8 @@ from copy import deepcopy
 import numpy as np
 from sklearn.model_selection import KFold
 
-from .objective import comp_mats
+from .objective import Objective, comp_mats
+from .joint_ver import Joint_Objective
 from .spatial_graph import query_node_attributes
 
 
@@ -12,7 +13,7 @@ def run_cv(
     sp_graph,
     lamb_grid,
     alpha_grid=None,
-    n_folds=5,
+    n_folds=None,
     lb=1e-6,
     ub=1e6,
     factr=1e10,
