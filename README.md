@@ -13,7 +13,19 @@ to help construct the spatial graphs.
 
 For details on the method see our [pre-print](https://www.biorxiv.org/content/10.1101/2020.08.07.242214v1). Note that `feems` is in review so the method could be subject to change.  
 
-# Setup
+# Quick start
+
+Typically the simplest way to get started with feems is to install Anaconda or Miniconda, 
+then install feems using the conda recipe:
+
+```bash
+conda install -c bioconda feems -c conda-forge
+```
+
+See the next section for alternative ways to install feems, or if 
+"conda install" worked for you, skip ahead to "Running feems". 
+
+# More detailed installation instructions
 
 We've found that the easiest way to get started is to setup a `conda` 
 environment:
