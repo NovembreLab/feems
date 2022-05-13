@@ -15,8 +15,9 @@ For details on the method see our [pre-print](https://www.biorxiv.org/content/10
 
 # Quick start
 
-Typically the simplest way to get started with feems is to install Anaconda or Miniconda, 
-then install feems using the conda recipe:
+Typically the simplest way to get started with feems is to install 
+[Anaconda][anaconda] or [Miniconda][miniconda], 
+then install feems using the [Bioconda recipe][bioconda-recipe]:
 
 ```bash
 conda install -c bioconda feems -c conda-forge
@@ -71,3 +72,7 @@ NOTE: Some users have reported a compatibility error arising at this step with t
 To help get your analysis started, we provide an example workflow in the [getting-started.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
 
 An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
+
+[anaconda]: https://www.anaconda.com/products/distribution
+[miniconda]: https://docs.conda.io
+[bioconda-recipe]: https://anaconda.org/bioconda/feems
