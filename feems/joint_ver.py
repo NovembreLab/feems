@@ -17,7 +17,7 @@ class Joint_Objective(Objective):
         
         # indicator whether optimizing residual variance jointly with edge weights
         # None  : residual variance is holding fixed
-        # 1-dim : sinlge residual variance is estimated across all nodes
+        # 1-dim : single residual variance is estimated across all nodes
         # n-dim : node-specific residual variances are estimated 
         self.optimize_q = None 
         
@@ -194,8 +194,8 @@ class Joint_SpatialGraph(SpatialGraph):
         s2_init=None,
         alpha=None,
         optimize_q=None,
-        lamb_q=None,
-        alpha_q=None,
+        lamb_q=1.,
+        alpha_q=1.,
         factr=1e7,
         maxls=50,
         m=10,

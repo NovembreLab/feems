@@ -17,7 +17,7 @@ class Viz(object):
         self,
         ax,
         sp_graph,
-        weights=None,
+        weights=None, foldchange=None,
         projection=None,
         coastline_m="50m",
         coastline_linewidth=0.5,
@@ -136,6 +136,7 @@ class Viz(object):
         self.edge_norm = clr.LogNorm(
             vmin=10 ** (-self.abs_max), vmax=10 ** (self.abs_max)
         )
+        self.change_norm = clr.CenteredNorm(halfrange=5)
         self.dist_cmap = plt.get_cmap("viridis_r")
 
         # extract node positions on the lattice
@@ -147,6 +148,7 @@ class Viz(object):
         else:
             self.weights = weights
         self.norm_log_weights = np.log10(self.weights) - np.mean(np.log10(self.weights))
+        self.foldchange = foldchange
         self.n_params = int(len(self.weights) / 2)
 
         # plotting maps
@@ -210,34 +212,50 @@ class Viz(object):
                 zorder=self.obs_node_zorder,
             )
 
-    def draw_edges(self, use_weights=False):
+    def draw_edges(self, use_weights=False, use_foldchange=False):
         """Draw the edges of the graph"""
-        if use_weights:
-            nx.draw(
-                self.sp_graph,
-                ax=self.ax,
-                node_size=0.0,
-                edge_cmap=self.edge_cmap,
-                edge_norm=self.edge_norm,
-                alpha=self.edge_alpha,
-                pos=self.grid,
-                width=self.edge_width,
-                edgelist=list(np.column_stack(self.idx)),
-                edge_color=self.norm_log_weights,
-                edge_vmin=-self.abs_max,
-                edge_vmax=self.abs_max,
-            )
+        if not use_foldchange:
+            if use_weights:
+                nx.draw(
+                    self.sp_graph,
+                    ax=self.ax,
+                    node_size=0.0,
+                    edge_cmap=self.edge_cmap,
+                    edge_norm=self.edge_norm,
+                    alpha=self.edge_alpha,
+                    pos=self.grid,
+                    width=self.edge_width,
+                    edgelist=list(np.column_stack(self.idx)),
+                    edge_color=self.norm_log_weights,
+                    edge_vmin=-self.abs_max,
+                    edge_vmax=self.abs_max,
+                )
+            else:
+                nx.draw(
+                    self.sp_graph,
+                    ax=self.ax,
+                    node_size=0.0,
+                    alpha=self.edge_alpha,
+                    pos=self.grid,
+                    width=self.edge_width,
+                    edgelist=list(np.column_stack(self.idx)),
+                    edge_color=self.edge_color,
+                    zorder=self.edge_zorder,
+                )
         else:
             nx.draw(
-                self.sp_graph,
-                ax=self.ax,
-                node_size=0.0,
-                alpha=self.edge_alpha,
-                pos=self.grid,
-                width=self.edge_width,
-                edgelist=list(np.column_stack(self.idx)),
-                edge_color=self.edge_color,
-                zorder=self.edge_zorder,
+                    self.sp_graph,
+                    ax=self.ax,
+                    node_size=0.0,
+                    edge_cmap=self.edge_cmap,
+                    edge_norm=self.change_norm,
+                    alpha=self.edge_alpha,
+                    pos=self.grid,
+                    width=self.edge_width,
+                    # edgelist=list(np.column_stack(self.idx)),
+                    edge_color=self.foldchange,
+                    edge_vmin=-5,
+                    edge_vmax=5,
             )
 
     def draw_edge_colorbar(self):
@@ -261,6 +279,32 @@ class Viz(object):
         self.edge_cbar.update_ticks()
         self.edge_cbar.ax.tick_params(which="minor", length=0)
         self.edge_cbar.ax.set_title(r"log10(w)", loc="center")
+        self.edge_cbar.ax.set_title(
+            self.edge_cbar.ax.get_title(), fontsize=self.cbar_font_size
+        )
+        self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
+
+    def draw_edge_change_colorbar(self):
+        """Draws colorbar of relative change (but in both directions)"""
+        self.edge_sm = plt.cm.ScalarMappable(cmap=self.edge_cmap, norm=self.change_norm)
+        # self.edge_sm._A = []
+        self.edge_tick_locator = ticker.LinearLocator(numticks=3)
+        self.edge_axins = inset_axes(
+            self.ax,
+            width=self.cbar_width,
+            height=self.cbar_height,
+            loc=self.cbar_loc,
+            bbox_to_anchor=self.cbar_bbox_to_anchor,
+            bbox_transform=self.ax.transAxes,
+            borderpad=0,
+        )
+        self.edge_cbar = plt.colorbar(
+            self.edge_sm, cax=self.edge_axins, orientation=self.cbar_orientation
+        )
+        self.edge_cbar.locator = self.edge_tick_locator
+        self.edge_cbar.update_ticks()
+        self.edge_cbar.ax.tick_params(which="minor", length=0)
+        self.edge_cbar.ax.set_title(r"relative-change (%)", loc="center")
         self.edge_cbar.ax.set_title(
             self.edge_cbar.ax.get_title(), fontsize=self.cbar_font_size
         )

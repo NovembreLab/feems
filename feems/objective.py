@@ -88,6 +88,12 @@ class Objective(object):
         self.Linv_block = {}
         self.Linv_block["oo"] = np.linalg.solve(self.L_double_inv, B)
 
+        # only modify the corresponding lre element if there is an lre
+        # if np.sum(self.sp_graph.lre_idx) > 0:
+        #     # currently assuming only one lre & symmetric (need to model dest only...cos Linv is symmetric)
+        #     self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] = (1-self.sp_graph.c) * np.ravel(np.dot(self.sp_graph.adj_base.todense()[self.sp_graph.lre[0][0],:], self.Linv_block["oo"][:,self.sp_graph.lre[0][0]]))[0] + self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] 
+        #     self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] = self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] #self.sp_graph.c * np.ravel(np.dot(self.sp_graph.adj_base.todense()[self.sp_graph.lre[0][1],:], self.Linv_block["oo"][:,self.sp_graph.lre[0][1]]))[0] + (1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] 
+
         # compute (d-o)-by-o submatrix of inverse of lap
         self.Linv_block["do"] = -self.lap_sol @ self.Linv_block["oo"]
 

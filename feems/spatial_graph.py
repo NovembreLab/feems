@@ -77,6 +77,10 @@ class SpatialGraph(nx.Graph):
         # initialize w
         self.w = np.ones(self.size())
 
+        # initialize c (admixture proportions)
+        # currently only one lre (otherwise need a vector here)
+        self.c = 0.9995 # np.repeat(0.5, np.sum(self.lre_idx))
+
         # compute gradient of the graph laplacian with respect to w (dL / dw)
         # this only needs to be done once
         self.comp_grad_w()
