@@ -13,7 +13,12 @@ to help construct the spatial graphs.
 
 For details on the method see our [pre-print](https://www.biorxiv.org/content/10.1101/2020.08.07.242214v1). Note that `feems` is in review so the method could be subject to change.  
 
-# Quick start
+Note: MS Windows users will struggle to install feems directly in a 
+Windows environment because at least one of the dependencies does not
+have a Windows port.  A virtual Linux machine should be preferable if 
+you are on a Windows machine. 
+
+# Quick start using bioconda
 
 Typically the simplest way to get started with feems is to install 
 [Anaconda][anaconda] or [Miniconda][miniconda], 
@@ -26,9 +31,9 @@ conda install -c bioconda feems -c conda-forge
 See the next section for alternative ways to install feems, or if 
 "conda install" worked for you, skip ahead to "Running feems". 
 
-# More detailed installation instructions
+# Alternative installation instructions (Python 3.8)
 
-We've found that the easiest way to get started is to setup a `conda` 
+As an alternative way to get started, setup a `conda` 
 environment:
 
 ```
@@ -47,7 +52,7 @@ Unfortunately some of the other dependencies for `feems` are not easily
 installed by pip so we recommend getting started using `conda`:
 
 ```
-conda install -c conda-forge suitesparse=5.7.2 scikit-sparse=0.4.4 cartopy=0.18.0 jupyter=1.0.0 jupyterlab=2.1.5 sphinx=3.1.2 sphinx_rtd_theme=0.5.0 nbsphinx=0.7.1 sphinx-autodoc-typehints
+conda install -c conda-forge suitesparse=5.7.2 scikit-sparse=0.4.4 cartopy=0.18.0 jupyter=1.0.0 jupyterlab=2.1.5 sphinx=3.1.2 sphinx_rtd_theme=0.5.0 nbsphinx=0.7.1 pandas-plink sphinx-autodoc-typehints
 ```
 
 We added jupyter and jupyterlab to explore some example notebooks but these 
