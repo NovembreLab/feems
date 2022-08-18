@@ -6,7 +6,7 @@ import itertools as it
 import networkx as nx
 import numpy as np
 import msprime
-
+import matplotlib.pyplot as plt
 
 def setup_graph(
     n_rows=8,
@@ -265,7 +265,7 @@ def setup_graph_long_range(
     return (graph, coord, grid, edge)
 
 def simulate_genotypes(
-    graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50
+    graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50, asymmetric=False, long_range_nodes=[(0,0)], long_range_edges=[0],
 ):
     """Simulates genotypes under the stepping-stone model with a habitat specified by the graph
 
@@ -295,7 +295,11 @@ def simulate_genotypes(
         genotype matrix
     """
     assert target_n_snps > n_print, "n_rep must be greater than n_print"
+    assert len(long_range_edges) == len(long_range_nodes), "unequal number of pairs of nodes and corresponding edges for long range"
 
+    if asymmetric:
+        if len(long_range_nodes) < 1:
+            raise ValueError('There should be at least one edge for asymmetric migration. ')
 
     # number of nodes
     d = len(graph.nodes)
@@ -310,13 +314,23 @@ def simulate_genotypes(
         ]
     else:
         population_configurations = [
-            msprime.PopulationConfiguration(sample_size=sample_sizes[i]) for i in range(d)
+            msprime.PopulationConfiguration(sample_size=sample_sizes[i], initial_size=n_e) for i in range(d)
         ]
+
+    if asymmetric:
+        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+        for id, node in enumerate(long_range_nodes):
+            migmat[node[1], node[0]] = long_range_edges[id]
+            migmat[node[0], node[1]] = 0.
+    else:
+        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+
+    plt.imshow(migmat,cmap='Greys'); plt.colorbar()
 
     # tree sequences
     ts = msprime.simulate(
         population_configurations=population_configurations,
-        migration_matrix=nx.adj_matrix(graph, weight="w").toarray().tolist(),
+        migration_matrix=migmat,
         length=chrom_length,
         mutation_rate=mu,
         num_replicates=target_n_snps,
@@ -326,6 +340,8 @@ def simulate_genotypes(
     # simulate haplotypes
     haplotypes = []
     for i, tree_sequence in enumerate(ts):
+
+        tree_sequence.dump(f"results/trees/mytesttreeNe1s{i}.tree")
 
         # extract haps from ts
         H = tree_sequence.genotype_matrix()
@@ -349,3 +365,4 @@ def simulate_genotypes(
     # convert to genotype matrix: s/o to @aabiddanda
     genotypes = H[:, ::2] + H[:, 1::2]
     return genotypes.T
+

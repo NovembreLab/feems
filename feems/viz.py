@@ -17,7 +17,8 @@ class Viz(object):
         self,
         ax,
         sp_graph,
-        weights=None, foldchange=None,
+        weights=None, 
+        newweights=None, halfrange=50,
         projection=None,
         coastline_m="50m",
         coastline_linewidth=0.5,
@@ -136,7 +137,8 @@ class Viz(object):
         self.edge_norm = clr.LogNorm(
             vmin=10 ** (-self.abs_max), vmax=10 ** (self.abs_max)
         )
-        self.change_norm = clr.CenteredNorm(halfrange=5)
+        self.halfrange = halfrange
+        self.change_norm = clr.CenteredNorm(halfrange=self.halfrange)
         self.dist_cmap = plt.get_cmap("viridis_r")
 
         # extract node positions on the lattice
@@ -148,7 +150,9 @@ class Viz(object):
         else:
             self.weights = weights
         self.norm_log_weights = np.log10(self.weights) - np.mean(np.log10(self.weights))
-        self.foldchange = foldchange
+
+        if newweights is not None:
+            self.foldchange = recover_nnz_entries_foldchange(sp_graph, newweights)
         self.n_params = int(len(self.weights) / 2)
 
         # plotting maps
@@ -252,10 +256,10 @@ class Viz(object):
                     alpha=self.edge_alpha,
                     pos=self.grid,
                     width=self.edge_width,
-                    # edgelist=list(np.column_stack(self.idx)),
+                    edgelist=list(np.column_stack(self.idx)),
                     edge_color=self.foldchange,
-                    edge_vmin=-5,
-                    edge_vmax=5,
+                    edge_vmin=-self.halfrange,
+                    edge_vmax=self.halfrange,
             )
 
     def draw_edge_colorbar(self):
@@ -321,6 +325,17 @@ def recover_nnz_entries(sp_graph):
         w = np.append(w, W[idx[i][0], idx[i][1]])
     return w
 
+def recover_nnz_entries_foldchange(sp_graph, newweights):
+    """Permuting the edge change matrix instead"""
+    # norm_newweights = (newweights - np.mean(newweights))/np.std(newweights)
+    # norm_weights = (sp_graph.w - np.mean(sp_graph.w))/np.std(sp_graph.w)
+    W = sp_graph.inv_triu((newweights-sp_graph.w)*100/sp_graph.w, perm=False)
+    w = np.array([])
+    idx = nx.adjacency_matrix(sp_graph).nonzero()
+    idx = list(np.column_stack(idx))
+    for i in range(len(idx)):
+        w = np.append(w, W[idx[i][0], idx[i][1]])
+    return w
 
 def project_coords(X, proj):
     """Project coordinates"""
