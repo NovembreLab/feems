@@ -341,7 +341,7 @@ def simulate_genotypes(
     haplotypes = []
     for i, tree_sequence in enumerate(ts):
 
-        tree_sequence.dump(f"results/trees/mytesttreeNe1s{i}.tree")
+        tree_sequence.dump(f"results/trees/mytesttreelargeNe1s{i}.tree")
 
         # extract haps from ts
         H = tree_sequence.genotype_matrix()
@@ -366,3 +366,93 @@ def simulate_genotypes(
     genotypes = H[:, ::2] + H[:, 1::2]
     return genotypes.T
 
+def simulate_genotypes_w_admixture(
+    graph, n_e=1, target_n_snps=1000, n_print=50, long_range_nodes=[(0,0)], admixture_props=[0],
+):
+    """Simulates genotypes under the stepping-stone model with a habitat specified by the graph
+
+    Arguments
+    ---------
+    graph : Graph
+        networkx graph object
+
+    chrom_length : float
+        length of the chromosome to simulate from
+
+    mu : float
+        mutation rate
+
+    n_e : float
+        effective population size
+
+    target_n_snps : int
+        target number of variants
+
+    n_print : int
+        interval to print simulation updates for each rep
+
+    Returns
+    -------
+    genotypes : 2D ndarray
+        genotype matrix
+    """
+    assert target_n_snps > n_print, "n_rep must be greater than n_print"
+
+    # number of nodes
+    d = len(graph.nodes)
+
+    # sample sizes per node
+    sample_sizes = list(nx.get_node_attributes(graph, "sample_size").values())
+
+    # population config
+    if hasattr(n_e, "__len__"):
+        population_configurations = [
+            msprime.PopulationConfiguration(sample_size=sample_sizes[i], initial_size=n_e[i]) for i in range(d)
+        ]
+    else:
+        population_configurations = [
+            msprime.PopulationConfiguration(sample_size=sample_sizes[i], initial_size=n_e) for i in range(d)
+        ]
+
+    demography = msprime.Demography.from_old_style(population_configurations, migration_matrix=np.array(nx.adj_matrix(graph, weight="w").toarray().tolist()), ignore_sample_size=True)
+    
+    ## adding admixture event
+    for i in range(len(admixture_props)):
+        demography.add_mass_migration(time=1, source=long_range_nodes[i][1], dest=long_range_nodes[i][0], proportion=admixture_props[i])
+
+    # tree sequences
+    ts = msprime.sim_ancestry([msprime.SampleSet(sample_sizes[i],population=i,time=0) for i in range(d)],
+        demography=demography,
+        ploidy=2,
+        num_replicates=target_n_snps,
+        sequence_length=1,
+    )
+
+    # simulate haplotypes
+    haplotypes = []
+    for i, tree_sequence in enumerate(ts.trees()):
+
+        # tree_sequence.dump(f"results/trees/mytesttreelargeNe1s{i}.tree")
+
+        # extract haps from ts
+        H = tree_sequence.genotype_matrix()
+        p, n = H.shape
+
+        # select a random marker per linked replicate
+        if p == 0:
+            continue
+        else:
+            idx = np.random.choice(np.arange(p), 1)
+            h = H[idx, :]
+
+        haplotypes.append(tree_sequence.haplotypes())
+
+        if i % n_print == 0:
+            print("Simulating ~SNP {}".format(i))
+
+    # stack haplotypes over replicates
+    H = np.vstack(haplotypes)
+
+    # convert to genotype matrix: s/o to @aabiddanda
+    genotypes = H[:, ::2] + H[:, 1::2]
+    return genotypes.T

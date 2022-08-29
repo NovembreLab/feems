@@ -6,10 +6,12 @@ import numpy as np
 import statsmodels.api as sm
 from copy import deepcopy
 import pandas as pd
+import scipy as sp
 
 # viz
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+import networkx as nx
 
 # feems
 from .utils import prepare_graph_inputs

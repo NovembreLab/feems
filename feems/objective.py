@@ -90,9 +90,22 @@ class Objective(object):
 
         # only modify the corresponding lre element if there is an lre
         # if np.sum(self.sp_graph.lre_idx) > 0:
-        #     # currently assuming only one lre & symmetric (need to model dest only...cos Linv is symmetric)
+        #     # currently assuming only one lre & symmetric (picking first node as source and second as destination)
         #     self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] = (1-self.sp_graph.c) * np.ravel(np.dot(self.sp_graph.adj_base.todense()[self.sp_graph.lre[0][0],:], self.Linv_block["oo"][:,self.sp_graph.lre[0][0]]))[0] + self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] 
         #     self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] = self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] #self.sp_graph.c * np.ravel(np.dot(self.sp_graph.adj_base.todense()[self.sp_graph.lre[0][1],:], self.Linv_block["oo"][:,self.sp_graph.lre[0][1]]))[0] + (1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] 
+        # if np.sum(self.sp_graph.lre_idx) > 0:
+        #     # currently assuming only one lre & symmetric (picking source as 0 and destination as 1)
+        #     # Ddd
+        #     Ddd = ((1-self.sp_graph.c)**2 * self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]] + 2*self.sp_graph.c*(1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] + self.sp_graph.c**2 * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]])
+        #     # Dsd = Dds
+        #     Dsd = (self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] + (1-self.sp_graph.c) * self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]])
+        #     # Dss
+        #     Dss = self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]]
+
+        #     self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]] = Dss
+        #     self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] = Dsd
+        #     self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] = Dsd
+        #     self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]] = Ddd
 
         # compute (d-o)-by-o submatrix of inverse of lap
         self.Linv_block["do"] = -self.lap_sol @ self.Linv_block["oo"]
