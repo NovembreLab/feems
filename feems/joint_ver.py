@@ -19,11 +19,11 @@ class Joint_Objective(Objective):
         # None  : residual variance is holding fixed
         # 1-dim : single residual variance is estimated across all nodes
         # n-dim : node-specific residual variances are estimated 
-        self.optimize_q = None 
+        self.optimize_q = None
         
         # reg params for residual variance
-        self.lamb_q= None
-        self.alpha_q = None
+        self.lamb_q = None
+        self.alpha_q = 1. 
 
     def _comp_grad_obj(self):
         """Computes the gradient of the objective function with respect to the
@@ -77,24 +77,25 @@ class Joint_Objective(Objective):
             )
             self.grad_pen_q = self.sp_graph.Delta_q.T @ self.sp_graph.Delta_q @ (lamb_q * term)
             self.grad_pen_q = self.grad_pen_q * (alpha_q / (1 - np.exp(-alpha_q * self.sp_graph.s2)))
-
+        
     def loss(self):
         """Evaluate the loss function given the current params"""
         lamb = self.lamb
         alpha = self.alpha
 
         lik = self.neg_log_lik()
-        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w)
-        term_1 = alpha * self.sp_graph.w + np.log(term_0)
-        pen = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
                 
         if self.optimize_q == 'n-dim':
             lamb_q = self.lamb_q
             alpha_q = self.alpha_q
                 
-            term_0 = 1.0 - np.exp(-self.alpha_q * self.sp_graph.s2)
+            term_0 = 1.0 - np.exp(-alpha_q * self.sp_graph.s2)
             term_1 = alpha_q * self.sp_graph.s2 + np.log(term_0)
-            pen = 0.5 * lamb_q * np.linalg.norm(self.sp_graph.Delta_q @ term_1) ** 2                
+            pen = 0.5 * lamb_q * np.linalg.norm(self.sp_graph.Delta_q @ term_1) ** 2   
+        else: 
+            term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
+            term_1 = alpha * self.sp_graph.w + np.log(term_0)
+            pen = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2             
 
         # loss
         loss = lik + pen
@@ -129,7 +130,7 @@ def loss_wrapper(z, obj):
 
 
 class Joint_SpatialGraph(SpatialGraph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, long_range_edges=[(0,0)]):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, admix_prop=0, admix_edges=[(0,0)], Ldag = np.repeat(0,3), long_range_edges=[(0,0)]):
         """Inherit from the feems object SpatialGraph and overwrite some methods for 
         estimation of edge weights and residual variance jointly
         """               
@@ -138,6 +139,9 @@ class Joint_SpatialGraph(SpatialGraph):
                          node_pos=node_pos,
                          edges=edges,
                          scale_snps=scale_snps,
+                         admix_edges = admix_edges,
+                         admix_prop = admix_prop, 
+                         Ldag = Ldag, 
                          long_range_edges=long_range_edges) 
         
     # ------------------------- Data -------------------------        
@@ -203,7 +207,6 @@ class Joint_SpatialGraph(SpatialGraph):
         ub=np.Inf,
         maxiter=15000,
         verbose=True,
-        constrained=False,
     ):
         """Estimates the edge weights of the full model holding the residual
         variance fixed using a quasi-newton algorithm, specifically L-BFGS.
@@ -268,12 +271,6 @@ class Joint_SpatialGraph(SpatialGraph):
             obj.alpha_q = alpha_q
             s2_init = self.s2 if obj.optimize_q=="1-dim" else self.s2*np.ones(len(self))
             x0 = np.r_[np.log(w_init), np.log(s2_init)]
-            if constrained:
-                # print("performing constrained optimization...\n")
-                bounds = np.r_[[(x-0.01, x+0.01) for x in x0[:len(w_init)]],[(lb, ub) for _ in range(len(s2_init))]]
-            else: 
-                bounds = [(lb, ub) for _ in range(x0.shape[0])]
-                # print("performing unconstrained optimization...\n")
         res = fmin_l_bfgs_b(
             func=loss_wrapper,
             x0=x0,
@@ -283,7 +280,6 @@ class Joint_SpatialGraph(SpatialGraph):
             maxls=maxls,
             maxiter=maxiter,
             approx_grad=False,
-            bounds=bounds,
         )
         if maxiter >= 100:
             assert res[2]["warnflag"] == 0, "did not converge"

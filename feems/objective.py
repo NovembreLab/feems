@@ -89,24 +89,20 @@ class Objective(object):
         self.Linv_block["oo"] = np.linalg.solve(self.L_double_inv, B)
 
         # only modify the corresponding lre element if there is an lre
-        # if np.sum(self.sp_graph.lre_idx) > 0:
-        #     # currently assuming only one lre & symmetric (picking first node as source and second as destination)
-        #     self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] = (1-self.sp_graph.c) * np.ravel(np.dot(self.sp_graph.adj_base.todense()[self.sp_graph.lre[0][0],:], self.Linv_block["oo"][:,self.sp_graph.lre[0][0]]))[0] + self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] 
-        #     self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] = self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] #self.sp_graph.c * np.ravel(np.dot(self.sp_graph.adj_base.todense()[self.sp_graph.lre[0][1],:], self.Linv_block["oo"][:,self.sp_graph.lre[0][1]]))[0] + (1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] 
-        # if np.sum(self.sp_graph.lre_idx) > 0:
-        #     # currently assuming only one lre & symmetric (picking source as 0 and destination as 1)
-        #     # Ddd
-        #     Ddd = ((1-self.sp_graph.c)**2 * self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]] + 2*self.sp_graph.c*(1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] + self.sp_graph.c**2 * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]])
-        #     # Dsd = Dds
-        #     Dsd = (self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] + (1-self.sp_graph.c) * self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]])
-        #     # Dss
-        #     Dss = self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]]
+        if len(self.sp_graph.admix_edges) > 0:
+            # currently assuming only one lre & symmetric (picking source as 0 and destination as 1)
+            # Ddd
+            Ddd = (1-self.sp_graph.c)**2 * self.Linv_block["oo"][self.sp_graph.admix_edges[0][1],self.sp_graph.admix_edges[0][1]] + 2*self.sp_graph.c*(1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][1]] + self.sp_graph.c**2 * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]]
+            # Dsd = Dds
+            Dsd = self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]] + (1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][1]]
+            # Dss
+            # Dss = self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]]
 
-        #     self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]] = Dss
-        #     self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][0]] = Dsd
-        #     self.Linv_block["oo"][self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] = Dsd
-        #     self.Linv_block["oo"][self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]] = Ddd
-
+            # self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]] = Dss
+            self.Linv_block["oo"][self.sp_graph.admix_edges[0][1],self.sp_graph.admix_edges[0][0]] = Dsd
+            self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][1]] = Dsd
+            self.Linv_block["oo"][self.sp_graph.admix_edges[0][1],self.sp_graph.admix_edges[0][1]] = Ddd
+            
         # compute (d-o)-by-o submatrix of inverse of lap
         self.Linv_block["do"] = -self.lap_sol @ self.Linv_block["oo"]
 
@@ -208,14 +204,13 @@ class Objective(object):
     def loss(self):
         """Evaluate the loss function given the current params"""
         lamb = self.lamb
-        alpha = self.alpha
         beta = self.beta
 
         lik = self.neg_log_lik()
 
         # index edges that are NOT in lre
-        term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
-        term_1 = alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
+        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
+        term_1 = self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
         pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
 
         self.pen1 = pen1

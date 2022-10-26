@@ -165,6 +165,37 @@ def comp_genetic_vs_fitted_distance(
 
         return(max_res_node)
 
+def get_best_lre(sp_graph_lr, gen_test, coord, grid, edge_def, k=5, nfolds=None, lamb_cv=3., top=20):
+    sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
+    edges_lr = deepcopy(edge_def)
+    edges_lr = edges_lr.tolist()
+    ll_edges = np.empty((top,k))
+    top_edges = pd.DataFrame(index=range(top), columns=range(k))
+    for ik in range(k):
+        print("Starting search for edge {}...".format(ik+1))
+        lrn = comp_genetic_vs_fitted_distance(sp_graph_lr, n_lre=top, lamb=lamb_cv, plotFig=False, joint=True)
+        # lrn = list(map(tuple,node_to_pop['nodes'][np.ravel(max_res_nodes)].values.reshape(top,2)))
+        edges_lr.append(list(x+1 for x in lrn[0]))
+        # print(len(edges_lr))
+        sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=lrn[0:1])
+        sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+        # print(len(sp_graph_lr.edges))
+        obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); 
+        ll_edges[0,ik] = -obj_lr.neg_log_lik()
+        for ie, e in enumerate(lrn[1:]):
+            ll_edges[ie+1,ik] = sub_edge_get_ll(sp_graph_lr, lrn[ie], lrn[ie+1], 3.)
+        print("{}, found at index {}.".format(lrn[np.argmax(ll_edges[:,ik])], np.argmax(ll_edges[:,ik])))
+        top_edges.iloc[:,ik] = lrn
+        sub_edge_get_ll(sp_graph_lr, lrn[len(lrn)-1], lrn[np.argmax(ll_edges[:,ik])], 3.)
+        edges_lr = [list(x+1 for x in lrn[np.argmax(ll_edges[:,ik])]) if item == list(x+1 for x in lrn[0]) else item for item in edges_lr] 
+        # print(len(edges_lr))
+        # print(lrn, ll_edges[:,ik])
+        # edges_lr.append(list(x+1 for x in lrn[np.argmax(ll_edges[:,ik])]))
+        # sp_graph = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=[lrn[np.argmax(ll_edges[:,ik])]])
+        sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
+        
+    return ll_edges, top_edges
+
 def plot_estimated_vs_simulated_edges(
     # graph,
     sp_Graph,

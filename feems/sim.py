@@ -367,7 +367,7 @@ def simulate_genotypes(
     return genotypes.T
 
 def simulate_genotypes_w_admixture(
-    graph, n_e=1, target_n_snps=1000, n_print=50, long_range_nodes=[(0,0)], admixture_props=[0],
+    graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50, long_range_nodes=[(0,0)], admixture_props=[0], time_of_adm=[1]
 ):
     """Simulates genotypes under the stepping-stone model with a habitat specified by the graph
 
@@ -414,25 +414,22 @@ def simulate_genotypes_w_admixture(
             msprime.PopulationConfiguration(sample_size=sample_sizes[i], initial_size=n_e) for i in range(d)
         ]
 
-    demography = msprime.Demography.from_old_style(population_configurations, migration_matrix=np.array(nx.adj_matrix(graph, weight="w").toarray().tolist()), ignore_sample_size=True)
-    
-    ## adding admixture event
-    for i in range(len(admixture_props)):
-        demography.add_mass_migration(time=1, source=long_range_nodes[i][1], dest=long_range_nodes[i][0], proportion=admixture_props[i])
-
     # tree sequences
-    ts = msprime.sim_ancestry([msprime.SampleSet(sample_sizes[i],population=i,time=0) for i in range(d)],
-        demography=demography,
-        ploidy=2,
+    ts = msprime.simulate(
+        population_configurations=population_configurations,
+        migration_matrix=np.array(nx.adj_matrix(graph, weight="w").toarray().tolist()),
+        demographic_events=[msprime.MassMigration(time_of_adm[i], source=long_range_nodes[i][1], dest=long_range_nodes[i][0], proportion=admixture_props[i]) for i in range(len(admixture_props))],
+        length=chrom_length,
+        mutation_rate=mu,
         num_replicates=target_n_snps,
-        sequence_length=1,
+        Ne=1,
     )
 
     # simulate haplotypes
     haplotypes = []
-    for i, tree_sequence in enumerate(ts.trees()):
+    for i, tree_sequence in enumerate(ts):
 
-        # tree_sequence.dump(f"results/trees/mytesttreelargeNe1s{i}.tree")
+        tree_sequence.dump(f"results/trees/mytesttreewadms{i}.tree")
 
         # extract haps from ts
         H = tree_sequence.genotype_matrix()
@@ -445,7 +442,7 @@ def simulate_genotypes_w_admixture(
             idx = np.random.choice(np.arange(p), 1)
             h = H[idx, :]
 
-        haplotypes.append(tree_sequence.haplotypes())
+        haplotypes.append(h)
 
         if i % n_print == 0:
             print("Simulating ~SNP {}".format(i))

@@ -12,7 +12,7 @@ from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 
 
 class SpatialGraph(nx.Graph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, 
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, admix_prop=0, admix_edges=[(0,0)], Ldag=np.repeat(0,3),
                 long_range_edges=[(0,0)]):
         """Represents the spatial network which the data is defined on and
         stores relevant matrices / performs linear algebra routines needed for
@@ -79,7 +79,9 @@ class SpatialGraph(nx.Graph):
 
         # initialize c (admixture proportions)
         # currently only one lre (otherwise need a vector here)
-        self.c = 0.9995 # np.repeat(0.5, np.sum(self.lre_idx))
+        self.c = admix_prop # np.repeat(0.5, np.sum(self.lre_idx))
+        self.admix_edges = admix_edges
+        self.Ldag = Ldag
 
         # compute gradient of the graph laplacian with respect to w (dL / dw)
         # this only needs to be done once
