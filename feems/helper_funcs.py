@@ -20,7 +20,7 @@ from .spatial_graph import query_node_attributes
 from .cross_validation import comp_mats, run_cv
 from .objective import Objective
 from .viz import Viz
-from .joint_ver import Joint_Objective
+from .joint_ver import Joint_SpatialGraph, Joint_Objective
 
 # change matplotlib fonts
 plt.rcParams["font.family"] = "Arial"
@@ -166,7 +166,7 @@ def comp_genetic_vs_fitted_distance(
         return(max_res_node)
 
 def get_best_lre(sp_graph_lr, gen_test, coord, grid, edge_def, k=5, nfolds=None, lamb_cv=3., top=20):
-    sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
+    sp_graph_lr.fit(lamb=lamb_cv)#, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
     edges_lr = deepcopy(edge_def)
     edges_lr = edges_lr.tolist()
     ll_edges = np.empty((top,k))

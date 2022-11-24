@@ -75,7 +75,8 @@ class Objective(object):
         # multiply one matrix by solution of lap-system
         B = np.outer(np.ones(o), self.lap_sol.sum(axis=0)) / d
 
-        # sum up with L_{o,o} and one matrix
+        # sum up with L_{o,o} and one matrix 
+        ## Eqn 16 (pg. 23)
         self.L_double_inv = self.sp_graph.L_block["oo"].toarray() + 1.0 / d - A - B
 
     def _comp_inv_lap(self, B=None):
