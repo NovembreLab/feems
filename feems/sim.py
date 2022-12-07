@@ -425,6 +425,15 @@ def simulate_genotypes_w_admixture(
         Ne=1,
     )
 
+    if long_range_nodes!=[(0,0)]:
+        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+        for id, node in enumerate(long_range_nodes):
+            migmat[node[1], node[0]] = admixture_props[id]
+            migmat[node[0], node[1]] = 0.
+    else:
+        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+    plt.imshow(migmat,cmap='Greys'); plt.colorbar()
+
     # simulate haplotypes
     haplotypes = []
     for i, tree_sequence in enumerate(ts):

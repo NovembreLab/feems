@@ -88,22 +88,6 @@ class Objective(object):
         # compute o-by-o submatrix of inverse of lap
         self.Linv_block = {}
         self.Linv_block["oo"] = np.linalg.solve(self.L_double_inv, B)
-
-        # only modify the corresponding lre element if there is an lre
-        if len(self.sp_graph.admix_edges) > 0:
-            # currently assuming only one lre & symmetric (picking source as 0 and destination as 1)
-            # Ddd
-            Ddd = (1-self.sp_graph.c)**2 * self.Linv_block["oo"][self.sp_graph.admix_edges[0][1],self.sp_graph.admix_edges[0][1]] + 2*self.sp_graph.c*(1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][1]] + self.sp_graph.c**2 * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]]
-            # Dsd = Dds
-            Dsd = self.sp_graph.c * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]] + (1-self.sp_graph.c) * self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][1]]
-            # Dss
-            # Dss = self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]]
-
-            # self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][0]] = Dss
-            self.Linv_block["oo"][self.sp_graph.admix_edges[0][1],self.sp_graph.admix_edges[0][0]] = Dsd
-            self.Linv_block["oo"][self.sp_graph.admix_edges[0][0],self.sp_graph.admix_edges[0][1]] = Dsd
-            self.Linv_block["oo"][self.sp_graph.admix_edges[0][1],self.sp_graph.admix_edges[0][1]] = Ddd
-            
         # compute (d-o)-by-o submatrix of inverse of lap
         self.Linv_block["do"] = -self.lap_sol @ self.Linv_block["oo"]
 
