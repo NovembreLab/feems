@@ -143,7 +143,7 @@ def comp_genetic_vs_fitted_distance(
         x_ = np.linspace(np.min(fit_dist), np.max(fit_dist), 20)
         ax.plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1)
         ax.text(0.8, 0.15, "$\lambda$={:.3}".format(lamb), transform=ax.transAxes)
-        ax.text(0.8, 0.05, "R²={:.4f}".format(res.rsquared), transform=ax.transAxes)
+        ax.text(0.8, 0.05, "R²={:.3f}".format(res.rsquared), transform=ax.transAxes)
         ax.set_ylabel("genetic distance")
         ax.set_xlabel("fitted distance")
 
