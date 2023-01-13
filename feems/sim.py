@@ -341,7 +341,7 @@ def simulate_genotypes(
     haplotypes = []
     for i, tree_sequence in enumerate(ts):
 
-        tree_sequence.dump(f"results/trees/mytesttreelargeNe1s{i}.tree")
+        # tree_sequence.dump(f"results/trees/mytesttreelargeNe1s{i}.tree")
 
         # extract haps from ts
         H = tree_sequence.genotype_matrix()
@@ -438,7 +438,7 @@ def simulate_genotypes_w_admixture(
     haplotypes = []
     for i, tree_sequence in enumerate(ts):
 
-        tree_sequence.dump(f"results/trees/mytesttreewadms{i}.tree")
+        # tree_sequence.dump(f"results/trees/mytesttreewadms{i}.tree")
 
         # extract haps from ts
         H = tree_sequence.genotype_matrix()
