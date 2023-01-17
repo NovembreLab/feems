@@ -325,7 +325,7 @@ def simulate_genotypes(
     else:
         migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
 
-    plt.imshow(migmat,cmap='Greys'); plt.colorbar()
+    # plt.imshow(migmat,cmap='Greys'); plt.colorbar()
 
     # tree sequences
     ts = msprime.simulate(
@@ -432,7 +432,7 @@ def simulate_genotypes_w_admixture(
             migmat[node[0], node[1]] = 0.
     else:
         migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
-    plt.imshow(migmat,cmap='Greys'); plt.colorbar()
+    # plt.imshow(migmat,cmap='Greys'); plt.colorbar()
 
     # simulate haplotypes
     haplotypes = []
