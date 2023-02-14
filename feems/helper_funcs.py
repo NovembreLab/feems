@@ -7,6 +7,7 @@ import statsmodels.api as sm
 from copy import deepcopy
 import pandas as pd
 import scipy as sp
+import os 
 
 # viz
 import matplotlib.pyplot as plt
@@ -165,36 +166,146 @@ def comp_genetic_vs_fitted_distance(
 
         return(max_res_node)
 
-def get_best_lre(sp_graph_lr, gen_test, coord, grid, edge_def, k=5, nfolds=None, lamb_cv=3., top=20):
-    sp_graph_lr.fit(lamb=lamb_cv)#, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
+def get_best_lre(sp_graph, gen_test, coord, grid, edge_def, obj, k=2, lamb_cv=3., top=20, nboot=20, nchoose=100, option='base'):
+    ## the graph has not been fit yet, so fit it again with the given lambda
+    if not hasattr(sp_graph, 'W'):
+        sp_graph.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph.s2))
+    
+    # get a list of existing edges in the NO admixture edge object
     edges_lr = deepcopy(edge_def)
     edges_lr = edges_lr.tolist()
+    
     ll_edges = np.empty((top,k))
     top_edges = pd.DataFrame(index=range(top), columns=range(k))
+    te = []
+
     for ik in range(k):
         print("Starting search for edge {}...".format(ik+1))
-        lrn = comp_genetic_vs_fitted_distance(sp_graph_lr, n_lre=top, lamb=lamb_cv, plotFig=False, joint=True)
-        # lrn = list(map(tuple,node_to_pop['nodes'][np.ravel(max_res_nodes)].values.reshape(top,2)))
-        edges_lr.append(list(x+1 for x in lrn[0]))
-        # print(len(edges_lr))
-        sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=lrn[0:1])
-        sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
-        # print(len(sp_graph_lr.edges))
-        obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); 
-        ll_edges[0,ik] = -obj_lr.neg_log_lik()
-        for ie, e in enumerate(lrn[1:]):
-            ll_edges[ie+1,ik] = sub_edge_get_ll(sp_graph_lr, lrn[ie], lrn[ie+1], 3.)
-        print("{}, found at index {}.".format(lrn[np.argmax(ll_edges[:,ik])], np.argmax(ll_edges[:,ik])))
-        top_edges.iloc[:,ik] = lrn
-        sub_edge_get_ll(sp_graph_lr, lrn[len(lrn)-1], lrn[np.argmax(ll_edges[:,ik])], 3.)
-        edges_lr = [list(x+1 for x in lrn[np.argmax(ll_edges[:,ik])]) if item == list(x+1 for x in lrn[0]) else item for item in edges_lr] 
-        # print(len(edges_lr))
-        # print(lrn, ll_edges[:,ik])
-        # edges_lr.append(list(x+1 for x in lrn[np.argmax(ll_edges[:,ik])]))
-        # sp_graph = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=[lrn[np.argmax(ll_edges[:,ik])]])
-        sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
+        if option=='base':
+            max_res_nodes = comp_genetic_vs_fitted_distance(sp_graph, n_lre=top, lamb=lamb_cv, plotFig=False, joint=True)
+        else:
+            max_res_nodes = get_boot_edges(gen_test, sp_graph, coord, grid, edge_def, obj, lamb=lamb_cv, nreps=nboot, ntop=top, nchoose=nchoose, option=option)
+        
+        # code to exclude edges that have already been added in the previous steps
+        if ik>0:
+            max_res_nodes = [ele for ele in max_res_nodes if ele not in te]
+
+        # iterate across remaining edges
+        for ie, e in enumerate(max_res_nodes):
+            edges_t = deepcopy(edges_lr)
+            edges_t.append(list(x+1 for x in e))
+            sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_t), long_range_edges=max_res_nodes[ie:(ie+1)])
+            sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+            obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); 
+            ll_edges[ie,ik] = -obj_lr.neg_log_lik()
+
+        print("{}, found at index {}.".format(max_res_nodes[np.argmax(ll_edges[:,ik])], np.argmax(ll_edges[:,ik])))
+        te.append(top_edges.iloc[np.argmax(ll_edges[:,ik]),ik])
+        top_edges.iloc[:,ik] = max_res_nodes
+
+        edges_lr.append(list(x+1 for x in max_res_nodes[np.argmax(ll_edges[:,ik])]))
+        sp_graph = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=[max_res_nodes[np.argmax(ll_edges[:,ik])]])
+        sp_graph.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph.s2))
         
     return ll_edges, top_edges
+
+def get_boot_edges(gen_test_1e, sp_Graph, coord, grid, edge, obj, nreps=20, ntop=20, nchoose=100, lamb=3., option='hard'):
+    fit_dist = np.zeros((sp_Graph.n_observed_nodes*(sp_Graph.n_observed_nodes-1)//2,nreps+1)); emp_dist = np.zeros_like(fit_dist)
+    rng = np.random.default_rng(2022)
+    fit_cov, _, emp_cov = comp_mats(obj)
+    fit_dist[:,0] = cov_to_dist(fit_cov)[np.tril_indices(sp_Graph.n_observed_nodes, k=-1)]
+    emp_dist[:,0] = cov_to_dist(emp_cov)[np.tril_indices(sp_Graph.n_observed_nodes, k=-1)]
+
+    for n2 in range(1,nreps+1):
+        bootgenotypes = deepcopy(gen_test_1e)
+        ## if we bootstrap over SNPs, then we can do the below
+        ## bootgenotypes[:,rng.choice(range(gen_test_1e.shape[1]),gen_test_1e.shape[1])]
+        ## bootstrapping over inds (since this is the source of uncertainty)
+        ctr = 0
+        for deme in range(sp_Graph.n_observed_nodes):
+            bootgenotypes[ctr:(ctr+sp_Graph.n_samples_per_obs_node_permuted[deme]),:] = gen_test_1e[rng.choice(range(ctr,(ctr+sp_Graph.n_samples_per_obs_node_permuted[deme])),sp_Graph.n_samples_per_obs_node_permuted[deme],replace=True),:]
+            ctr += sp_Graph.n_samples_per_obs_node_permuted[deme]
+        ## remove SNPs that are invariant after bootstrapping
+        bootgenotypes = np.delete(bootgenotypes,np.where(bootgenotypes.sum(axis=0)==0)[0],1)
+        bootgenotypes = np.delete(bootgenotypes,np.where(bootgenotypes.sum(axis=0)==2*bootgenotypes.shape[0])[0],1)
+        sp_graph_boot = Joint_SpatialGraph(bootgenotypes, coord, grid, edge)
+        sp_graph_boot.fit(lamb=lamb, optimize_q='n-dim',verbose=False)
+        obj_boot = Joint_Objective(sp_graph_boot)
+        fit_cov, _, emp_cov = comp_mats(obj_boot)
+        fit_dist[:,n2] = cov_to_dist(fit_cov)[np.tril_indices(sp_graph_boot.n_observed_nodes, k=-1)]
+        emp_dist[:,n2] = cov_to_dist(emp_cov)[np.tril_indices(sp_graph_boot.n_observed_nodes, k=-1)]
+    
+    # computing the best-fit linear regression on the whole data set
+    X = sm.add_constant(fit_dist[:,0])
+    mod = sm.OLS(emp_dist[:,0], X)
+    res = mod.fit()
+    muhat, betahat = res.params
+
+    # finding the largest outliers, taking into account the SE might overlap with best-fit line
+    max_idx = np.argpartition(res.resid, nchoose)[:nchoose]
+    max_idx = max_idx[np.argsort(res.resid[max_idx])]
+    new_max_idx = []
+
+    se_resid = np.zeros(fit_dist.shape[0])
+    for i in range(fit_dist.shape[0]):
+        se_resid[i] = np.std(((betahat*fit_dist[i,0]+muhat)-emp_dist[i,:])-res.resid[i])/np.sqrt(nreps)
+
+    if option=='hard':       
+        # computing the standard errors from before
+        se_fit = np.zeros(fit_dist.shape[0]); se_emp = np.zeros_like(se_fit)
+        for i in range(fit_dist.shape[0]):
+            se_fit[i] = np.sqrt(np.sum((fit_dist[i,:]-np.mean(fit_dist[i,:]))**2)/(nreps-1))
+            se_emp[i] = np.sqrt(np.sum((emp_dist[i,:]-np.mean(emp_dist[i,:]))**2)/(nreps-1))
+
+        for i in max_idx:
+            if ((fit_dist[i,0]-se_fit[i])>(emp_dist[i,0]-muhat)/betahat) & ((betahat*fit_dist[i,0]+muhat) > (emp_dist[i,0]+se_emp[i])):
+                new_max_idx.append(i)
+
+    elif option=='ashr':
+        np.savetxt('/Users/vivaswatshastry/Desktop/feemsashr.txt',np.vstack((res.resid,se_resid)).T)
+        os.system('Rscript /Users/vivaswatshastry/Desktop/run_ashr.R')
+        resash = np.loadtxt('/Users/vivaswatshastry/Desktop/feemsresash.txt',)
+        new_max_idx = np.argpartition(resash[:,0], nchoose)[:nchoose]
+        new_max_idx = new_max_idx[np.argsort(resash[new_max_idx,0])]
+
+    new_max_res_node = []
+    for k in new_max_idx[:ntop]:
+        x = np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1
+        y = np.int(k - 0.5*x*(x-1))
+        new_max_res_node.append(tuple(sorted((x,y))))
+
+    return new_max_res_node
+
+# def get_best_lre(sp_graph_lr, gen_test, coord, grid, edge_def, k=5, nfolds=None, lamb_cv=3., top=20):
+#     sp_graph_lr.fit(lamb=lamb_cv)#, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
+#     edges_lr = deepcopy(edge_def)
+#     edges_lr = edges_lr.tolist()
+#     ll_edges = np.empty((top,k))
+#     top_edges = pd.DataFrame(index=range(top), columns=range(k))
+#     for ik in range(k):
+#         print("Starting search for edge {}...".format(ik+1))
+#         lrn = comp_genetic_vs_fitted_distance(sp_graph_lr, n_lre=top, lamb=lamb_cv, plotFig=False, joint=True)
+#         # lrn = list(map(tuple,node_to_pop['nodes'][np.ravel(max_res_nodes)].values.reshape(top,2)))
+#         edges_lr.append(list(x+1 for x in lrn[0]))
+#         # print(len(edges_lr))
+#         sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=lrn[0:1])
+#         sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+#         # print(len(sp_graph_lr.edges))
+#         obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); 
+#         ll_edges[0,ik] = -obj_lr.neg_log_lik()
+#         for ie, e in enumerate(lrn[1:]):
+#             ll_edges[ie+1,ik] = sub_edge_get_ll(sp_graph_lr, lrn[ie], lrn[ie+1], 3.)
+#         print("{}, found at index {}.".format(lrn[np.argmax(ll_edges[:,ik])], np.argmax(ll_edges[:,ik])))
+#         top_edges.iloc[:,ik] = lrn
+#         sub_edge_get_ll(sp_graph_lr, lrn[len(lrn)-1], lrn[np.argmax(ll_edges[:,ik])], 3.)
+#         edges_lr = [list(x+1 for x in lrn[np.argmax(ll_edges[:,ik])]) if item == list(x+1 for x in lrn[0]) else item for item in edges_lr] 
+#         # print(len(edges_lr))
+#         # print(lrn, ll_edges[:,ik])
+#         # edges_lr.append(list(x+1 for x in lrn[np.argmax(ll_edges[:,ik])]))
+#         # sp_graph = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=[lrn[np.argmax(ll_edges[:,ik])]])
+#         sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2))
+       
+#     return ll_edges, top_edges
 
 def plot_estimated_vs_simulated_edges(
     # graph,

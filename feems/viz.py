@@ -140,6 +140,7 @@ class Viz(object):
         self.halfrange = halfrange
         self.change_norm = clr.CenteredNorm(halfrange=self.halfrange)
         self.dist_cmap = plt.get_cmap("viridis_r")
+        self.c_cmap = plt.get_cmap('Greys')
 
         # extract node positions on the lattice
         self.idx = nx.adjacency_matrix(self.sp_graph).nonzero()
@@ -312,6 +313,15 @@ class Viz(object):
             self.edge_cbar.ax.get_title(), fontsize=self.cbar_font_size
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
+
+    def draw_arrow(self, lre, c):
+        self.ax.arrow(self.grid[lre[0][0],0],self.grid[lre[0][0],1],dx=self.grid[lre[0][1],0]-self.grid[lre[0][0],0],dy=self.grid[lre[0][1],1]-self.grid[lre[0][0],1],ec=self.c_cmap(c),fc='k',length_includes_head=True,lw=2,head_width=20000,head_length=20000,)
+
+    def draw_c_colorbar(self):
+        "Draws simple colorbar from 0 to 1 scale for admixture proportion"
+        self.c_axins = inset_axes(self.ax, loc='upper right', width="20%", height="5%",)
+        self.c_axins.set_title(r'$|\hat c - c_{sim}|$', fontsize=12)
+        plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap),cax=self.c_axins,shrink=0.3,orientation='horizontal')
 
 
 def recover_nnz_entries(sp_graph):

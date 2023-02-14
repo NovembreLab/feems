@@ -312,7 +312,7 @@ class SpatialGraph(nx.Graph):
     def comp_precision(self, s2):
         """Computes the residual precision matrix"""
         self.s2 = s2
-        self.q = self.n_samples_per_obs_node_permuted / self.s2 ##  NOTE: variable q is inverse of q from FEEMS & EEMS manuscript
+        self.q = self.n_samples_per_obs_node_permuted / self.s2 ## NOTE: variable q is inverse of q from FEEMS & EEMS manuscript
         self.q_diag = sp.diags(self.q).tocsc()
         self.q_inv_diag = sp.diags(1.0 / self.q).tocsc()
         self.q_inv_grad = -1.0 / self.n_samples_per_obs_node_permuted
