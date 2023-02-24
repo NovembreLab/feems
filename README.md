@@ -3,8 +3,6 @@
 
 # feems
 
-Test update!
-
 **F**ast **E**stimation of **E**ffective **M**igration **S**urfaces (`feems`) is a python package 
 implementing a statistical method for inferring and visualizing gene-flow in 
 spatial population genetic data.
