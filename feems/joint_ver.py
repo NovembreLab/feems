@@ -67,6 +67,9 @@ class Joint_Objective(Objective):
         )  # avoid overflow in exp
         self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
         self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w)))
+
+        ## Feb 27, 2023 (set gradient to 0 for long range edges)
+        self.grad_pen[self.sp_graph.lre_idx] = 0 
         
         if self.optimize_q == 'n-dim':
             lamb_q = self.lamb_q
@@ -93,9 +96,17 @@ class Joint_Objective(Objective):
             term_1 = alpha_q * self.sp_graph.s2 + np.log(term_0)
             pen = 0.5 * lamb_q * np.linalg.norm(self.sp_graph.Delta_q @ term_1) ** 2   
         else: 
-            term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
-            term_1 = alpha * self.sp_graph.w + np.log(term_0)
-            pen = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2             
+            term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
+            term_1 = alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
+            pen = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2   
+
+            # calculating penalty associated with LRE term
+            if len(self.sp_graph.lre)>0:
+                term_lre = alpha * self.sp_graph.w[self.sp_graph.lre_idx] + np.log(1.0 - np.exp(-alpha * self.sp_graph.w[self.sp_graph.lre_idx]))
+                pen_lre = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,self.sp_graph.lre_idx] @ term_lre) ** 2
+
+                # removing the penalty associated with LRE: no constraint on LRE weight
+                pen = pen - pen_lre
 
         # loss
         loss = lik + pen
@@ -281,7 +292,7 @@ class Joint_SpatialGraph(SpatialGraph):
             maxiter=maxiter,
             approx_grad=False,
         )
-        if maxiter >= 100:
+        if maxiter >= 500:
             assert res[2]["warnflag"] == 0, "did not converge"
         if obj.optimize_q is not None:
             self.w = np.exp(res[0][:self.size()])

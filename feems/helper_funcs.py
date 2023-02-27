@@ -228,6 +228,7 @@ def get_boot_edges(gen_test_1e, sp_Graph, coord, grid, edge, obj, nreps=20, ntop
         ## remove SNPs that are invariant after bootstrapping
         bootgenotypes = np.delete(bootgenotypes,np.where(bootgenotypes.sum(axis=0)==0)[0],1)
         bootgenotypes = np.delete(bootgenotypes,np.where(bootgenotypes.sum(axis=0)==2*bootgenotypes.shape[0])[0],1)
+        ## fit the model with the bootstrapped genotypes
         sp_graph_boot = Joint_SpatialGraph(bootgenotypes, coord, grid, edge)
         sp_graph_boot.fit(lamb=lamb, optimize_q='n-dim',verbose=False)
         obj_boot = Joint_Objective(sp_graph_boot)

@@ -142,13 +142,15 @@ class Objective(object):
         # term_1 = alpha * self.sp_graph.w + np.log(term_0)
         # term_2 = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term_1)
         # self.grad_pen = term_2 * (alpha / term_0)
-        term = alpha * self.sp_graph.w + np.log(
-            1 - np.exp(-alpha * self.sp_graph.w)
+        term = self.alpha * self.sp_graph.w + np.log(
+            1 - np.exp(-self.alpha * self.sp_graph.w)
         )  # avoid overflow in exp
         self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
-        self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w)))  
+        self.grad_pen = self.grad_pen * (self.alpha / (1 - np.exp(-self.alpha * self.sp_graph.w)))  
         # only fill the long range edge indices with this derivative
-        self.grad_pen[self.sp_graph.lre_idx] = beta * np.ones(np.sum(self.sp_graph.lre_idx))  
+        ## Feb 26, 2023 - set the derivative to 0? 
+        self.grad_pen[self.sp_graph.lre_idx] = 0
+        # beta * np.ones(np.sum(self.sp_graph.lre_idx))  
         # 2.0 * self.graph.w[lre_idx] if Frobenius/L-2 norm
         # np.ones(np.sum(lre_idx)) if L-1 norm
 
@@ -194,22 +196,23 @@ class Objective(object):
         lik = self.neg_log_lik()
 
         # index edges that are NOT in lre
-        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx])
-        term_1 = self.alpha * self.sp_graph.w[~self.sp_graph.lre_idx] + np.log(term_0)
-        pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta[:,~self.sp_graph.lre_idx] @ term_1) ** 2
+        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w)
+        term_1 = self.alpha * self.sp_graph.w + np.log(term_0)
+        pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
 
-        self.pen1 = pen1
+        self.pen1 = pen1 
 
         # lasso penalty for lre, index edges in lre
-        pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx])
+        ## Feb 26, 2023 - no penalty for long range edges
+        # pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx])
         ## relative scaling: by the inverse of the graph Laplacian?
         # larger the absolute value (lower the inverse), the lower the scaling coefficient - prompts a lower beta?
         #pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx]/np.abs([self.sp_graph.L[i] for i in self.sp_graph.lre]))
 
-        self.pen2 = pen2
+        # self.pen2 = pen2
 
         # loss
-        loss = lik + pen1 + pen2
+        loss = lik + pen1 
         return loss
 
 
