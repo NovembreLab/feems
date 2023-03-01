@@ -52,11 +52,24 @@ Unfortunately some of the other dependencies for `feems` are not easily
 installed by pip so we recommend getting started using `conda`:
 
 ```
-conda install -c conda-forge suitesparse=5.7.2 scikit-sparse=0.4.4 cartopy=0.18.0 jupyter=1.0.0 jupyterlab=2.1.5 sphinx=3.1.2 sphinx_rtd_theme=0.5.0 nbsphinx=0.7.1 pandas-plink sphinx-autodoc-typehints
+conda install numpy==1.22.3 scipy==1.5.0 scikit-learn==0.23.1
+conda install matplotlib==3.2.2 pyproj==2.6.1.post1 networkx==2.4.0 
+conda install shapely==1.7.1 
+conda install fiona
+conda install pytest==5.4.3 pep8==1.7.1 flake8==3.8.3
+conda install click==7.1.2 setuptools pandas-plink
+conda install msprime==1.0.0 statsmodels==0.12.2 PyYAML==5.4.1
+conda install xlrd==2.0.1 
+conda install openpyxl==3.0.7
+conda install suitesparse=5.7.2
+conda install scikit-sparse=0.4.4 
+conda install cartopy=0.18.0
 ```
 
-We added jupyter and jupyterlab to explore some example notebooks but these 
-are not necessary for the `feems` package. Once the `conda` environment has 
+Jupyter and jupyterlab are also needed to explore some example notebooks but these 
+are not necessary for the `feems` package. 
+
+Once the `conda` environment has 
 been setup with these tricky dependencies we can install `feems`:
 
 ```
