@@ -108,8 +108,8 @@ class SpatialGraph(nx.Graph):
         * note this is computed only once
         """
         data = np.array([], dtype=np.float)
-        row_idx = np.array([], dtype=np.int)
-        col_idx = np.array([], dtype=np.int)
+        row_idx = np.array([], dtype=int)
+        col_idx = np.array([], dtype=int)
         n_count = 0
         for i in range(self.size()):
             edge1 = np.array([self.nnz_idx[0][i], self.nnz_idx[1][i]])
@@ -137,7 +137,7 @@ class SpatialGraph(nx.Graph):
         * note this is computed only once
         """
         row_idx = np.repeat(np.arange(len(self)), len(self))
-        col_idx = np.array([], dtype=np.int)
+        col_idx = np.array([], dtype=int)
         for ite, i in enumerate(range(len(self))):
             idx = np.arange(0, len(self) ** 2, len(self)) + ite
             col_idx = np.append(col_idx, idx)
