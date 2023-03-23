@@ -149,7 +149,7 @@ class Objective(object):
         self.grad_pen = self.grad_pen * (self.alpha / (1 - np.exp(-self.alpha * self.sp_graph.w)))  
         # only fill the long range edge indices with this derivative
         ## Feb 26, 2023 - set the derivative to 0? 
-        self.grad_pen[self.sp_graph.lre_idx] = 0
+        # self.grad_pen[self.sp_graph.lre_idx] = 0
         # beta * np.ones(np.sum(self.sp_graph.lre_idx))  
         # 2.0 * self.graph.w[lre_idx] if Frobenius/L-2 norm
         # np.ones(np.sum(lre_idx)) if L-1 norm

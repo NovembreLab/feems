@@ -210,10 +210,11 @@ def get_best_lre(sp_graph, gen_test, coord, grid, edge_def, obj, k=2, lamb_cv=3.
     return ll_edges, top_edges
 
 def get_boot_edges(gen_test_1e, sp_Graph, coord, grid, edge, obj, nreps=20, ntop=20, nchoose=100, lamb=3., option='hard'):
-    fit_dist = np.zeros((sp_Graph.n_observed_nodes*(sp_Graph.n_observed_nodes-1)//2,nreps+1)); emp_dist = np.zeros_like(fit_dist)
+    emp_dist = np.zeros((sp_Graph.n_observed_nodes*(sp_Graph.n_observed_nodes-1)//2,nreps+1))
+    fit_dist = np.zeros(sp_Graph.n_observed_nodes*(sp_Graph.n_observed_nodes-1)//2)
     rng = np.random.default_rng(2022)
     fit_cov, _, emp_cov = comp_mats(obj)
-    fit_dist[:,0] = cov_to_dist(fit_cov)[np.tril_indices(sp_Graph.n_observed_nodes, k=-1)]
+    fit_dist = cov_to_dist(fit_cov)[np.tril_indices(sp_Graph.n_observed_nodes, k=-1)]
     emp_dist[:,0] = cov_to_dist(emp_cov)[np.tril_indices(sp_Graph.n_observed_nodes, k=-1)]
 
     for n2 in range(1,nreps+1):
@@ -228,16 +229,25 @@ def get_boot_edges(gen_test_1e, sp_Graph, coord, grid, edge, obj, nreps=20, ntop
         ## remove SNPs that are invariant after bootstrapping
         bootgenotypes = np.delete(bootgenotypes,np.where(bootgenotypes.sum(axis=0)==0)[0],1)
         bootgenotypes = np.delete(bootgenotypes,np.where(bootgenotypes.sum(axis=0)==2*bootgenotypes.shape[0])[0],1)
+        
+        ## only run bootstrapping on the empirical distances
+        sp_Graph.genotypes = bootgenotypes
+        sp_Graph._estimate_allele_frequencies()
+        sp_Graph.mu = sp_Graph.frequencies.mean(axis=0) / 2
+        sp_Graph.frequencies = sp_Graph.frequencies / np.sqrt(sp_Graph.mu * (1 - sp_Graph.mu))
+        frequencies_centered = sp_Graph.frequencies - sp_Graph.frequencies.mean(axis=0)
+        emp_cov = frequencies_centered @ frequencies_centered.T / sp_Graph.n_snps
+
         ## fit the model with the bootstrapped genotypes
-        sp_graph_boot = Joint_SpatialGraph(bootgenotypes, coord, grid, edge)
-        sp_graph_boot.fit(lamb=lamb, optimize_q='n-dim',verbose=False)
-        obj_boot = Joint_Objective(sp_graph_boot)
-        fit_cov, _, emp_cov = comp_mats(obj_boot)
-        fit_dist[:,n2] = cov_to_dist(fit_cov)[np.tril_indices(sp_graph_boot.n_observed_nodes, k=-1)]
-        emp_dist[:,n2] = cov_to_dist(emp_cov)[np.tril_indices(sp_graph_boot.n_observed_nodes, k=-1)]
+        # sp_graph_boot = Joint_SpatialGraph(bootgenotypes, coord, grid, edge)
+        # sp_graph_boot.fit(lamb=lamb, optimize_q='n-dim',verbose=False)
+        # obj_boot = Joint_Objective(sp_graph_boot)
+        # fit_cov, _, emp_cov = comp_mats(obj_boot)
+        # fit_dist[:,n2] = cov_to_dist(fit_cov)[np.tril_indices(sp_graph_boot.n_observed_nodes, k=-1)]
+        emp_dist[:,n2] = cov_to_dist(emp_cov)[np.tril_indices(sp_Graph.n_observed_nodes, k=-1)]
     
     # computing the best-fit linear regression on the whole data set
-    X = sm.add_constant(fit_dist[:,0])
+    X = sm.add_constant(fit_dist)
     mod = sm.OLS(emp_dist[:,0], X)
     res = mod.fit()
     muhat, betahat = res.params
@@ -249,17 +259,19 @@ def get_boot_edges(gen_test_1e, sp_Graph, coord, grid, edge, obj, nreps=20, ntop
 
     se_resid = np.zeros(fit_dist.shape[0])
     for i in range(fit_dist.shape[0]):
-        se_resid[i] = np.std(((betahat*fit_dist[i,0]+muhat)-emp_dist[i,:])-res.resid[i])/np.sqrt(nreps)
+        se_resid[i] = np.std(((betahat*fit_dist[i]+muhat)-emp_dist[i,:])-res.resid[i])/np.sqrt(nreps)
 
     if option=='hard':       
         # computing the standard errors from before
-        se_fit = np.zeros(fit_dist.shape[0]); se_emp = np.zeros_like(se_fit)
+        se_emp = np.zeros(fit_dist.shape[0])
+        # se_fit = np.zeros_like(se_emp)
         for i in range(fit_dist.shape[0]):
-            se_fit[i] = np.sqrt(np.sum((fit_dist[i,:]-np.mean(fit_dist[i,:]))**2)/(nreps-1))
+            # se_fit[i] = np.sqrt(np.sum((fit_dist[i,:]-np.mean(fit_dist[i,:]))**2)/(nreps-1))
             se_emp[i] = np.sqrt(np.sum((emp_dist[i,:]-np.mean(emp_dist[i,:]))**2)/(nreps-1))
 
         for i in max_idx:
-            if ((fit_dist[i,0]-se_fit[i])>(emp_dist[i,0]-muhat)/betahat) & ((betahat*fit_dist[i,0]+muhat) > (emp_dist[i,0]+se_emp[i])):
+            # if ((fit_dist[i,0]-se_fit[i])>(emp_dist[i,0]-muhat)/betahat) & ((betahat*fit_dist[i,0]+muhat) > (emp_dist[i,0]+se_emp[i])):
+            if (betahat*fit_dist[i]+muhat) > (emp_dist[i,0]+se_emp[i]):
                 new_max_idx.append(i)
 
     elif option=='ashr':
