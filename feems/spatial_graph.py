@@ -107,7 +107,7 @@ class SpatialGraph(nx.Graph):
         """Create a signed incidence matrix on the edges
         * note this is computed only once
         """
-        data = np.array([], dtype=np.float)
+        data = np.array([], dtype=float)
         row_idx = np.array([], dtype=int)
         col_idx = np.array([], dtype=int)
         n_count = 0
