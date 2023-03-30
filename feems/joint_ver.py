@@ -1,17 +1,19 @@
 import sys
 import numpy as np
 import scipy.sparse as sp
+from scipy.stats import wishart
 from scipy.optimize import fmin_l_bfgs_b, minimize
 
 from .spatial_graph import SpatialGraph
 from .objective import Objective, neg_log_lik_w0_s2
 
 class Joint_Objective(Objective): 
-    def __init__(self, sp_graph):
+    def __init__(self, sp_graph, option='default'):
         """Inherit from the feems object Objective and overwrite some methods for evaluations 
         and gradient of feems objective when residual variance is estimated jointly with edge weights
         Args:
             sp_graph (:obj:`feems.SpatialGraph`): feems spatial graph object
+            option (string): indicating whether weights & admixture proportion are jointly estimated
         """
         super().__init__(sp_graph=sp_graph)   
         
@@ -23,7 +25,8 @@ class Joint_Objective(Objective):
         
         # reg params for residual variance
         self.lamb_q = None
-        self.alpha_q = 1. 
+        self.alpha_q = None
+        self.option = option
 
     def _comp_grad_obj(self):
         """Computes the gradient of the objective function with respect to the
@@ -51,6 +54,153 @@ class Joint_Objective(Objective):
             
         if self.optimize_q == '1-dim':
             self.grad_obj_q = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad) 
+
+    def _comp_grad_obj_joint(self):
+        """Computes the gradient of the objective function (now defined with admix. prop. c) with respect to the latent variables dLoss / dL
+        """
+
+        # compute inverses
+        self._comp_inv_lap()
+        
+        C = np.vstack((-np.ones(self.sp_graph.n_observed_nodes-1),np.eye(self.sp_graph.n_observed_nodes-1))).T
+
+        lrn = self.sp_graph.lre
+
+        Rmat = -2*self.Linv + np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
+        Q1mat = (np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(1/self.sp_graph.q,(1,-1))).T
+        resmat = -0.5*(Rmat + (Q1mat + Q1mat.T) - 2*np.diag(1/self.sp_graph.q))
+        
+        resmat[lrn[0][0],lrn[0][1]] = -0.5*((0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*Rmat[lrn[0][0],lrn[0][1]] + (1+self.sp_graph.c)/self.sp_graph.q[lrn[0][0]] + (1-self.sp_graph.c)/self.sp_graph.q[lrn[0][1]])
+        resmat[lrn[0][1],lrn[0][0]] = resmat[lrn[0][0],lrn[0][1]]
+
+        ## id
+        for i in set(range(self.sp_graph.n_observed_nodes))-set([lrn[0][0],lrn[0][1]]):
+            resmat[i,lrn[0][1]] = -0.5*((1-self.sp_graph.c)*(Rmat[i,lrn[0][1]]) + self.sp_graph.c*Rmat[i,lrn[0][0]] + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*Rmat[lrn[0][0],lrn[0][1]] + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[lrn[0][1]] + self.sp_graph.c/self.sp_graph.q[lrn[0][0]])
+            resmat[lrn[0][1],i] = resmat[i,lrn[0][1]]
+
+        ## (1 x d2)
+        delldsig = self.sp_graph.n_snps * (C.T@(np.linalg.inv(C@resmat@C.T)@(C@self.sp_graph.S@C.T)@np.linalg.inv(C@resmat@C.T)-np.linalg.inv(C@resmat@C.T))@C).reshape(1,-1)
+
+        ## (d2 x d2) 
+        dsigdL = np.zeros((self.sp_graph.n_observed_nodes**2,self.sp_graph.n_observed_nodes**2))
+        idx = np.arange(self.sp_graph.n_observed_nodes**2).reshape(-1,self.sp_graph.n_observed_nodes).T[np.tril_indices(self.sp_graph.n_observed_nodes,k=-1)]   
+        for I in idx:
+            i = I//self.sp_graph.n_observed_nodes; j = I%self.sp_graph.n_observed_nodes
+            dsigdL[I,self.sp_graph.n_observed_nodes*i+j] = 2*self.Linv[i,j]**2
+            dsigdL[I,self.sp_graph.n_observed_nodes*j+i] = 2*self.Linv[i,j]**2
+
+            dsigdL[I,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
+            dsigdL[I,self.sp_graph.n_observed_nodes*j+j] = -self.Linv[j,j]**2
+
+            It = self.sp_graph.n_observed_nodes*j + i
+            dsigdL[It,self.sp_graph.n_observed_nodes*i+j] = 2*self.Linv[j,i]**2
+            dsigdL[It,self.sp_graph.n_observed_nodes*j+i] = 2*self.Linv[i,j]**2
+
+            dsigdL[It,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
+            dsigdL[It,self.sp_graph.n_observed_nodes*j+j] = -self.Linv[j,j]**2
+
+        s = self.sp_graph.lre[0][0]; d = self.sp_graph.lre[0][1]
+        I = self.sp_graph.n_observed_nodes*d + s 
+        dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[s,d]**2)
+        dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[d,s]**2)
+
+        dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[s,s]**2)  
+        dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[d,d]**2) 
+
+        ## do it for transpose too
+        I = self.sp_graph.n_observed_nodes*s + d 
+        dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[s,d]**2)
+        dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[d,s]**2)
+
+        dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[s,s]**2)  
+        dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[d,d]**2) 
+
+        for i in set(range(self.sp_graph.n_observed_nodes))-{s,d}:
+            I = self.sp_graph.n_observed_nodes*d + i
+            dsigdL[I,self.sp_graph.n_observed_nodes*i+d] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*d+i] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = 0.5*(self.sp_graph.c**2+self.sp_graph.c)*(-self.Linv[s,s]**2)
+
+            dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = 0.5*(self.sp_graph.c**2-3*self.sp_graph.c+2)*(-self.Linv[d,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
+
+            I = self.sp_graph.n_observed_nodes*i + d
+            dsigdL[I,self.sp_graph.n_observed_nodes*i+d] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*d+i] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = 0.5*(self.sp_graph.c**2+self.sp_graph.c)*(-self.Linv[s,s]**2)
+
+            dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = 0.5*(self.sp_graph.c**2-3*self.sp_graph.c+2)*(-self.Linv[d,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
+            dsigdL[I,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
+            
+        ## (d2 x e)
+        dLdw = np.zeros((self.sp_graph.n_observed_nodes**2,len(self.sp_graph.edges)))
+        for I in range(len(self.sp_graph.edges)):
+            Ii = list(self.sp_graph.edges)[I][0]; Ij = list(self.sp_graph.edges)[I][1]
+
+            dLdw[self.sp_graph.n_observed_nodes*Ii + Ij, I] = -1
+            dLdw[self.sp_graph.n_observed_nodes*Ij + Ii, I] = -1
+
+        for i in range(self.sp_graph.n_observed_nodes):
+            for j in np.where(self.sp_graph.Delta_q.toarray()[:,i])[0]:
+                dLdw[self.sp_graph.n_observed_nodes*i + i, j] = 1
+
+        self.grad_obj = np.ravel(delldsig @ dsigdL @ dLdw)
+
+        # grads for d diag(Jq^-1) / dq
+        if self.optimize_q == 'n-dim':
+
+            # self.comp_B = self.inv_cov - (1.0 / self.denom) * np.outer(
+            #     self.inv_cov_sum, self.inv_cov_sum
+            # )
+            # self.comp_A = self.comp_B @ self.sp_graph.S @ self.comp_B
+            # M = self.comp_A - self.comp_B
+            # self.grad_obj_q = np.zeros(len(self.sp_graph))
+            # self.grad_obj_q[:self.sp_graph.n_observed_nodes] = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad)
+             
+            dsigdq = np.zeros((self.sp_graph.n_observed_nodes**2,self.sp_graph.n_observed_nodes))
+            idx = np.arange(self.sp_graph.n_observed_nodes**2).reshape(-1,self.sp_graph.n_observed_nodes).T[np.tril_indices(self.sp_graph.n_observed_nodes,k=-1)]
+            for I in idx:
+                i = I//self.sp_graph.n_observed_nodes; j = I%self.sp_graph.n_observed_nodes
+                dsigdq[I,i] = 1
+                dsigdq[I,j] = 1
+
+                It = self.sp_graph.n_observed_nodes*j + i
+                dsigdq[It,i] = 1
+                dsigdq[It,j] = 1
+
+            I = self.sp_graph.n_observed_nodes*d + s 
+            dsigdq[I,s] = (1+self.sp_graph.c); dsigdq[I,d] = (1-self.sp_graph.c)
+            It = self.sp_graph.n_observed_nodes*s + d
+            dsigdq[It,s] = (1+self.sp_graph.c); dsigdq[It,d] = (1-self.sp_graph.c)
+
+            for i in set(range(self.sp_graph.n_observed_nodes))-{s,d}:
+                I = self.sp_graph.n_observed_nodes*d + i
+                dsigdq[I,d] = (1-self.sp_graph.c)
+                dsigdL[I,s] = self.sp_graph.c
+
+                It = self.sp_graph.n_observed_nodes*i + d
+                dsigdq[I,d] = (1-self.sp_graph.c)
+                dsigdq[I,s] = self.sp_graph.c
+
+            self.grad_obj_q = np.zeros(self.sp_graph.n_observed_nodes)
+            self.grad_obj_q[:self.sp_graph.n_observed_nodes] = np.multiply(delldsig @ dsigdq, 1./self.sp_graph.n_samples_per_obs_node_permuted)
+            
+        if self.optimize_q == '1-dim':
+            self.grad_obj_q = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad) 
+
+        dsigdc = np.zeros((self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes))
+        dsigdc[lrn[0][0],lrn[0][1]] = (self.sp_graph.c-1.5)*Rmat[lrn[0][0],lrn[0][1]] + 1/self.sp_graph.q[lrn[0][0]] - 1/self.sp_graph.q[lrn[0][1]]
+        dsigdc[lrn[0][1],lrn[0][0]] = dsigdc[lrn[0][0],lrn[0][1]]
+
+        for i in set(range(Rmat.shape[0]))-set([lrn[0][0],lrn[0][1]]):
+            dsigdc[i,lrn[0][1]] = -Rmat[i,lrn[0][1]] + Rmat[i,lrn[0][0]] + (self.sp_graph.c-0.5)*Rmat[lrn[0][0],lrn[0][1]] - 1/self.sp_graph.q[lrn[0][1]] + 1/self.sp_graph.q[lrn[0][0]]
+            dsigdc[lrn[0][1],i] = dsigdc[i,lrn[0][1]]
+
+        self.grad_obj_c = np.ravel(delldsig @ dsigdc.reshape(-1,1))[0]
 
     def _comp_grad_reg(self):
         """Computes gradient"""
@@ -80,7 +230,8 @@ class Joint_Objective(Objective):
             )
             self.grad_pen_q = self.sp_graph.Delta_q.T @ self.sp_graph.Delta_q @ (lamb_q * term)
             self.grad_pen_q = self.grad_pen_q * (alpha_q / (1 - np.exp(-alpha_q * self.sp_graph.s2)))
-        
+
+
     def loss(self):
         """Evaluate the loss function given the current params"""
         lamb = self.lamb
@@ -124,7 +275,7 @@ def loss_wrapper(z, obj):
         theta1 = theta[n_edges:]
         obj.sp_graph.comp_precision(s2=theta1)
     obj.inv()
-    obj.grad()                
+    obj.grad()     
 
     # loss / grad
     loss = obj.loss()
@@ -140,9 +291,37 @@ def loss_wrapper(z, obj):
         grad[n_edges:] = obj.grad_obj_q * obj.sp_graph.s2          
     return (loss, grad)
 
+def joint_loss_wrapper(z, obj):
+    """Wrapper function to optimize z=log(w,q,c) which returns the loss and gradient for ALL parameters"""                
+    n_edges = obj.sp_graph.size()
+    theta = np.r_[np.exp(z[:-1]), z[-1]]
+    theta0 = theta[:n_edges]
+    obj.sp_graph.comp_graph_laplacian(theta0)
+    if obj.optimize_q is not None:
+        theta1 = theta[n_edges:-1]
+        obj.sp_graph.comp_precision(s2=theta1)
+    obj.sp_graph.c = theta[-1]
+    obj.inv()
+    obj.grad()     
+
+    # loss / grad
+    loss = obj.loss()
+    if obj.optimize_q is None:
+        grad = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
+    elif obj.optimize_q == 'n-dim':
+        grad = np.zeros_like(theta)
+        grad[:n_edges] = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
+        grad[n_edges:-1] = obj.grad_obj_q * obj.sp_graph.s2 + obj.grad_pen_q * obj.sp_graph.s2
+        grad[-1] = obj.grad_obj_c # no penalty on admix. prop.
+    elif obj.optimize_q == '1-dim':
+        grad = np.zeros_like(theta)
+        grad[:n_edges] = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
+        grad[n_edges:-1] = obj.grad_obj_q * obj.sp_graph.s2    
+        grad[-1] = obj.grad_obj_c      
+    return (loss, grad)
 
 class Joint_SpatialGraph(SpatialGraph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, admix_prop=0, admix_edges=[(0,0)], Ldag = np.repeat(0,3), long_range_edges=[(0,0)]):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, long_range_edges=[(0,0)], c=0):
         """Inherit from the feems object SpatialGraph and overwrite some methods for 
         estimation of edge weights and residual variance jointly
         """               
@@ -151,9 +330,7 @@ class Joint_SpatialGraph(SpatialGraph):
                          node_pos=node_pos,
                          edges=edges,
                          scale_snps=scale_snps,
-                         admix_edges = admix_edges,
-                         admix_prop = admix_prop, 
-                         Ldag = Ldag, 
+                         c = c, 
                          long_range_edges=long_range_edges) 
         
     # ------------------------- Data -------------------------        
@@ -210,8 +387,8 @@ class Joint_SpatialGraph(SpatialGraph):
         s2_init=None,
         alpha=None,
         optimize_q=None,
-        lamb_q=1.,
-        alpha_q=1.,
+        lamb_q=None,
+        alpha_q=None,
         factr=1e7,
         maxls=50,
         m=10,
@@ -219,6 +396,7 @@ class Joint_SpatialGraph(SpatialGraph):
         ub=np.Inf,
         maxiter=15000,
         verbose=True,
+        option='default'
     ):
         """Estimates the edge weights of the full model holding the residual
         variance fixed using a quasi-newton algorithm, specifically L-BFGS.
@@ -272,8 +450,13 @@ class Joint_SpatialGraph(SpatialGraph):
             assert type(alpha) == float, "alpha must be float"
             assert alpha >= 0.0, "alpha must be non-negative"
 
+        if lamb_q is None:
+            lamb_q = lamb
+        if alpha_q is None:
+            alpha_q = 1. / self.s2.mean()
+
         # run l-bfgs
-        obj = Joint_Objective(self)
+        obj = Joint_Objective(self, option=option)
         obj.optimize_q = optimize_q
         obj.lamb = lamb
         obj.alpha = alpha
@@ -283,26 +466,48 @@ class Joint_SpatialGraph(SpatialGraph):
             obj.alpha_q = alpha_q
             s2_init = self.s2 if obj.optimize_q=="1-dim" else self.s2*np.ones(len(self))
             x0 = np.r_[np.log(w_init), np.log(s2_init)]
-        res = fmin_l_bfgs_b(
-            func=loss_wrapper,
-            x0=x0,
-            args=[obj],
-            factr=factr,
-            m=m,
-            maxls=maxls,
-            maxiter=maxiter,
-            approx_grad=False,
-        )
+
+        if option=='default':
+            res = fmin_l_bfgs_b(
+                func=loss_wrapper,
+                x0=x0,
+                args=[obj],
+                factr=factr,
+                m=m,
+                maxls=maxls,
+                maxiter=maxiter,
+                approx_grad=False,
+            )
+        else:
+            res = fmin_l_bfgs_b(
+                func=joint_loss_wrapper,
+                x0=np.append(x0, self.c),
+                args=[obj],
+                factr=factr,
+                m=m,
+                maxls=maxls,
+                maxiter=maxiter,
+                approx_grad=False,
+                bounds=[(lb, ub)] * len(x0) + [(0,1)]
+            )
+
         if maxiter >= 100:
             assert res[2]["warnflag"] == 0, "did not converge"
         if obj.optimize_q is not None:
             self.w = np.exp(res[0][:self.size()])
-            self.s2 = np.exp(res[0][self.size():])
+            self.s2 = np.exp(res[0][self.size():-1])
+            if option=='joint':
+                self.c = res[0][-1]
         else:    
             self.w = np.exp(res[0])
+            if option=='joint':
+                self.c = res[0][-1]
 
         # print update
-        self.train_loss, _ = loss_wrapper(res[0], obj)
+        if option=='default':
+            self.train_loss, _ = loss_wrapper(res[0], obj)
+        else:
+            self.train_loss, _ = joint_loss_wrapper(res[0], obj)
         if verbose:
             sys.stdout.write(
                 (

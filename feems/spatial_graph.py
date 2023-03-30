@@ -12,8 +12,8 @@ from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 
 
 class SpatialGraph(nx.Graph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, admix_prop=0, admix_edges=[(0,0)], Ldag=np.repeat(0,3),
-                long_range_edges=[(0,0)]):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, 
+                long_range_edges=[(0,0)], c=0):
         """Represents the spatial network which the data is defined on and
         stores relevant matrices / performs linear algebra routines needed for
         the model and optimization. Inherits from the networkx Graph object.
@@ -37,6 +37,7 @@ class SpatialGraph(nx.Graph):
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
         assert type(long_range_edges) == list or long_range_edges is None, "long_range_edges should be a list of 2-tuples"
+        assert c >=0, "c must be non-negative"
 
         # inherits from networkx Graph object -- changed this to new signature for python3
         super().__init__()
@@ -79,9 +80,7 @@ class SpatialGraph(nx.Graph):
 
         # initialize c (admixture proportions)
         # currently only one lre (otherwise need a vector here)
-        self.c = admix_prop # np.repeat(0.5, np.sum(self.lre_idx))
-        self.admix_edges = admix_edges
-        self.Ldag = Ldag
+        self.c = c # np.repeat(0.5, np.sum(self.lre_idx))
 
         # compute gradient of the graph laplacian with respect to w (dL / dw)
         # this only needs to be done once

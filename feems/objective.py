@@ -164,7 +164,13 @@ class Objective(object):
     def grad(self, reg=True):
         """Computes relevent gradients the objective"""
         # compute derivatives
-        self._comp_grad_obj()
+        if self.option == 'default':
+            self._comp_grad_obj()
+            # print(self.option, self.grad_obj)
+        else:
+            self._comp_grad_obj_joint()
+            # print(self.option, self.grad_obj)
+
         if reg is True:
             self._comp_grad_reg()
 
