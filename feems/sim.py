@@ -391,6 +391,15 @@ def simulate_genotypes_w_admixture(
     n_print : int
         interval to print simulation updates for each rep
 
+    long_range_nodes : list of tuples
+        nodes connected by admixture event [(source1, destination1), (source2, destination2), ...]
+
+    admixture_props : list of floats
+        proportion of admixture events [c1, c2, ...]
+    
+    time_of_adm : list of floats
+        time of admixture events [t1, t2, ...]
+
     Returns
     -------
     genotypes : 2D ndarray

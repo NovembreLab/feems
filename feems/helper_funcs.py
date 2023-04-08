@@ -166,7 +166,8 @@ def comp_genetic_vs_fitted_distance(
 
         return(max_res_node)
 
-def get_best_lre(sp_graph, gen_test, coord, grid, edge_def, obj, k=2, lamb_cv=3., top=20, nboot=20, nchoose=100, option='base'):
+def get_best_lre(sp_graph, gen_test, coord, grid, edge_def, k=1, lamb_cv=3., top=20, nboot=20, nchoose=100, option='base'):
+    obj = Joint_Objective(sp_graph)
     ## the graph has not been fit yet, so fit it again with the given lambda
     if not hasattr(sp_graph, 'W'):
         sp_graph.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph.s2))
@@ -191,11 +192,23 @@ def get_best_lre(sp_graph, gen_test, coord, grid, edge_def, obj, k=2, lamb_cv=3.
             max_res_nodes = [ele for ele in max_res_nodes if ele not in te]
 
         # iterate across remaining edges
+        # print('Top 20 nodes: ',max_res_nodes)
+        df = pd.DataFrame(np.random.rand(top,2), columns=['source','destination'], dtype=int)
+        for ie, e in enumerate(max_res_nodes):
+            df.iloc[ie,0] = e[0]; df.iloc[ie,1] = e[1]
+        print('Potential source demes:')
+        print(df.source.value_counts())
+        print('Potential destination demes:')
+        print(df.destination.value_counts())
+        
         for ie, e in enumerate(max_res_nodes):
             edges_t = deepcopy(edges_lr)
             edges_t.append(list(x+1 for x in e))
             sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_t), long_range_edges=max_res_nodes[ie:(ie+1)])
-            sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+            try:
+                sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+            except:
+                sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=100., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
             obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); 
             ll_edges[ie,ik] = -obj_lr.neg_log_lik()
 

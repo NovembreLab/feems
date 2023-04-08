@@ -173,7 +173,7 @@ def run_cv_joint(
                     _, err = predict_snps(sp_graph, sp_graph_train, sp_graph_test)
                     cv_err[fold, iq, i] = err
                 except: 
-                    cv_err[fold, iq, i] = 1. 
+                    cv_err[fold, iq, i] = np.nan 
 
                 w_init = deepcopy(sp_graph_train.w)
                 if i == 0:

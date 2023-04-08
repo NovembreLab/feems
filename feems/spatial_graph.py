@@ -36,7 +36,6 @@ class SpatialGraph(nx.Graph):
         assert (
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
-        assert type(long_range_edges) == list or long_range_edges is None, "long_range_edges should be a list of 2-tuples"
         assert c >=0, "c must be non-negative"
 
         # inherits from networkx Graph object -- changed this to new signature for python3

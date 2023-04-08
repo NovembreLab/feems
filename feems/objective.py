@@ -166,10 +166,10 @@ class Objective(object):
         # compute derivatives
         if self.option == 'default':
             self._comp_grad_obj()
-            # print(self.option, self.grad_obj)
-        else:
+        elif self.option == 'joint':
             self._comp_grad_obj_joint()
-            # print(self.option, self.grad_obj)
+        else:
+            self._comp_grad_obj_noc()
 
         if reg is True:
             self._comp_grad_reg()
