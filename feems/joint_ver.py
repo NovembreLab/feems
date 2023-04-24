@@ -29,6 +29,10 @@ class Joint_Objective(Objective):
         self.alpha_q = None
         self.option = option
 
+        self.nll = 0.0
+
+        self.C = np.vstack((-np.ones(self.sp_graph.n_observed_nodes-1),np.eye(self.sp_graph.n_observed_nodes-1))).T
+
     def _comp_grad_obj(self):
         """Computes the gradient of the objective function with respect to the
         latent variables dLoss / dL
@@ -58,6 +62,7 @@ class Joint_Objective(Objective):
 
     def _comp_grad_obj_joint(self):
         """Computes the gradient of the objective function (now defined with admix. prop. c) with respect to the latent variables dLoss / dL
+        ** does not work for cases with missing nodes i.e., all demes need to contain data ** 
         """
 
         # compute inverses
@@ -213,7 +218,7 @@ class Joint_Objective(Objective):
         # compute inverses
         self._comp_inv_lap()
         lrn = self.sp_graph.lre
-        C = np.vstack((-np.ones(self.sp_graph.n_observed_nodes-1),np.eye(self.sp_graph.n_observed_nodes-1))).T
+
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
         Q1mat = (np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(1/self.sp_graph.q,(1,-1))).T
         resmat = -0.5*(Rmat + (Q1mat + Q1mat.T) - 2*np.diag(1/self.sp_graph.q))
@@ -226,7 +231,7 @@ class Joint_Objective(Objective):
             resmat[i,lrn[0][1]] = -0.5*((1-self.sp_graph.c)*(Rmat[i,lrn[0][1]]) + self.sp_graph.c*Rmat[i,lrn[0][0]] + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*Rmat[lrn[0][0],lrn[0][1]] + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[lrn[0][1]] + self.sp_graph.c/self.sp_graph.q[lrn[0][0]])
             resmat[lrn[0][1],i] = resmat[i,lrn[0][1]]
 
-        M = C.T@(np.linalg.inv(C@resmat@C.T)@(C@self.sp_graph.S@C.T)@np.linalg.inv(C@resmat@C.T)-np.linalg.inv(C@resmat@C.T))@C
+        M = self.C.T @ (np.linalg.inv(self.C@resmat@self.C.T) @ (self.C@self.sp_graph.S@self.C.T) @ np.linalg.inv(self.C@resmat@self.C.T) - np.linalg.inv(self.C@resmat@self.C.T)) @self.C
 
         self.grad_obj_L = self.sp_graph.n_snps * (self.Linv @ M @ self.Linv.T)
 
@@ -234,118 +239,10 @@ class Joint_Objective(Objective):
         gradW = 2 * self.grad_obj_L[self.sp_graph.nnz_idx_perm]  # use symmetry
         self.grad_obj = gradD - gradW
         
-        # (1 x d2)
-        # if all nodes are observed: o=d
-        # delldsig = self.sp_graph.n_snps * (self.Linv @ C.T@(np.linalg.inv(C@resmat@C.T)@(C@self.sp_graph.S@C.T)@np.linalg.inv(C@resmat@C.T)-np.linalg.inv(C@resmat@C.T))@C @ self.Linv.T).reshape(1,-1)
-        # if some nodes are unobserved: o<d
-        # OnemPil = resmat @ C.T @ np.linalg.inv(C @ resmat @ C.T) @ C
-        # rinv = np.linalg.inv(resmat)
-        # delldsig = self.sp_graph.n_snps * (self.Linv @ (rinv @ OnemPil @ self.sp_graph.S @ rinv @ OnemPil - rinv @ OnemPil) @ self.Linv.T) .reshape(1,-1) 
-
-        ## (d2 x d2) 
-        numd = len(self.sp_graph)
-        dsigdL = np.zeros((numd**2,numd**2))
-        idx = np.arange(self.sp_graph.n_observed_nodes**2).reshape(-1,self.sp_graph.n_observed_nodes).T[np.tril_indices(self.sp_graph.n_observed_nodes,k=-1)]   
-        for I in idx:
-            i = I//self.sp_graph.n_observed_nodes; j = I%self.sp_graph.n_observed_nodes
-            dsigdL[I,self.sp_graph.n_observed_nodes*i+j] = 2*self.Linv[i,j]**2
-            dsigdL[I,self.sp_graph.n_observed_nodes*j+i] = 2*self.Linv[j,i]**2
-
-            dsigdL[I,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
-            dsigdL[I,self.sp_graph.n_observed_nodes*j+j] = -self.Linv[j,j]**2
-
-            It = self.sp_graph.n_observed_nodes*j + i
-            dsigdL[It,self.sp_graph.n_observed_nodes*i+j] = 2*self.Linv[i,j]**2
-            dsigdL[It,self.sp_graph.n_observed_nodes*j+i] = 2*self.Linv[j,i]**2
-
-            dsigdL[It,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
-            dsigdL[It,self.sp_graph.n_observed_nodes*j+j] = -self.Linv[j,j]**2
-
-        s = self.sp_graph.lre[0][0]; d = self.sp_graph.lre[0][1]
-        I = self.sp_graph.n_observed_nodes*d + s 
-        dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[s,d]**2)
-        dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[d,s]**2)
-
-        dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[s,s]**2)  
-        dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[d,d]**2) 
-
-        ## do it for transpose too
-        I = self.sp_graph.n_observed_nodes*s + d 
-        dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[s,d]**2)
-        dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(2*self.Linv[d,s]**2)
-
-        dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[s,s]**2)  
-        dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*(-self.Linv[d,d]**2) 
-        
-        for i in set(range(self.sp_graph.n_observed_nodes))-{s,d}:
-            I = self.sp_graph.n_observed_nodes*d + i
-            dsigdL[I,self.sp_graph.n_observed_nodes*i+d] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*d+i] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = 0.5*(self.sp_graph.c**2+self.sp_graph.c)*(-self.Linv[s,s]**2)
-
-            dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = 0.5*(self.sp_graph.c**2-3*self.sp_graph.c+2)*(-self.Linv[d,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
-
-            I = self.sp_graph.n_observed_nodes*i + d
-            dsigdL[I,self.sp_graph.n_observed_nodes*i+d] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*d+i] = (1-self.sp_graph.c)*(2*self.Linv[i,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*s+s] = 0.5*(self.sp_graph.c**2+self.sp_graph.c)*(-self.Linv[s,s]**2)
-
-            dsigdL[I,self.sp_graph.n_observed_nodes*d+d] = 0.5*(self.sp_graph.c**2-3*self.sp_graph.c+2)*(-self.Linv[d,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*s+d] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*d+s] = (self.sp_graph.c**2-self.sp_graph.c)*(self.Linv[s,d]**2)
-            dsigdL[I,self.sp_graph.n_observed_nodes*i+i] = -self.Linv[i,i]**2
-        
-        for I in range(self.sp_graph.n_observed_nodes**2,self.sp_graph.n_observed_nodes*numd):
-            i = I // self.sp_graph.n_observed_nodes; j = I % self.sp_graph.n_observed_nodes
-        ## (d2 x e)
-        ii = list(self.sp_graph.edges)
-        dLdw = np.zeros((numd**2,len(self.sp_graph.edges)))
-        for I in range(len(self.sp_graph.edges)):
-            Ii = ii[I][0]; Ij = ii[I][1]
-            dLdw[numd*Ii + Ij, I] = -1
-            dLdw[numd*Ij + Ii, I] = -1
-
-        for i in range(numd):
-            for j in np.where(self.sp_graph.Delta_q.toarray()[:,i])[0]:
-                dLdw[numd*i + i, j] = 1
-
-        # self.grad_obj = np.ravel(delldsig @ dsigdL @ dLdw)
-
         # grads for d diag(Jq^-1) / dq
         if self.optimize_q == 'n-dim':
-            numd = len(self.sp_graph)
-            s = self.sp_graph.lre[0][0]; d = self.sp_graph.lre[0][1]
-            dsigdq = np.zeros((self.sp_graph.n_observed_nodes**2,self.sp_graph.n_observed_nodes))
-            idx = np.arange(self.sp_graph.n_observed_nodes**2).reshape(-1,self.sp_graph.n_observed_nodes).T[np.tril_indices(self.sp_graph.n_observed_nodes,k=-1)]
-            for I in idx:
-                i = I//self.sp_graph.n_observed_nodes; j = I%self.sp_graph.n_observed_nodes
-                dsigdq[I,i] = 1
-                dsigdq[I,j] = 1
-
-                It = self.sp_graph.n_observed_nodes*j + i
-                dsigdq[It,i] = 1
-                dsigdq[It,j] = 1
-
-            I = self.sp_graph.n_observed_nodes*d + s 
-            dsigdq[I,s] = (1+self.sp_graph.c); dsigdq[I,d] = (1-self.sp_graph.c)
-            It = self.sp_graph.n_observed_nodes*s + d
-            dsigdq[It,s] = (1+self.sp_graph.c); dsigdq[It,d] = (1-self.sp_graph.c)
-            for i in set(range(self.sp_graph.n_observed_nodes))-{s,d}:
-                I = self.sp_graph.n_observed_nodes*d + i
-                dsigdq[I,d] = (1-self.sp_graph.c)
-                dsigdq[I,s] = self.sp_graph.c
-
-                It = self.sp_graph.n_observed_nodes*i + d
-                dsigdq[I,d] = (1-self.sp_graph.c)
-                dsigdq[I,s] = self.sp_graph.c
-
-            self.grad_obj_q = np.zeros(numd)
-            self.grad_obj_q[:self.sp_graph.n_observed_nodes] = np.multiply(self.grad_obj_L[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes].reshape(1,-1) @ dsigdq, 1./self.sp_graph.n_samples_per_obs_node_permuted)
-            # self.grad_obj_q = np.zeros(len(self.sp_graph))
-            # self.grad_obj_q[:self.sp_graph.n_observed_nodes] = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad)   
+            self.grad_obj_q = np.zeros(len(self.sp_graph))
+            self.grad_obj_q[:self.sp_graph.n_observed_nodes] = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad)   
             
         if self.optimize_q == '1-dim':
             self.grad_obj_q = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad) 
@@ -418,8 +315,6 @@ def full_nll_w_c(c, obj):
     """Evaluate the full negative log-likelihood for the given weights & admix. prop. c
     """
 
-    C = np.vstack((-np.ones(obj.sp_graph.n_observed_nodes-1),np.eye(obj.sp_graph.n_observed_nodes-1))).T
-
     lrn = obj.sp_graph.lre
 
     Rmat = -2*obj.Linv[:obj.sp_graph.n_observed_nodes,:obj.sp_graph.n_observed_nodes] + np.reshape(np.diag(obj.Linv),(1,-1)).T @ np.ones((obj.sp_graph.n_observed_nodes,1)).T + np.ones((obj.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(obj.Linv),(1,-1))
@@ -433,7 +328,9 @@ def full_nll_w_c(c, obj):
         resmat[i,lrn[0][1]] = (1-c)*(Rmat[i,lrn[0][1]]) + c*Rmat[i,lrn[0][0]] + 0.5*(c**2-c)*Rmat[lrn[0][0],lrn[0][1]] + 1/obj.sp_graph.q[i] + (1-c)/obj.sp_graph.q[lrn[0][1]] + c/obj.sp_graph.q[lrn[0][0]]
         resmat[lrn[0][1],i] = resmat[i,lrn[0][1]]
 
-    return -wishart.logpdf(2*C @ obj.sp_graph.S @ C.T, obj.sp_graph.n_snps, -0.5/obj.sp_graph.n_snps*C @ resmat @ C.T)
+    nll = -wishart.logpdf(2*obj.C @ obj.sp_graph.S @ obj.C.T, obj.sp_graph.n_snps, -0.5/obj.sp_graph.n_snps*obj.C @ resmat @ obj.C.T)
+
+    return nll
 
 def loss_wrapper(z, obj):
     """Wrapper function to optimize z=log(w) which returns the loss and gradient"""                

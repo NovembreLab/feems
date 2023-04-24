@@ -21,6 +21,8 @@ class Objective(object):
         self.pen1 = 0.0
         self.pen2 = 0.0
 
+        self.option = 'default'
+
     def _rank_one_solver(self, B):
         """Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank
         ones update equation
@@ -178,6 +180,7 @@ class Objective(object):
         """Evaluate the negative log-likelihood function given the current
         params
         """
+
         o = self.sp_graph.n_observed_nodes
         self.trA = self.sp_graph.S @ self.inv_cov
 

@@ -21,7 +21,7 @@ from .spatial_graph import query_node_attributes
 from .cross_validation import comp_mats, run_cv
 from .objective import Objective
 from .viz import Viz
-from .joint_ver import Joint_SpatialGraph, Joint_Objective
+from .joint_ver import Joint_SpatialGraph, Joint_Objective, full_nll_w_c
 
 # change matplotlib fonts
 plt.rcParams["font.family"] = "Arial"
@@ -201,24 +201,34 @@ def get_best_lre(sp_graph, gen_test, coord, grid, edge_def, k=1, lamb_cv=3., top
         print('Potential destination demes:')
         print(df.destination.value_counts())
         
+        # for ie, e in enumerate(max_res_nodes):
+        #     edges_t = deepcopy(edges_lr)
+        #     edges_t.append(list(x+1 for x in e))
+        #     sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_t), long_range_edges=max_res_nodes[ie:(ie+1)])
+        #     try:
+        #         sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+        #     except:
+        #         sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=100., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+        #     obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); 
+        #     ll_edges[ie,ik] = -obj_lr.neg_log_lik()
+        ## adding the best fit edge to the sp_graph object
+        # edges_lr.append(list(x+1 for x in max_res_nodes[np.argmax(ll_edges[:,ik])]))
+        # sp_graph = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=[max_res_nodes[np.argmax(ll_edges[:,ik])]])
+        # sp_graph.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph.s2))
+
+        ## with admix. prop. c estimation 
         for ie, e in enumerate(max_res_nodes):
-            edges_t = deepcopy(edges_lr)
-            edges_t.append(list(x+1 for x in e))
-            sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_t), long_range_edges=max_res_nodes[ie:(ie+1)])
-            try:
-                sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
-            except:
-                sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=100., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
-            obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); 
-            ll_edges[ie,ik] = -obj_lr.neg_log_lik()
+            sp_graph_lr = Joint_SpatialGraph(gen_test, coord, grid, edge_def, long_range_edges=max_res_nodes[ie:(ie+1)])
+            
+            sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph_lr.s2),verbose=False)
+            sp_graph_lr.fit(lamb=lamb_cv, optimize_q='n-dim', option='onlyc', verbose=False)
+
+            obj_lr = Joint_Objective(sp_graph_lr); obj_lr.inv(); obj_lr.grad(reg=False)
+            ll_edges[ie,ik] = -full_nll_w_c(sp_graph_lr.c, obj_lr)
 
         print("{}, found at index {}.".format(max_res_nodes[np.argmax(ll_edges[:,ik])], np.argmax(ll_edges[:,ik])))
         te.append(top_edges.iloc[np.argmax(ll_edges[:,ik]),ik])
         top_edges.iloc[:,ik] = max_res_nodes
-
-        edges_lr.append(list(x+1 for x in max_res_nodes[np.argmax(ll_edges[:,ik])]))
-        sp_graph = Joint_SpatialGraph(gen_test, coord, grid, np.array(edges_lr), long_range_edges=[max_res_nodes[np.argmax(ll_edges[:,ik])]])
-        sp_graph.fit(lamb=lamb_cv, optimize_q='n-dim', lamb_q=1., alpha_q=1./np.mean(sp_graph.s2))
         
     return ll_edges, top_edges
 
