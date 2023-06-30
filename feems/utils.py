@@ -15,11 +15,11 @@ def load_tiles(s):
     return [shape(t["geometry"]) for t in tiles]
 
 
-def wrap_america(tile):
-    tile = Point(tile)
-    if np.max(tile.xy[0]) < -40 or np.min(tile.xy[0]) < -40:
-        tile = translate(tile, xoff=360.0)
-    return tile.xy[0][0], tile.xy[1][0]
+# def wrap_america(tile):
+#     tile = Point(tile)
+#     if np.max(tile.xy[0]) < -40 or np.min(tile.xy[0]) < -40:
+#         tile = translate(tile, xoff=360.0)
+#     return tile.xy[0][0], tile.xy[1][0]
 
 
 def create_tile_dict(tiles, bpoly):
@@ -30,8 +30,8 @@ def create_tile_dict(tiles, bpoly):
 
     for c, poly in enumerate(tiles):
         x, y = poly.exterior.xy
-        points = zip(np.round(x, 3), np.round(y, 3))
-        points = [wrap_america(p) for p in points]
+        points = tuple(zip(np.round(x, 3), np.round(y, 3)))
+        # points = [wrap_america(p) for p in points]
         for p in points:
             if p not in pts_in:
                 # check if point is in region
