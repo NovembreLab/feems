@@ -47,10 +47,10 @@ class SpatialGraph(nx.Graph):
         self.node_pos = node_pos
         self.scale_snps = scale_snps
 
-        # creating a container to store these edges 
-        self.lre = long_range_edges
-        # mask for indices of edges in lre
-        self.lre_idx = np.array([val in self.lre for val in list(self.edges)])
+        # # creating a container to store these edges 
+        # self.lre = long_range_edges
+        # # mask for indices of edges in lre
+        # self.lre_idx = np.array([val in self.lre for val in list(self.edges)])
 
         # signed incidence_matrix
         self.Delta_q = nx.incidence_matrix(self, oriented=True).T.tocsc()
@@ -76,10 +76,6 @@ class SpatialGraph(nx.Graph):
 
         # initialize w
         self.w = np.ones(self.size())
-
-        # initialize c (admixture proportions)
-        # currently only one lre (otherwise need a vector here)
-        self.c = c # np.repeat(0.5, np.sum(self.lre_idx))
 
         # compute gradient of the graph laplacian with respect to w (dL / dw)
         # this only needs to be done once
@@ -470,5 +466,5 @@ def query_node_attributes(graph, name):
     and returns an array of values for each node instead of the dict
     """
     d = nx.get_node_attributes(graph, name)
-    arr = np.array(list(d.values()))
+    arr = np.array(list(d.values()),dtype='int')
     return arr

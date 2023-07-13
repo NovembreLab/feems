@@ -314,14 +314,18 @@ class Viz(object):
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
-    def draw_arrow(self, lre, c):
-        self.ax.arrow(self.grid[lre[0][0],0],self.grid[lre[0][0],1],dx=self.grid[lre[0][1],0]-self.grid[lre[0][0],0],dy=self.grid[lre[0][1],1]-self.grid[lre[0][0],1],ec=self.c_cmap(c),fc='k',length_includes_head=True,lw=2,head_width=20000,head_length=20000,)
+    def draw_arrow(self, lre, c, lw=2, hw=0.8, hl=0.8, fs=10):
+        # self.ax.arrow(self.grid[lre[0][0],0],self.grid[lre[0][0],1],dx=self.grid[lre[0][1],0]-self.grid[lre[0][0],0],dy=self.grid[lre[0][1],1]-self.grid[lre[0][0],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
+        ## the code below is for cases when we have unsampled demes so the node IDs are permuted
+        self.ax.arrow(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],dx=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],dy=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
+        self.ax.annotate(np.round(c,2),(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1]),fontsize=fs)
 
     def draw_c_colorbar(self):
         "Draws simple colorbar from 0 to 1 scale for admixture proportion"
-        self.c_axins = inset_axes(self.ax, loc='upper right', width="20%", height="5%",)
-        self.c_axins.set_title(r'$|\hat c - c_{sim}|$', fontsize=12)
-        plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap),cax=self.c_axins,shrink=0.3,orientation='horizontal')
+        self.c_axins = inset_axes(self.ax, loc='upper right', width="8%", height="2%",)
+        self.c_axins.set_title(r'$\hat c$', fontsize=8)
+        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap),cax=self.c_axins,shrink=0.1,orientation='horizontal',ticks=np.linspace(0,1,3))
+        self.c_cbar.ax.tick_params(labelsize=5)
 
 
 def recover_nnz_entries(sp_graph):
