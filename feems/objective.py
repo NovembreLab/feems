@@ -96,6 +96,10 @@ class Objective(object):
         # stack the submatrices
         self.Linv = np.vstack((self.Linv_block["oo"], self.Linv_block["do"]))
 
+        ## bascially just need the diagonals of Lpinv_{d-by-d} for going from an unsampled deme to a sampled deme
+        ## will need entire matrix if we want to calculate prob of going from an unsampled deme to an unsampled deme
+        # self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
+
     def _comp_inv_cov(self, B=None):
         """Computes inverse of the covariance matrix"""
         # helper

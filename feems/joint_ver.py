@@ -3,6 +3,7 @@ import numpy as np
 import scipy.sparse as sp
 from copy import deepcopy
 from scipy.stats import wishart
+import networkx as nx
 from scipy.optimize import fmin_l_bfgs_b, minimize, minimize_scalar
 import matplotlib.pyplot as plt
 
@@ -224,20 +225,31 @@ class Joint_Objective(Objective):
         resmat = -0.5*(Rmat + (Q1mat + Q1mat.T) - 2*np.diag(1/self.sp_graph.q))
 
         for ie, _ in enumerate(self.sp_graph.lre):
-            resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] = -0.5*((0.5*self.sp_graph.c[ie]**2-1.5*self.sp_graph.c[ie]+1)*Rmat[self.sp_graph.lre[0][0],self.sp_graph.lre[ie][1]] + (1+self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][0]] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]])
-            resmat[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][0]] = resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]
+            if(self.sp_graph.lre[ie][0]<self.sp_graph.n_observed_nodes and self.sp_graph.lre[ie][1]<self.sp_graph.n_observed_nodes):
+                resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] = -0.5*((0.5*self.sp_graph.c[ie]**2-1.5*self.sp_graph.c[ie]+1)*Rmat[self.sp_graph.lre[0][0],self.sp_graph.lre[ie][1]] + (1+self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][0]] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]])
+                resmat[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][0]] = resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]
 
-            for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]):
-                resmat[i,self.sp_graph.lre[ie][1]] = -0.5*((1-self.sp_graph.c[ie])*(Rmat[i,self.sp_graph.lre[ie][1]]) + self.sp_graph.c[ie]*Rmat[i,self.sp_graph.lre[ie][0]] + 0.5*(self.sp_graph.c[ie]**2-self.sp_graph.c[ie])*Rmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] + 1/self.sp_graph.q[i] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]] + self.sp_graph.c[ie]/self.sp_graph.q[self.sp_graph.lre[ie][0]])
-                resmat[self.sp_graph.lre[ie][1],i] = resmat[i,self.sp_graph.lre[ie][1]]
+                for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]):
+                    resmat[i,self.sp_graph.lre[ie][1]] = -0.5*((1-self.sp_graph.c[ie])*Rmat[i,self.sp_graph.lre[ie][1]] + self.sp_graph.c[ie]*Rmat[i,self.sp_graph.lre[ie][0]] + 0.5*(self.sp_graph.c[ie]**2-self.sp_graph.c[ie])*Rmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] + 1/self.sp_graph.q[i] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]] + self.sp_graph.c[ie]/self.sp_graph.q[self.sp_graph.lre[ie][0]])
+                    resmat[self.sp_graph.lre[ie][1],i] = resmat[i,self.sp_graph.lre[ie][1]]
+            else:
+                neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[self.sp_graph.lre[0][0]]))
+                neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
 
-        # resmat[lrn[0][0],lrn[0][1]] = -0.5*((0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*Rmat[lrn[0][0],lrn[0][1]] + (1+self.sp_graph.c)/self.sp_graph.q[lrn[0][0]] + (1-self.sp_graph.c)/self.sp_graph.q[lrn[0][1]])
-        # resmat[lrn[0][1],lrn[0][0]] = resmat[lrn[0][0],lrn[0][1]]
+                R1d = -2*self.Lpinv[self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] + self.Lpinv[self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]] + self.Lpinv[self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]]
 
-        # ## id
-        # for i in set(range(self.sp_graph.n_observed_nodes))-set([lrn[0][0],lrn[0][1]]):
-        #     resmat[i,lrn[0][1]] = -0.5*((1-self.sp_graph.c)*(Rmat[i,lrn[0][1]]) + self.sp_graph.c*Rmat[i,lrn[0][0]] + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*Rmat[lrn[0][0],lrn[0][1]] + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[lrn[0][1]] + self.sp_graph.c/self.sp_graph.q[lrn[0][0]])
-        #     resmat[lrn[0][1],i] = resmat[i,lrn[0][1]]
+                for s in neighs:
+                    # convert back to appropriate indexing excluding the unsampled demes
+                    s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==s][0]
+                    resmat[s,self.sp_graph.lre[0][1]] = Rmat[s,self.sp_graph.lre[0][1]] + 0.5*(self.sp_graph.c[ie]**2-self.sp_graph.c[ie])*R1d + (1-self.sp_graph.c[ie])/self.sp_graph.q[s] + (1+self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[0][1]]
+                    resmat[self.sp_graph.lre[0][1],s] = resmat[s,self.sp_graph.lre[0][1]]
+
+                proxs = np.argmin([nx.shortest_path_length(self.sp_graph,source=self.sp_graph.lre[0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([self.sp_graph.lre[0][0]])])
+                ## id
+                for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]]+neighs):
+                    Ri1 = -2*self.Lpinv[i,self.sp_graph.lre[0][0]] + self.Lpinv[i,i] + self.Lpinv[self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]]
+                    resmat[i,self.sp_graph.lre[0][1]] = (1-self.sp_graph.c[ie])*(Rmat[i,self.sp_graph.lre[0][1]]) + self.sp_graph.c[ie]*Ri1 + 0.5*(self.sp_graph.c[ie]**2-self.sp_graph.c[ie])*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[0][1]] + self.sp_graph.c[ie]/self.sp_graph.q[proxs]
+                    resmat[self.sp_graph.lre[0][1],i] = resmat[i,self.sp_graph.lre[0][1]]
 
         M = self.C.T @ (np.linalg.inv(self.C@resmat@self.C.T) @ (self.C@self.sp_graph.S@self.C.T) @ np.linalg.inv(self.C@resmat@self.C.T) - np.linalg.inv(self.C@resmat@self.C.T)) @self.C
 
@@ -322,17 +334,37 @@ class Joint_Objective(Objective):
     def neg_log_lik_c(self, c):
         """Evaluate the full negative log-likelihood for the given weights & admix. prop. c
         """
+
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
         Q1mat = (np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(1/self.sp_graph.q,(1,-1))).T
         resmat = Rmat + (Q1mat + Q1mat.T) - 2*np.diag(1/self.sp_graph.q)
 
         for ie in range(len(c)):
-            resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] = (0.5*c[ie]**2-1.5*c[ie]+1)*Rmat[self.sp_graph.lre[0][0],self.sp_graph.lre[ie][1]] + (1+c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][0]] + (1-c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]]
-            resmat[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][0]] = resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]
+            if(self.sp_graph.lre[ie][0]<self.sp_graph.n_observed_nodes and self.sp_graph.lre[ie][1]<self.sp_graph.n_observed_nodes):
+                resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] = (0.5*c[ie]**2-1.5*c[ie]+1)*Rmat[self.sp_graph.lre[0][0],self.sp_graph.lre[ie][1]] + (1+c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][0]] + (1-c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]]
+                resmat[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][0]] = resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]
 
-            for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]):
-                resmat[i,self.sp_graph.lre[ie][1]] = (1-c[ie])*(Rmat[i,self.sp_graph.lre[ie][1]]) + c[ie]*Rmat[i,self.sp_graph.lre[ie][0]] + 0.5*(c[ie]**2-c[ie])*Rmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] + 1/self.sp_graph.q[i] + (1-c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]] + c[ie]/self.sp_graph.q[self.sp_graph.lre[ie][0]]
-                resmat[self.sp_graph.lre[ie][1],i] = resmat[i,self.sp_graph.lre[ie][1]]
+                for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]):
+                    resmat[i,self.sp_graph.lre[ie][1]] = (1-c[ie])*(Rmat[i,self.sp_graph.lre[ie][1]]) + c[ie]*Rmat[i,self.sp_graph.lre[ie][0]] + 0.5*(c[ie]**2-c[ie])*Rmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] + 1/self.sp_graph.q[i] + (1-c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]] + c[ie]/self.sp_graph.q[self.sp_graph.lre[ie][0]]
+                    resmat[self.sp_graph.lre[ie][1],i] = resmat[i,self.sp_graph.lre[ie][1]]
+            else:
+                neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[self.sp_graph.lre[0][0]]))
+                neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
+
+                R1d = -2*self.Lpinv[self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]] + self.Lpinv[self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]] + self.Lpinv[self.sp_graph.lre[0][1],self.sp_graph.lre[0][1]]
+
+                for s in neighs:
+                    # convert back to appropriate indexing excluding the unsampled demes
+                    s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==s][0]
+                    resmat[s,self.sp_graph.lre[0][1]] = Rmat[s,self.sp_graph.lre[0][1]] + 0.5*(c**2-c)*R1d + (1-c)/self.sp_graph.q[s] + (1+c)/self.sp_graph.q[self.sp_graph.lre[0][1]]
+                    resmat[self.sp_graph.lre[0][1],s] = resmat[s,self.sp_graph.lre[0][1]]
+
+                proxs = np.argmin([nx.shortest_path_length(self.sp_graph,source=self.sp_graph.lre[0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([self.sp_graph.lre[0][0]])])
+                ## id
+                for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]]+neighs):
+                    Ri1 = -2*self.Lpinv[i,self.sp_graph.lre[0][0]] + self.Lpinv[i,i] + self.Lpinv[self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]]
+                    resmat[i,self.sp_graph.lre[0][1]] = (1-c)*(Rmat[i,self.sp_graph.lre[0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[self.sp_graph.lre[0][1]] + c/self.sp_graph.q[proxs]
+                    resmat[self.sp_graph.lre[0][1],i] = resmat[i,self.sp_graph.lre[0][1]]
 
         nll = -wishart.logpdf(2*self.C @ self.sp_graph.S @ self.C.T, self.sp_graph.n_snps, -0.5/self.sp_graph.n_snps*self.C @ resmat @ self.C.T)
 
