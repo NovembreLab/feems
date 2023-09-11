@@ -96,10 +96,6 @@ class Objective(object):
         # stack the submatrices
         self.Linv = np.vstack((self.Linv_block["oo"], self.Linv_block["do"]))
 
-        ## bascially just need the diagonals of Lpinv_{d-by-d} for going from an unsampled deme to a sampled deme
-        ## will need entire matrix if we want to calculate prob of going from an unsampled deme to an unsampled deme
-        # self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
-
     def _comp_inv_cov(self, B=None):
         """Computes inverse of the covariance matrix"""
         # helper
@@ -141,18 +137,17 @@ class Objective(object):
         """Computes gradient"""
         lamb = self.lamb
         alpha = self.alpha
-        beta = self.beta
 
         # avoid overflow in exp
         # term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
         # term_1 = alpha * self.sp_graph.w + np.log(term_0)
         # term_2 = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term_1)
         # self.grad_pen = term_2 * (alpha / term_0)
-        term = self.alpha * self.sp_graph.w + np.log(
-            1 - np.exp(-self.alpha * self.sp_graph.w)
+        term = alpha * self.sp_graph.w + np.log(
+            1 - np.exp(-alpha * self.sp_graph.w)
         )  # avoid overflow in exp
         self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
-        self.grad_pen = self.grad_pen * (self.alpha / (1 - np.exp(-self.alpha * self.sp_graph.w)))  
+        self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w)))  
         # only fill the long range edge indices with this derivative
         ## Feb 26, 2023 - set the derivative to 0? 
         # self.grad_pen[self.sp_graph.lre_idx] = 0
@@ -172,8 +167,6 @@ class Objective(object):
         # compute derivatives
         if self.option == 'default':
             self._comp_grad_obj()
-        elif self.option == 'joint':
-            self._comp_grad_obj_joint()
         else:
             self._comp_grad_obj_noc()
 

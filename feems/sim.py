@@ -68,7 +68,7 @@ def setup_graph(
     -------
     tuple of graph objects
     """
-    graph = nx.generators.lattice.triangular_lattice_graph(
+    graph = nx.generators.triangular_lattice_graph(
         n_rows - 1, 2 * n_columns - 2, with_positions=True
     )
     graph = nx.convert_node_labels_to_integers(graph)
@@ -426,7 +426,7 @@ def simulate_genotypes_w_admixture(
     # tree sequences
     ts = msprime.simulate(
         population_configurations=population_configurations,
-        migration_matrix=np.array(nx.adj_matrix(graph, weight="w").toarray().tolist()),
+        migration_matrix=np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist()),
         demographic_events=[msprime.MassMigration(time_of_adm[i], source=long_range_nodes[i][1], dest=long_range_nodes[i][0], proportion=admixture_props[i]) for i in range(len(admixture_props))],
         length=chrom_length,
         mutation_rate=mu,
@@ -435,12 +435,12 @@ def simulate_genotypes_w_admixture(
     )
 
     if long_range_nodes!=[(0,0)]:
-        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+        migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
         for id, node in enumerate(long_range_nodes):
             migmat[node[1], node[0]] = admixture_props[id]
             migmat[node[0], node[1]] = 0.
     else:
-        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+        migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
     # plt.imshow(migmat,cmap='Greys'); plt.colorbar()
 
     # simulate haplotypes

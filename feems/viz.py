@@ -147,7 +147,7 @@ class Viz(object):
 
         # edge weights
         if weights is None:
-            self.weights = recover_nnz_entries(sp_graph)
+            self.weights = recover_nnz_entries(sp_graph) 
         else:
             self.weights = weights
         self.norm_log_weights = np.log10(self.weights) - np.mean(np.log10(self.weights))
@@ -162,16 +162,31 @@ class Viz(object):
             self.coord = project_coords(self.coord, self.proj)
             self.grid = project_coords(self.grid, self.proj)
 
-    def draw_map(self):
-        """Draws the underlying map projection"""
-        # self.ax.add_feature(cfeature.LAND, facecolor="#f7f7f7", zorder=0)
-        self.ax.add_feature(cfeature.LAND, facecolor="#ffffff", zorder=0)
+    def draw_map(self, latlong=True):
+        """Draws the underlying map projection
+        latlong: 
+            - True to draw default gridlines or 
+            - tuple of ([lats], [longs]) coordinates to draw custom gridlines or 
+            - False for no gridlines"""
+        self.ax.add_feature(cfeature.LAND, facecolor="#f7f7f7", zorder=0)
+        # self.ax.add_feature(cfeature.LAND, facecolor="#ffffff", zorder=0)
         self.ax.coastlines(
             self.coastline_m,
             color="#636363",
             linewidth=self.coastline_linewidth,
             zorder=0,
         )
+
+        if latlong is not False:
+            if latlong==True:
+                gl = self.ax.gridlines(draw_labels=True, linewidth=.5, color='grey', alpha=0.5, zorder=0)
+                gl.top_labels=False; gl.right_labels=False
+            elif len(latlong)==2:
+                gl = self.ax.gridlines(xlocs=latlong[1], ylocs=latlong[0], draw_labels=True, linewidth=.5, color='grey', alpha=0.5, zorder=0)
+                gl.top_labels=False; gl.right_labels=False
+            else:
+                print('Please specify valid option for latlong: True (default) or tuple of ([lats],[longs]) for custom gridlines. When specifying just a single coordinate list, leave an empty list in tuple for the other coordinate.')
+            
 
     def draw_samples(self):
         """Draw the individual sample coordinates"""
@@ -323,7 +338,7 @@ class Viz(object):
             obs_perm_ids = permuted_idx[: self.sp_graph.n_observed_nodes]
             obs_grid = self.grid[obs_perm_ids, :]
             self.ax.arrow(obs_grid[lre[0][0],0],obs_grid[lre[0][0],1],dx=obs_grid[lre[0][1],0]-obs_grid[lre[0][0],0],dy=obs_grid[lre[0][1],1]-obs_grid[lre[0][0],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
-            self.ax.annotate(np.round(c,2),(0.5*(obs_grid[lre[0][0],0]+obs_grid[lre[0][1],0]),0.5*(obs_grid[lre[0][0],1]+obs_grid[lre[0][1],1])),fontsize=fs)
+            # self.ax.annotate(np.round(c,2),(0.5*(obs_grid[lre[0][0],0]+obs_grid[lre[0][1],0]),0.5*(obs_grid[lre[0][0],1]+obs_grid[lre[0][1],1])),fontsize=fs)
         else:
             self.ax.arrow(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],dx=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],dy=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
             self.ax.annotate(np.round(c,2),(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1]),fontsize=fs)
@@ -335,16 +350,17 @@ class Viz(object):
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap),cax=self.c_axins,shrink=0.1,orientation='horizontal',ticks=np.linspace(0,1,3))
         self.c_cbar.ax.tick_params(labelsize=5)
 
-    def draw_c_contour(self, nodes, cest, loglik, cest_levels=5, loglik_levels=[-100,-20,-10,-3,0], cest_fs=8, loglik_fs=8):
-        "Draws two tricontours of admix. prop.: estimates & log-lik"
+    def draw_c_contour(self, nodes, cest, cest_levels=3, cest_fs=8):
+        """Draws two tricontours of admix. prop. estimates & log-lik
+        cest_levels: int or list"""
         assert len(nodes) == len(cest), "number of nodes should be equal to number of estimates"
-        assert len(nodes) == len(loglik), "number of nodes should be equal to number of log-lik estimates"
-        self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],1] for x in nodes],cest,cmap='Greys',vmin=0,vmax=1,alpha=0.8,levels=cest_levels); 
-        CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],1] for x in nodes],cest,cmap='Greys',vmin=0,vmax=1,alpha=0.8,levels=cest_levels); self.ax.clabel(CS, inline=1, fontsize=cest_fs, colors='k')
+        self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],cest,cmap='Greys',vmin=0,vmax=1,alpha=0.7,levels=cest_levels); 
+        CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],cest,cmap='Greys',vmin=0,vmax=1,alpha=0.7,levels=cest_levels); self.ax.clabel(CS, inline=1, fontsize=cest_fs, colors='k')
 
-        ## will need to create a new axis for the loglik contour (so a new subplot?)
-        self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],1] for x in nodes],np.min(loglik)-loglik,cmap='Greens',extend='max',alpha=0.8,levels=loglik_levels); 
-        CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x],1] for x in nodes],np.min(loglik)-loglik,cmap='Greens',extend='max',alpha=0.8,levels=loglik_levels); self.ax.clabel(CS, inline=1, fontsize=loglik_fs, colors='k')
+    def draw_ll_contour(self, nodes, loglik, loglik_levels=[-100,-20,-10,-2,0], loglik_fs=8): 
+        assert len(nodes) == len(loglik), "number of nodes should be equal to number of log-lik estimates"
+        self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],np.min(loglik)-loglik,cmap='Greens',extend='max',alpha=0.7,levels=loglik_levels); 
+        CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],np.min(loglik)-loglik,cmap='Greens',extend='max',alpha=0.7,levels=loglik_levels); self.ax.clabel(CS, inline=1, fontsize=loglik_fs, colors='k')
 
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""

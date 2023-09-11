@@ -116,9 +116,9 @@ class SpatialGraph(nx.Graph):
         """Create a signed incidence matrix on the edges
         * note this is computed only once
         """
-        data = np.array([], dtype=np.float)
-        row_idx = np.array([], dtype=np.int)
-        col_idx = np.array([], dtype=np.int)
+        data = np.array([], dtype=float)
+        row_idx = np.array([], dtype=int)
+        col_idx = np.array([], dtype=int)
         n_count = 0
         for i in range(self.size()):
             edge1 = np.array([self.nnz_idx[0][i], self.nnz_idx[1][i]])
@@ -167,7 +167,7 @@ class SpatialGraph(nx.Graph):
         * note this is computed only once
         """
         row_idx = np.repeat(np.arange(len(self)), len(self))
-        col_idx = np.array([], dtype=np.int)
+        col_idx = np.array([], dtype=int)
         for ite, i in enumerate(range(len(self))):
             idx = np.arange(0, len(self) ** 2, len(self)) + ite
             col_idx = np.append(col_idx, idx)
@@ -345,7 +345,7 @@ class SpatialGraph(nx.Graph):
         s2_hat = np.exp(res.x[1])
         self.w0 = w0_hat * np.ones(self.w.shape[0])
         self.s2 = s2_hat
-        self.comp_precision(s2=s2_hat)
+        comp_precision(s2=s2_hat)
 
         # print update
         self.train_loss = neg_log_lik_w0_s2(np.r_[np.log(w0_hat), np.log(s2_hat)], obj)
