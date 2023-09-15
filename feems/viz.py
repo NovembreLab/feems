@@ -350,17 +350,22 @@ class Viz(object):
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap),cax=self.c_axins,shrink=0.1,orientation='horizontal',ticks=np.linspace(0,1,3))
         self.c_cbar.ax.tick_params(labelsize=5)
 
-    def draw_c_contour(self, nodes, cest, cest_levels=3, cest_fs=8):
+    def draw_c_contour(self, nodes, cest, loglik, cest_levels=3, cest_fs=8):
         """Draws two tricontours of admix. prop. estimates & log-lik
         cest_levels: int or list"""
+        ## VS: draw stars & crosses for MLE and destination
         assert len(nodes) == len(cest), "number of nodes should be equal to number of estimates"
         self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],cest,cmap='Greys',vmin=0,vmax=1,alpha=0.7,levels=cest_levels); 
         CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],cest,cmap='Greys',vmin=0,vmax=1,alpha=0.7,levels=cest_levels); self.ax.clabel(CS, inline=1, fontsize=cest_fs, colors='k')
 
-    def draw_ll_contour(self, nodes, loglik, loglik_levels=[-100,-20,-10,-2,0], loglik_fs=8): 
+        self.ax.scatter(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)]][0],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)]][0],1],marker='*',zorder=2,facecolors='k',edgecolors='k')
+
+    def draw_ll_contour(self, nodes, loglik, loglik_levels=[-20,-10,-2,0], loglik_fs=8): 
         assert len(nodes) == len(loglik), "number of nodes should be equal to number of log-lik estimates"
         self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],np.min(loglik)-loglik,cmap='Greens',extend='max',alpha=0.7,levels=loglik_levels); 
         CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],np.min(loglik)-loglik,cmap='Greens',extend='max',alpha=0.7,levels=loglik_levels); self.ax.clabel(CS, inline=1, fontsize=loglik_fs, colors='k')
+        # drawing a star at the location of the MLE
+        self.ax.scatter(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],1],marker='*',zorder=2,facecolors='k',edgecolors='k')
 
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""

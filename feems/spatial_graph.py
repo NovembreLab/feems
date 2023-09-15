@@ -47,11 +47,6 @@ class SpatialGraph(nx.Graph):
         self.node_pos = node_pos
         self.scale_snps = scale_snps
 
-        # # creating a container to store these edges 
-        # self.lre = long_range_edges
-        # # mask for indices of edges in lre
-        # self.lre_idx = np.array([val in self.lre for val in list(self.edges)])
-
         # signed incidence_matrix
         self.Delta_q = nx.incidence_matrix(self, oriented=True).T.tocsc()
 
@@ -139,27 +134,6 @@ class SpatialGraph(nx.Graph):
         Delta = sp.csc_matrix(
             (data, (row_idx, col_idx)), shape=(int(len(data) / 2.0), self.size())
         )
-        # nlre_idx = np.where(~self.lre_idx)[0]
-        # ## NOT including LRE in Delta
-        # for idi, i in enumerate(nlre_idx):
-        #     edge1 = np.array([self.nnz_idx[0][i], self.nnz_idx[1][i]])
-        #     for idj, j in enumerate(nlre_idx[(idi + 1):]):
-        #         edge2 = np.array([self.nnz_idx[0][j], self.nnz_idx[1][j]])
-        #         if len(np.intersect1d(edge1, edge2)) > 0:
-        #             data = np.append(data, 1)
-        #             row_idx = np.append(row_idx, n_count)
-        #             col_idx = np.append(col_idx, idi)
-
-        #             data = np.append(data, -1)
-        #             row_idx = np.append(row_idx, n_count)
-        #             col_idx = np.append(col_idx, idj + idi + 1)
-
-        #             # increment
-        #             n_count += 1
-
-        # Delta = sp.csc_matrix(
-        #     (data, (row_idx, col_idx)), shape=(int(len(data) / 2.0), self.size()-len(self.lre))
-        # )
         return Delta
 
     def _create_vect_matrix(self):
@@ -345,7 +319,7 @@ class SpatialGraph(nx.Graph):
         s2_hat = np.exp(res.x[1])
         self.w0 = w0_hat * np.ones(self.w.shape[0])
         self.s2 = s2_hat
-        comp_precision(s2=s2_hat)
+        self.comp_precision(s2=s2_hat)
 
         # print update
         self.train_loss = neg_log_lik_w0_s2(np.r_[np.log(w0_hat), np.log(s2_hat)], obj)

@@ -168,7 +168,7 @@ class Objective(object):
         if self.option == 'default':
             self._comp_grad_obj()
         else:
-            self._comp_grad_obj_noc()
+            self._comp_grad_obj_c()
 
         if reg is True:
             self._comp_grad_reg()
