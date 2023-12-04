@@ -21,7 +21,7 @@ from .spatial_graph import query_node_attributes
 from .cross_validation import comp_mats, run_cv
 from .objective import Objective
 from .viz import Viz
-from .joint_ver import Joint_SpatialGraph, Joint_Objective
+from .joint_ver import FEEMSmix_SpatialGraph, FEEMSmix_Objective
 
 # change matplotlib fonts
 plt.rcParams["font.family"] = "Arial"

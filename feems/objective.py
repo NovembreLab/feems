@@ -197,28 +197,17 @@ class Objective(object):
     def loss(self):
         """Evaluate the loss function given the current params"""
         lamb = self.lamb
-        beta = self.beta
+        alpha = self.alpha
 
         lik = self.neg_log_lik()
 
         # index edges that are NOT in lre
-        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w)
-        term_1 = self.alpha * self.sp_graph.w + np.log(term_0)
-        pen1 = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
-
-        self.pen1 = pen1 
-
-        # lasso penalty for lre, index edges in lre
-        ## Feb 26, 2023 - no penalty for long range edges
-        # pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx])
-        ## relative scaling: by the inverse of the graph Laplacian?
-        # larger the absolute value (lower the inverse), the lower the scaling coefficient - prompts a lower beta?
-        #pen2 = beta * np.sum(self.sp_graph.w[self.sp_graph.lre_idx]/np.abs([self.sp_graph.L[i] for i in self.sp_graph.lre]))
-
-        # self.pen2 = pen2
+        term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
+        term_1 = alpha * self.sp_graph.w + np.log(term_0)
+        pen = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
 
         # loss
-        loss = lik + pen1 
+        loss = lik + pen 
         return loss
 
 

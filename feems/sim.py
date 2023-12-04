@@ -367,7 +367,7 @@ def simulate_genotypes(
     return genotypes.T
 
 def simulate_genotypes_w_admixture(
-    graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50, long_range_nodes=[(0,0)], admixture_props=[0], time_of_adm=[1], replic=0
+    graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50, long_range_nodes=[(0,0)], admixture_props=[0], time_of_adm=[1], replic=0, Ne=1,
 ):
     """Simulates genotypes under the stepping-stone model with a habitat specified by the graph
 
@@ -431,7 +431,7 @@ def simulate_genotypes_w_admixture(
         length=chrom_length,
         mutation_rate=mu,
         num_replicates=target_n_snps,
-        Ne=1,
+        Ne=Ne
     )
 
     if long_range_nodes!=[(0,0)]:
@@ -447,7 +447,7 @@ def simulate_genotypes_w_admixture(
     haplotypes = []
     for i, tree_sequence in enumerate(ts):
 
-        # tree_sequence.dump(f"feemsResults/trees/mytreewadms{i}_rep{replic}_tau{time_of_adm[0]}_c{admixture_props[0]}.tree")
+        # tree_sequence.dump(f"/Volumes/GoogleDrive/Other computers/My Mac mini/Documents/feemsResults/trees/tree{i}_6x6_c0_t0.tree")
 
         # extract haps from ts
         H = tree_sequence.genotype_matrix()

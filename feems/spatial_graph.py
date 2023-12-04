@@ -12,8 +12,7 @@ from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 
 
 class SpatialGraph(nx.Graph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, 
-                long_range_edges=[(0,0)], c=0):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, c=0):
         """Represents the spatial network which the data is defined on and
         stores relevant matrices / performs linear algebra routines needed for
         the model and optimization. Inherits from the networkx Graph object.
@@ -25,8 +24,7 @@ class SpatialGraph(nx.Graph):
             edges (:obj:`numpy.ndarray`): edge array
             scale_snps (:obj:`Bool`): boolean to scale SNPs by SNP specific
                 Binomial variance estimates
-            long_range_edges (:obj:`list`): list of 2-tuples with pairs of nodes
-                Default is a self pointer to the first node
+            c (:obj:`float`): float to store value of admix. prop. between two demes
         """
         # check inputs
         assert len(genotypes.shape) == 2
@@ -301,7 +299,7 @@ class SpatialGraph(nx.Graph):
     def comp_precision(self, s2):
         """Computes the residual precision matrix"""
         self.s2 = s2
-        self.q = self.n_samples_per_obs_node_permuted / self.s2 ## NOTE: variable q is inverse of q from FEEMS & EEMS manuscript
+        self.q = self.n_samples_per_obs_node_permuted / self.s2 ## NOTE: variable q is inverse of q from FEEMS & proportional to q in EEMS manuscript
         self.q_diag = sp.diags(self.q).tocsc()
         self.q_inv_diag = sp.diags(1.0 / self.q).tocsc()
         self.q_inv_grad = -1.0 / self.n_samples_per_obs_node_permuted

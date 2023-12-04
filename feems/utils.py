@@ -119,3 +119,22 @@ def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None):
     ipmap = get_closest_point_to_sample(pts, coord)
     res = (outer, edges, grid, ipmap)
     return res
+
+
+def mean_pairwise_differences_between(ac1, ac2):
+    "(borrowed completely from allel package to compute Fst)"
+    an1 = np.sum(ac1, axis=1); an2 = np.sum(ac2, axis=1)
+    n_pairs = an1 * an2
+    n_same = np.sum(ac1 * ac2, axis=1)
+    n_diff = n_pairs - n_same
+    mpd = np.where(n_pairs > 0, n_diff / n_pairs, np.nan)
+    return np.mean(mpd)
+
+
+def cov_to_dist(S):
+    """Convert a covariance matrix to a distance matrix
+    """
+    s2 = np.diag(S).reshape(-1, 1)
+    ones = np.ones((s2.shape[0], 1))
+    D = s2 @ ones.T + ones @ s2.T - 2 * S
+    return D 
