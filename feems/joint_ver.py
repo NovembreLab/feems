@@ -361,16 +361,22 @@ class FEEMSmix_Objective(Objective):
             e2 = (np.where(perm_id==e[0])[0][0], destid)
             randpedge.append((perm_id[e[0]],destpid))
             if e2[0]<self.sp_graph.n_observed_nodes:
-                res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], method='Nelder-Mead', args={'lre':[e2],'mode':'sampled'})
-                cest2[ie] = res.x; llc2[ie] = res.fun
+                try:
+                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], method='Nelder-Mead', args={'lre':[e2],'mode':'sampled'})
+                    cest2[ie] = res.x; llc2[ie] = res.fun
+                except:
+                    cest2[ie] = np.nan; llc2[ie] = np.nan
             else:
-                res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], method='Nelder-Mead', args={'lre':[e2],'mode':'unsampled'})
-                cest2[ie] = res.x; llc2[ie] = res.fun
+                try:
+                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], method='Nelder-Mead', args={'lre':[e2],'mode':'unsampled'})
+                    cest2[ie] = res.x; llc2[ie] = res.fun
+                except:
+                    cest2[ie] = np.nan; llc2[ie] = np.nan
 
-        ## if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
+        ## TODO: if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
 
         df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
-        df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = -llc2; df['scaled log-lik'] = llc2-np.max(llc2)
+        df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = -llc2; df['scaled log-lik'] = df['log-lik']-np.nanmax(df['log-lik'])
 
         return df
               
@@ -395,7 +401,7 @@ def loss_wrapper(z, obj):
     if obj.optimize_q is None:
         grad = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
     ## VS: not penalizing q/s2, only penalizing w
-    if obj.optimize_q == 'n-dim':
+    elif obj.optimize_q == 'n-dim':
         grad = np.zeros_like(theta)
         grad[:n_edges] = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
         grad[n_edges:] = obj.grad_obj_q * obj.sp_graph.s2 + obj.grad_pen_q * obj.sp_graph.s2
@@ -651,7 +657,7 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
             if obj.optimize_q is not None:
                 obj.lamb_q = lamb_q
                 obj.alpha_q = alpha_q
-            obj.inv(); #obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); 
+            obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); 
             obj.grad(reg=False)
             res = coordinate_descent(
                 obj=obj,

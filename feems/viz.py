@@ -313,14 +313,14 @@ class Viz(object):
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
         # add min and max ticks to colorbar based on data 
-        # if np.min(self.norm_log_weights)<-1:
-        #     self.edge_cbar.ax.axvline(10**np.min(self.norm_log_weights), color='w')
-        # else:
-        #     self.edge_cbar.ax.axvline(10**np.min(self.norm_log_weights), color='dimgrey')
-        # if np.max(self.norm_log_weights)>1:
-        #     self.edge_cbar.ax.axvline(10**np.max(self.norm_log_weights), color='w')
-        # else:
-        #     self.edge_cbar.ax.axvline(10**np.max(self.norm_log_weights), color='dimgrey')
+        if np.min(self.norm_log_weights)<-1:
+            self.edge_cbar.ax.axvline(10**np.min(self.norm_log_weights), color='w')
+        else:
+            self.edge_cbar.ax.axvline(10**np.min(self.norm_log_weights), color='dimgrey')
+        if np.max(self.norm_log_weights)>1:
+            self.edge_cbar.ax.axvline(10**np.max(self.norm_log_weights), color='w')
+        else:
+            self.edge_cbar.ax.axvline(10**np.max(self.norm_log_weights), color='dimgrey')
 
     def draw_edge_change_colorbar(self):
         """Draws colorbar of relative change (but in both directions)"""
@@ -361,14 +361,15 @@ class Viz(object):
             self.ax.arrow(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],dx=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],dy=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
             self.ax.annotate(np.round(c,2),(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1]),fontsize=fs)
 
-    def draw_c_colorbar(self):
+    def draw_c_colorbar(self, df):
         "Draws simple colorbar from 0 to 1 scale for admixture proportion"
         self.c_axins = inset_axes(self.ax, loc = 'upper right', width = "10%", height = "2%",)
-        self.c_axins.set_title(r"$\hat{c}$", fontsize = 0.8*self.cbar_font_size)
+        self.c_axins.set_title(r"$\hat{c}$", fontsize = self.cbar_font_size)
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=np.linspace(0,1,3))
-        self.c_cbar.ax.tick_params(labelsize = 0.4*self.cbar_ticklabelsize)
+        self.c_cbar.ax.tick_params(labelsize = self.cbar_ticklabelsize)
+        self.c_cbar.ax.axvline(df['admix. prop.'].loc[df['scaled log-lik']==0].values[0], color='r', linewidth=1)
 
-    def draw_c_contour(self, df, levels=3, fs=8):
+    def draw_c_contour(self, df, ll_thresh=-10, levels=3, fs=8):
         """Draws two tricontours of admix. prop. estimates & log-lik
         cest_levels: int or list"""
         ## VS: draw stars & crosses for MLE and destination
@@ -377,24 +378,23 @@ class Viz(object):
         # # drawing a star at the location of the MLE
         # self.ax.scatter(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],1],marker='*',zorder=2,facecolors='k',edgecolors='k')
 
-        self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['admix. prop.'], cmap='Greys', vmin=0, vmax=1, alpha=0.7, levels=levels); 
-        CS = self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['admix. prop.'], cmap='Greys', vmin=0, vmax=1, alpha=0.7, levels=levels)
+        idx = np.where(df['scaled log-lik'] > ll_thresh)
+        self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]],[self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend=None, levels=levels); 
+        CS = self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]],[self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend=None, levels=levels)
         self.ax.clabel(CS, inline=1, fontsize=fs, colors='k')
         # drawing a star at the location of the MLE
         self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0],self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='*', zorder=2, facecolors='k', edgecolors='k')
-        self.draw_c_colorbar()
+        self.draw_c_colorbar(df)
 
     def draw_ll_contour(self, df, levels=[-20,-10,-2,0], fs=8): 
-        # self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],df['scaled log-lik'],cmap='Greens',extend='max',alpha=0.7,levels=loglik_levels); 
-        # CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],df['scaled log-lik'],cmap='Greens',extend='max',alpha=0.7,levels=loglik_levels); self.ax.clabel(CS, inline=1, fontsize=loglik_fs, colors='k')
-        # # drawing a star at the location of the MLE
-        # self.ax.scatter(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],1],marker='*',zorder=2,facecolors='k',edgecolors='k')
+        #TODO: check if there are any nan and drop (also do for above function)
 
         self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels) 
         CS = self.ax.tricontour([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels)
         self.ax.clabel(CS, inline=1, fontsize=fs, colors='k')
         # drawing a star at the location of the MLE
         self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0],self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='*', zorder=2, facecolors='k', edgecolors='k')
+        self.draw_c_colorbar(df)
 
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""
