@@ -159,7 +159,8 @@ class FEEMSmix_Objective(Objective):
         if self.option == 'default':
             lik = self.neg_log_lik()
         else:
-            lik = self.neg_log_lik_c(self.sp_graph.c, opts={'mode':'sampled','lre':self.sp_graph.lre})
+            # lik = self.neg_log_lik_c(self.sp_graph.c, opts={'mode':'sampled','lre':self.sp_graph.lre})
+            lik = self.neg_log_lik_c(np.log10(self.sp_graph.c/(1-self.sp_graph.c)), opts={'mode':'sampled','lre':self.sp_graph.lre})
 
         term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
         term_1 = alpha * self.sp_graph.w + np.log(term_0)
@@ -177,10 +178,13 @@ class FEEMSmix_Objective(Objective):
         loss = lik + pen
         return loss 
 
-    def neg_log_lik_c(self, c, opts):
+    def neg_log_lik_c(self, ct, opts):
         """Evaluate the full negative log-likelihood for the given weights & admix. prop. c
         (changing function to only take in single long-range edge with a flag for 'sampled' vs 'unsampled' source)
         """
+
+        c = ct
+        # c = 10**ct/(1+10**ct)
 
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
         Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
@@ -253,8 +257,10 @@ class FEEMSmix_Objective(Objective):
         rm = []
         for k in range(len(ls)):
             # checking the log-lik of fits with deme1 - deme2 to find the source & dest. deme
-            resc = minimize(self.neg_log_lik_c, x0=np.random.random(), args={'lre':[(x[k],y[k])],'mode':'sampled'}, method='Nelder-Mead', bounds=[(0,1)])
-            rescopp = minimize(self.neg_log_lik_c, x0=np.random.random(), args={'lre':[(y[k],x[k])],'mode':'sampled'}, method='Nelder-Mead', bounds=[(0,1)])
+            resc = minimize(self.neg_log_lik_c, x0=np.random.random(), args={'lre':[(x[k],y[k])],'mode':'sampled'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
+            rescopp = minimize(self.neg_log_lik_c, x0=np.random.random(), args={'lre':[(y[k],x[k])],'mode':'sampled'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
+            # resc = minimize(self.neg_log_lik_c, x0=6*np.random.random()-3, args={'lre':[(x[k],y[k])],'mode':'sampled'}, method='L-BFGS-B', bounds=[(-3,3)])
+            # rescopp = minimize(self.neg_log_lik_c, x0=6*np.random.random()-3, args={'lre':[(y[k],x[k])],'mode':'sampled'}, method='L-BFGS-B', bounds=[(-3,3)])
             if resc.x<1e-3 and rescopp.x<1e-3:
                 rm.append(k)
             else:
@@ -268,6 +274,7 @@ class FEEMSmix_Objective(Objective):
         
         df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', \
                                          'raw diff.', '# of samples (source, dest.)', 'Fst'])
+        # TODO: check (lat., long.) values in df (seems to be wrong in the afroeurasia dataset)
 
         if len(df)==0:
             print('No outliers found.')
@@ -311,7 +318,7 @@ class FEEMSmix_Objective(Objective):
         # creating a list of (source, dest.) pairings based on user-picked criteria
         if search_area == 'all':
             # including every possible node in graph as a putative source
-            randedge = [(x,destid) for x in list(set(range(self.sp_graph.number_of_nodes()))-set([destid]))]
+            randedge = [(x,destpid) for x in list(set(range(self.sp_graph.number_of_nodes()))-set([destpid]))]
         elif search_area == 'radius':
             assert type(sourcepid) == int, "sourcepid must be an integer"
             assert type(opts) == int and opts > 0, "radius must be an integer >=1"
@@ -320,14 +327,15 @@ class FEEMSmix_Objective(Objective):
             except: 
                 print('invalid ID for source deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
             neighs = [] 
-            neighs = list(self.sp_graph.neighbors(sourceid)) + [sourceid]
+            neighs = list(self.sp_graph.neighbors(sourcepid)) + [sourcepid]
+
             # including all nodes within a certain radius
             for _ in range(opts):
                 tempn = [list(self.sp_graph.neighbors(n1)) for n1 in neighs]
                 # dropping repeated nodes 
                 neighs = np.unique(list(it.chain(*tempn)))
 
-            randedge = [(x,destid) for x in list(set(neighs)-set([destid]))]
+            randedge = [(x,destpid) for x in list(set(neighs)-set([destpid]))]
         elif search_area == 'range':
             assert len(opts) == 2, "limits must be list of length 2"
             # reverse coordinates if in Western and Southern hemispheres
@@ -343,38 +351,45 @@ class FEEMSmix_Objective(Objective):
                 # checking for lat. & long. of all possible nodes in graph
                 if self.sp_graph.nodes[n]['pos'][0] > opts[0][0] and self.sp_graph.nodes[n]['pos'][0] < opts[0][1]:
                     if self.sp_graph.nodes[n]['pos'][1] > opts[1][0] and self.sp_graph.nodes[n]['pos'][1] < opts[1][1]:
-                        randedge.append((n,destid))
+                        randedge.append((n,destpid))
 
             # remove tuple of dest -> dest ONLY if it is in randedge
-            if (destid,destid) in randedge:
-                randedge.remove((destid,destid))
+            if (destpid,destpid) in randedge:
+                randedge.remove((destpid,destpid))
         elif search_area == 'custom':
-            randedge = [(x,destid) for x in list(set(opts)-set([destid]))]
+            randedge = [(x,destpid) for x in list(set(opts)-set([destpid]))]
 
         # only include central demes (==6 neighbors), since demes on edge of range exhibit some boundary effects during estimation
         randedge = list(it.compress(randedge,np.array([sum(1 for _ in self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[i])) for i in list(set(range(self.sp_graph.number_of_nodes()))-set([destid]))])==6))
 
+        # TODO: check if Lpinv has been calculated, if not then calculate it
         randpedge = []
         cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
         for ie, e in enumerate(randedge):
+            # TODO: put a progress bar here
             # convert all sources to valid permuted ids (so observed demes should be b/w index 0 & o-1)
             e2 = (np.where(perm_id==e[0])[0][0], destid)
             randpedge.append((perm_id[e[0]],destpid))
             if e2[0]<self.sp_graph.n_observed_nodes:
                 try:
-                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], method='Nelder-Mead', args={'lre':[e2],'mode':'sampled'})
+                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], tol=1e-6, method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
+                    # res = minimize(self.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
                     cest2[ie] = res.x; llc2[ie] = res.fun
+                    # cest2[ie] = 10**res.x/(1+10**res.x); llc2[ie] = res.fun
                 except:
                     cest2[ie] = np.nan; llc2[ie] = np.nan
             else:
                 try:
-                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], method='Nelder-Mead', args={'lre':[e2],'mode':'unsampled'})
+                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], tol=1e-6, method='L-BFGS-B', args={'lre':[e2],'mode':'unsampled'})
+                    # res = minimize(self.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':[e2],'mode':'unsampled'})
                     cest2[ie] = res.x; llc2[ie] = res.fun
+                    # cest2[ie] = 10**res.x/(1+10**res.x); llc2[ie] = res.fun
                 except:
                     cest2[ie] = np.nan; llc2[ie] = np.nan
 
         ## TODO: if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
-
+        ## TODO: if MLE admix. prop. < 1e-4 then just assign 0 
+        ## TODO: if there are any nan values, drop it from df (and print warning message but nothing to be alarmed about unless 10%? of values dropped)
         df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
         df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = -llc2; df['scaled log-lik'] = df['log-lik']-np.nanmax(df['log-lik'])
 
@@ -400,7 +415,7 @@ def loss_wrapper(z, obj):
     loss = obj.loss()
     if obj.optimize_q is None:
         grad = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
-    ## VS: not penalizing q/s2, only penalizing w
+    ## VS: not penalizing q (or s2), only penalizing w
     elif obj.optimize_q == 'n-dim':
         grad = np.zeros_like(theta)
         grad[:n_edges] = obj.grad_obj * obj.sp_graph.w + obj.grad_pen * obj.sp_graph.w
@@ -427,7 +442,8 @@ def coordinate_descent(obj, factr, m, maxls, maxiter, verbose):
     for bigiter in range(10):
         # first fit admix. prop. c
         if optimc: # stop it from overly optimizing over c
-            resc = minimize(obj.neg_log_lik_c, x0=obj.sp_graph.c, args={'lre':obj.sp_graph.lre,'mode':'sampled'}, method='Nelder-Mead', bounds=[(0,1)])
+            resc = minimize(obj.neg_log_lik_c, x0=obj.sp_graph.c, args={'lre':obj.sp_graph.lre,'mode':'sampled'}, method='L-BFGS-B', bounds=[(0,1)])
+            # resc = minimize(obj.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':obj.sp_graph.lre,'mode':'sampled'})
             if resc.status != 0:
                 print('Warning: admix. prop. optimization failed')
             if np.min(np.abs(resc.x - obj.sp_graph.c)) > 1e-4:
@@ -435,6 +451,7 @@ def coordinate_descent(obj, factr, m, maxls, maxiter, verbose):
                 if bigiter > 0:
                     break
             obj.sp_graph.c = deepcopy(resc.x)
+            # obj.sp_graph.c = deepcopy(10**resc.x/(1+10**resc.x))
 
         if obj.optimize_q is not None:
             x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
@@ -515,6 +532,7 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
         assert res.success is True, "did not converge"
         w0_hat = np.exp(res.x[0])
         s2_hat = np.exp(res.x[1])
+        self.s2_hat = s2_hat
         self.w0 = w0_hat * np.ones(self.w.shape[0])
         self.s2 = s2_hat * np.ones(len(self))
         self.comp_precision(s2=s2_hat)

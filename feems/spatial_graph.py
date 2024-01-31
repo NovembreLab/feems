@@ -317,6 +317,7 @@ class SpatialGraph(nx.Graph):
         s2_hat = np.exp(res.x[1])
         self.w0 = w0_hat * np.ones(self.w.shape[0])
         self.s2 = s2_hat
+        self.s2_hat = s2_hat
         self.comp_precision(s2=s2_hat)
 
         # print update

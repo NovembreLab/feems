@@ -348,26 +348,27 @@ class Viz(object):
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
-    def draw_arrow(self, lre, c, lw=2, hw=0.8, hl=0.8, fs=10, mode='unsampled'):
+    def draw_arrow(self, lre, c, lw=2, hw=0.8, hl=0.8, fs=10, alpha=0.8, mode='unsampled'):
         # self.ax.arrow(self.grid[lre[0][0],0],self.grid[lre[0][0],1],dx=self.grid[lre[0][1],0]-self.grid[lre[0][0],0],dy=self.grid[lre[0][1],1]-self.grid[lre[0][0],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
         ## the code below is for cases when we have unsampled demes so the node IDs are permuted
         if mode=='sampled':
             permuted_idx = query_node_attributes(self.sp_graph, "permuted_idx")
             obs_perm_ids = permuted_idx[: self.sp_graph.n_observed_nodes]
             obs_grid = self.grid[obs_perm_ids, :]
-            self.ax.arrow(obs_grid[lre[0][0],0],obs_grid[lre[0][0],1],dx=obs_grid[lre[0][1],0]-obs_grid[lre[0][0],0],dy=obs_grid[lre[0][1],1]-obs_grid[lre[0][0],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
-            # self.ax.annotate(np.round(c,2),(0.5*(obs_grid[lre[0][0],0]+obs_grid[lre[0][1],0]),0.5*(obs_grid[lre[0][0],1]+obs_grid[lre[0][1],1])),fontsize=fs)
+            self.ax.arrow(obs_grid[lre[0][0],0],obs_grid[lre[0][0],1],dx=obs_grid[lre[0][1],0]-obs_grid[lre[0][0],0],dy=obs_grid[lre[0][1],1]-obs_grid[lre[0][0],1],ec=self.c_cmap(c), fc=self.c_cmap(c), length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl,alpha=alpha)
+            self.ax.annotate(np.round(c,2),(obs_grid[lre[0][1],0],obs_grid[lre[0][1],1]),fontsize=fs)
         else:
-            self.ax.arrow(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],dx=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],dy=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
-            self.ax.annotate(np.round(c,2),(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1]),fontsize=fs)
+            self.ax.arrow(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],dx=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],dy=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],ec=self.c_cmap(c), fc=self.c_cmap(c), length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
+            self.ax.annotate(np.round(c,2),(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]),fontsize=fs)
 
-    def draw_c_colorbar(self, df):
+    def draw_c_colorbar(self, df=None):
         "Draws simple colorbar from 0 to 1 scale for admixture proportion"
         self.c_axins = inset_axes(self.ax, loc = 'upper right', width = "10%", height = "2%",)
         self.c_axins.set_title(r"$\hat{c}$", fontsize = self.cbar_font_size)
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=np.linspace(0,1,3))
         self.c_cbar.ax.tick_params(labelsize = self.cbar_ticklabelsize)
-        self.c_cbar.ax.axvline(df['admix. prop.'].loc[df['scaled log-lik']==0].values[0], color='r', linewidth=1)
+        if df is not None:
+            self.c_cbar.ax.axvline(df['admix. prop.'].loc[df['scaled log-lik']==0].values[0], color='r', linewidth=1)
 
     def draw_c_contour(self, df, ll_thresh=-10, levels=3, fs=8):
         """Draws two tricontours of admix. prop. estimates & log-lik
@@ -389,8 +390,8 @@ class Viz(object):
     def draw_ll_contour(self, df, levels=[-20,-10,-2,0], fs=8): 
         #TODO: check if there are any nan and drop (also do for above function)
 
-        self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels) 
-        CS = self.ax.tricontour([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels)
+        self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels, zorder=2) 
+        CS = self.ax.tricontour([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels, zorder=2)
         self.ax.clabel(CS, inline=1, fontsize=fs, colors='k')
         # drawing a star at the location of the MLE
         self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0],self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='*', zorder=2, facecolors='k', edgecolors='k')
