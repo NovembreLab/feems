@@ -46,4 +46,6 @@ for i in range(rows):
                 adj_matrix[node_index + cols - 1, node_index - 1] = 1
                 print(node_index - cols - 1, node_index - 1)
 
+adj_matrix *= 0.001
+
 plt.imshow(adj_matrix); plt.colorbar()
