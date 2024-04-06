@@ -32,7 +32,6 @@ class FEEMSmix_Objective(Objective):
         ## reg params for residual variance
         self.lamb_q = None
         self.alpha_q = None
-        self.option = option
 
         self.nll = 0.0
 
@@ -72,18 +71,19 @@ class FEEMSmix_Objective(Objective):
         self._comp_inv_lap()
 
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
-        Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
+        Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) #np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
         resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag
 
         for ie, _ in enumerate(self.sp_graph.lre):
             if(self.sp_graph.lre[ie][0]<self.sp_graph.n_observed_nodes and self.sp_graph.lre[ie][1]<self.sp_graph.n_observed_nodes):
-                resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] = (0.5*self.sp_graph.c[ie]**2-1.5*self.sp_graph.c[ie]+1)*Rmat[self.sp_graph.lre[0][0],self.sp_graph.lre[ie][1]] + (1+self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][0]] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]]
+                resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] = (0.5*self.sp_graph.c[ie]**2-1.5*self.sp_graph.c[ie]+1)*Rmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] + (1+self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][0]] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]]
                 resmat[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][0]] = resmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]
 
                 for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]]):
                     resmat[i,self.sp_graph.lre[ie][1]] = (1-self.sp_graph.c[ie])*Rmat[i,self.sp_graph.lre[ie][1]] + self.sp_graph.c[ie]*Rmat[i,self.sp_graph.lre[ie][0]] + 0.5*(self.sp_graph.c[ie]**2-self.sp_graph.c[ie])*Rmat[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] + 1/self.sp_graph.q[i] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[ie][1]] + self.sp_graph.c[ie]/self.sp_graph.q[self.sp_graph.lre[ie][0]]
                     resmat[self.sp_graph.lre[ie][1],i] = resmat[i,self.sp_graph.lre[ie][1]]
             else:
+                #TODO: annotate this in more detail
                 neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[self.sp_graph.lre[0][0]]))
                 neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
 
@@ -96,11 +96,57 @@ class FEEMSmix_Objective(Objective):
                     resmat[self.sp_graph.lre[0][1],s] = resmat[s,self.sp_graph.lre[0][1]]
 
                 proxs = np.argmin([nx.shortest_path_length(self.sp_graph,source=self.sp_graph.lre[0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([self.sp_graph.lre[0][0]])])
-                ## id
                 for i in set(range(self.sp_graph.n_observed_nodes))-set([self.sp_graph.lre[0][0],self.sp_graph.lre[0][1]]+neighs):
                     Ri1 = -2*self.Lpinv[i,self.sp_graph.lre[0][0]] + self.Lpinv[i,i] + self.Lpinv[self.sp_graph.lre[0][0],self.sp_graph.lre[0][0]]
                     resmat[i,self.sp_graph.lre[0][1]] = (1-self.sp_graph.c[ie])*(Rmat[i,self.sp_graph.lre[0][1]]) + self.sp_graph.c[ie]*Ri1 + 0.5*(self.sp_graph.c[ie]**2-self.sp_graph.c[ie])*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c[ie])/self.sp_graph.q[self.sp_graph.lre[0][1]] + self.sp_graph.c[ie]/self.sp_graph.q[proxs]
                     resmat[self.sp_graph.lre[0][1],i] = resmat[i,self.sp_graph.lre[0][1]]
+
+        CRCt = np.linalg.inv(-0.5*self.C @ resmat @ self.C.T)
+        if self.optimize_q == 'n-dim':
+            M = self.C.T @ (CRCt @ (self.C @ self.sp_graph.S @ self.C.T) @ CRCt - CRCt) @ self.C
+        else:
+            self.comp_B = self.inv_cov - (1.0 / self.denom) * np.outer(
+                self.inv_cov_sum, self.inv_cov_sum
+            )
+            self.comp_A = self.comp_B @ self.sp_graph.S @ self.comp_B
+            M = self.comp_A - self.comp_B
+
+        self.grad_obj_L = self.sp_graph.n_snps * (self.Linv @ M @ self.Linv.T)
+
+        gradD = np.diag(self.grad_obj_L) @ self.sp_graph.P
+        gradW = 2 * self.grad_obj_L[self.sp_graph.nnz_idx_perm]  # use symmetry
+        self.grad_obj = np.ravel(gradD - gradW)
+        
+        # grads for d diag(Jq^-1) / dq
+        if self.optimize_q == 'n-dim':
+            self.grad_obj_q = np.zeros(len(self.sp_graph))
+            self.grad_obj_q[:self.sp_graph.n_observed_nodes] = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad)        
+        else:
+            self.grad_obj_q = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad) 
+
+    def _comp_grad_obj_c_t(self):
+        """Computes the gradient of the objective function (now defined with admix. prop. c & admix. time t) with respect to the latent variables dLoss / dL
+        """
+
+        # compute inverses
+        self._comp_inv_lap()
+
+        Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
+        Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) #np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
+        Tstar = Rmat + (Q1mat + Q1mat.T); Tstar[np.diag_indices_from(Tstar)] = 0
+
+        dT0 = np.zeros_like(Tstar)
+
+        for ie, _ in enumerate(self.sp_graph.lre):
+            for i in list(set(range(dT0.shape[0]))-set([self.sp_graph.lre[ie][1]])):
+                dT0[i,self.sp_graph.lre[ie][1]] = self.sp_graph.c[ie]*Tstar[i,self.sp_graph.lre[ie][0]] - self.sp_graph.c[ie]*Tstar[i,self.sp_graph.lre[ie][1]] 
+                dT0[self.sp_graph.lre[ie][1],i] = dT0[i,self.sp_graph.lre[ie][1]]
+            dT0[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][1]] = self.sp_graph.c[ie]*Tstar[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][0]] - self.sp_graph.c[ie]*Tstar[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][1]] 
+            #self.sp_graph.c[ie]**2*Tstar[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][0]] + 2*self.sp_graph.c[ie]*(1-self.sp_graph.c[ie])*Tstar[self.sp_graph.lre[ie][0],self.sp_graph.lre[ie][1]] + (self.sp_graph.c[ie]**2-2*self.sp_graph.c[ie])*Tstar[self.sp_graph.lre[ie][1],self.sp_graph.lre[ie][1]] 
+            
+        dTt = -self.sp_graph.t[ie]*(np.diag(1/self.sp_graph.q)@np.diag(np.diag(dT0)) + self.Linv@dT0 + dT0@self.Linv) + dT0
+
+        resmat = Tstar + dTt; resmat[np.diag_indices_from(resmat)] = 0
 
         CRCt = np.linalg.inv(-0.5*self.C @ resmat @ self.C.T)
         if self.optimize_q == 'n-dim':
@@ -156,15 +202,19 @@ class FEEMSmix_Objective(Objective):
         lamb = self.lamb
         alpha = self.alpha
 
-        if self.option == 'default':
+        if self.sp_graph.option == 'default':
             lik = self.neg_log_lik()
-        else:
+        elif self.sp_graph.option == 'onlyc':
             # lik = self.neg_log_lik_c(self.sp_graph.c, opts={'mode':'sampled','lre':self.sp_graph.lre})
-            lik = self.neg_log_lik_c(np.log10(self.sp_graph.c/(1-self.sp_graph.c)), opts={'mode':'sampled','lre':self.sp_graph.lre})
+            lik = self.neg_log_lik_c(self.sp_graph.c, opts={'mode':'sampled','lre':self.sp_graph.lre})
+        else:
+            lik = self.neg_log_lik_c_t([self.sp_graph.c, self.sp_graph.t], opts={'lre':self.sp_graph.lre})
+            print([self.sp_graph.c, self.sp_graph.t])
 
         term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
         term_1 = alpha * self.sp_graph.w + np.log(term_0)
         pen = 0.5 * lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
+        # print(pen)
                 
         if self.optimize_q == 'n-dim':
             lamb_q = self.lamb_q
@@ -172,53 +222,270 @@ class FEEMSmix_Objective(Objective):
                 
             term_0 = 1.0 - np.exp(-alpha_q * self.sp_graph.s2)
             term_1 = alpha_q * self.sp_graph.s2 + np.log(term_0)
-            pen += 0.5 * lamb_q * np.linalg.norm(self.sp_graph.Delta_q @ term_1) ** 2   
+            pen += 0.5 * lamb_q * np.linalg.norm(self.sp_graph.Delta_q @ term_1) ** 2  
+            # print(str(pen)+"here") 
 
         # loss
         loss = lik + pen
         return loss 
 
-    def neg_log_lik_c(self, ct, opts):
+    def neg_log_lik_c_t(self, ct, opts):
+        """Evaluate the full negative log-likelihood for the given weights AND admix. prop. c + admix. time t
+        """
+
+        Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
+        # Rmat = -2*2/self.sp_graph.number_of_nodes()*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(2/self.sp_graph.number_of_nodes()*np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(2/self.sp_graph.number_of_nodes()*np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
+        Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) #np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
+        # Q1mat = self.sp_graph.number_of_nodes()/2*np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
+        Tstar = Rmat + (Q1mat + Q1mat.T); Tstar[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
+
+        dT0 = np.zeros_like(Tstar)
+
+        # dT0[opts['lre'][0][0],opts['lre'][0][1]] = ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][0]] - ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 2*ct[0]*Q1mat[opts['lre'][0][0],opts['lre'][0][0]]
+        # dT0[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*ct[0]**2-1.5*ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+ct[0])*self.Linv[opts['lre'][0][0],opts['lre'][0][0]] + ct[0]/self.sp_graph.q[opts['lre'][0][0]] + (1-ct[0])*self.Linv[opts['lre'][0][1],opts['lre'][0][1]] - ct[0]/self.sp_graph.q[opts['lre'][0][1]]
+        # # dT0[opts['lre'][0][0],opts['lre'][0][1]] = ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][0]] - ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 2*ct[0]*(1/self.sp_graph.q[opts['lre'][0][0]] + self.Linv[opts['lre'][0][0],opts['lre'][0][0]])
+        # dT0[opts['lre'][0][1],opts['lre'][0][0]] = dT0[opts['lre'][0][0],opts['lre'][0][1]]
+        # for i in list(set(range(dT0.shape[0]))-set([opts['lre'][0][0],opts['lre'][0][1]])):
+        #     dT0[i,opts['lre'][0][1]] = ct[0]*Tstar[i,opts['lre'][0][0]] - ct[0]*Tstar[i,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]]; dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
+            # dT0[i,opts['lre'][0][1]] = -ct[0]*Rmat[i,opts['lre'][0][1]] + ct[0]*Rmat[i,opts['lre'][0][0]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + self.Linv[i,i] - ct[0]/self.sp_graph.q[opts['lre'][0][1]] + (1-ct[0])*self.Linv[opts['lre'][0][1],opts['lre'][0][1]] + ct[0]*(1/self.sp_graph.q[opts['lre'][0][0]] + self.Linv[opts['lre'][0][0],opts['lre'][0][0]]); dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
+        # ct[0]**2*Tstar[opts['lre'][0][0],opts['lre'][0][0]] + 2*ct[0]*(1-ct[0])*Tstar[opts['lre'][0][0],opts['lre'][0][1]] + (ct[0]**2-2*ct[0])*Tstar[opts['lre'][0][1],opts['lre'][0][1]]
+        #ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][0]] - ct[0]*Tstar[opts['lre'][0][1],opts['lre'][0][1]]  -> has infs in array?  
+
+        ## changing diag(1/q) to diag(1/q)+diag(Linv) does not change the estimates...
+        # dTt = -ct[1]*(np.diag(1/self.sp_graph.q)@np.diag(np.diag(dT0)) + self.Linv@dT0 + dT0@self.Linv) + dT0
+        # dTt = -ct[1]/(1+ct[1])*(np.diag(1/self.sp_graph.q)@np.diag(np.diag(Tstar+dT0)) + self.Linv@(Tstar+dT0) + (Tstar+dT0)@self.Linv + np.ones((self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes))) + Tstar+dT0
+
+        # resmat = Tstar+dTt; resmat[np.diag_indices_from(resmat)] = 0
+
+        if opts['mode']=='sampled':
+            # dT0[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*ct[0]**2-1.5*ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + ct[0]/self.sp_graph.q[opts['lre'][0][0]] - ct[0]/self.sp_graph.q[opts['lre'][0][1]]
+            dT0[opts['lre'][0][0],opts['lre'][0][1]] = ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][0]] - ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 2*ct[0]*Q1mat[opts['lre'][0][0],opts['lre'][0][0]]
+            dT0[opts['lre'][0][1],opts['lre'][0][0]] = dT0[opts['lre'][0][0],opts['lre'][0][1]]
+            for i in list(set(range(dT0.shape[0]))-set([opts['lre'][0][0],opts['lre'][0][1]])):
+                dT0[i,opts['lre'][0][1]] = ct[0]*Tstar[i,opts['lre'][0][0]] - ct[0]*Tstar[i,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]]; dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
+
+            T0 = Tstar+dT0
+
+            ## changing diag(1/q) to diag(1/q)+diag(Linv) does not change the estimates...
+            resmat = T0 + ct[1]*(-np.diag(1/self.sp_graph.q)@np.diag(np.diag(T0)) - self.sp_graph.L@T0 - T0@self.sp_graph.L.T + np.ones((self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes))) 
+            # resmat = T0 + ct[1]*(-np.diag(1/self.sp_graph.q)@np.diag(np.diag(T0)) - self.Linv@T0 - T0@self.Linv + np.ones((self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)))
+
+        else:
+            Tstar = Rmat + (Q1mat + Q1mat.T); Tstar[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
+
+            dT0 = np.zeros_like(Tstar)
+            # gets the 6 neighboring demes
+            neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[opts['lre'][0][0]]))
+            # finds the neighboring deme that has samples
+            neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
+
+            R1d = -2*self.Lpinv[opts['lre'][0][0],opts['lre'][0][1]] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]] + self.Lpinv[opts['lre'][0][1],opts['lre'][0][1]]
+            R1 = -2*self.Lpinv[:self.sp_graph.n_observed_nodes,opts['lre'][0][0]].T + np.diag(self.Linv) + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
+
+            # apply this formula only to neighboring sampled demes
+            for n in neighs:
+                # convert back to appropriate indexing excluding the unsampled demes
+                s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==n][0]
+                dT0[s,opts['lre'][0][1]] = ct[0]*Tstar[s,s] - ct[0]*Tstar[s,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[s,opts['lre'][0][1]] + 2*ct[0]*Q1mat[s,s]
+                dT0[opts['lre'][0][1],s] = dT0[s,opts['lre'][0][1]]
+                # resmat[s,opts['lre'][0][1]] = Rmat[s,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*R1d + (1-ct[0])/self.sp_graph.q[s] + (1+ct[0])/self.sp_graph.q[opts['lre'][0][1]]
+                # resmat[opts['lre'][0][1],s] = resmat[s,opts['lre'][0][1]]
+
+            # find the closest sampled deme to 1 (this is just the proxy source, use q from here but do not model this as the source)
+            # proxs = np.argmin([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])
+            proxs = np.argsort([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])[:3]
+            qprox = np.dot(1/self.sp_graph.q[proxs], (1/R1[0,proxs].T)/np.sum(1/R1[0,proxs]))
+            # print(proxs)
+            ## id
+            ## this needs a more alert mind and quiet morning (not one in which I've had <6 hours of sleep)
+            for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
+                Ri1 = -2*self.Lpinv[i,opts['lre'][0][0]] + self.Lpinv[i,i] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
+                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*qprox
+                resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
+                dT0[i,opts['lre'][0][1]] = ct[0]*Tstar[i,opts['lre'][0][0]] - ct[0]*Tstar[i,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]]
+                dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
+
+
+
+        D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
+
+        nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
+
+        return nll
+
+    def joint_neg_log_lik_c_t(self, x0, opts):
+        """Evaluate the joint negative log-likelihood for the given weights, s2 and admix. prop. c & admix. time t, but taking as input all four sets of parameters
+        (prototype function: only works with option 'n-dim')
+        """
+
+        n_edges = self.sp_graph.size()
+        self.sp_graph.comp_graph_laplacian(np.exp(x0[:n_edges]))
+        self.sp_graph.comp_precision(s2=np.exp(x0[n_edges:-2]))
+        self.inv()
+
+        c = x0[-2]
+        t = x0[-1]/(1+x0[-1])
+
+        Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
+        Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) 
+        Tstar = Rmat + (Q1mat + Q1mat.T); Tstar[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
+
+        dT0 = np.zeros_like(Tstar)
+
+        dT0[opts['lre'][0][0],opts['lre'][0][1]] = c*Tstar[opts['lre'][0][0],opts['lre'][0][0]] - c*Tstar[opts['lre'][0][0],opts['lre'][0][1]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 2*c/self.sp_graph.q[opts['lre'][0][0]]; dT0[opts['lre'][0][1],opts['lre'][0][0]] = dT0[opts['lre'][0][0],opts['lre'][0][1]]
+        for i in list(set(range(dT0.shape[0]))-set([opts['lre'][0][0],opts['lre'][0][1]])):
+            # dT0[i,opts['lre'][0][1]] = c*Tstar[i,opts['lre'][0][0]] - c*Tstar[i,opts['lre'][0][1]]; dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
+            dT0[i,opts['lre'][0][1]] = c*Tstar[i,opts['lre'][0][0]] - c*Tstar[i,opts['lre'][0][1]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]]; dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
+        dT0[opts['lre'][0][1],opts['lre'][0][1]] = c*Tstar[opts['lre'][0][0],opts['lre'][0][0]] - c*Tstar[opts['lre'][0][1],opts['lre'][0][1]]  
+        #ct[0]**2*Tstar[opts['lre'][0][0],opts['lre'][0][0]] + 2*ct[0]*(1-ct[0])*Tstar[opts['lre'][0][0],opts['lre'][0][1]] + (ct[0]**2-2*ct[0])*Tstar[opts['lre'][0][1],opts['lre'][0][1]]
+        #ct[0]*Tstar[opts['lre'][0][0],opts['lre'][0][0]] - ct[0]*Tstar[opts['lre'][0][1],opts['lre'][0][1]]  -> has infs in array?  
+
+        # dTt = -t*(np.diag(1/self.sp_graph.q)@np.diag(np.diag(dT0)) + self.Linv@dT0 + dT0@self.Linv) + dT0
+
+        resmat = Tstar+dTt; resmat[np.diag_indices_from(resmat)] = 0
+
+        D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
+
+        # nll = -wishart.logpdf(2*self.sp_graph.n_snps*self.C @ self.sp_graph.S @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
+        nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
+
+        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w)
+        term_1 = self.alpha * self.sp_graph.w + np.log(term_0)
+        pen = 0.5 * self.lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
+
+        term_0 = 1.0 - np.exp(-self.alpha_q * self.sp_graph.s2)
+        term_1 = self.alpha_q * self.sp_graph.s2 + np.log(term_0)
+        pen += 0.5 * self.lamb_q * np.linalg.norm(self.sp_graph.Delta_q @ term_1) ** 2
+
+        return nll + pen
+
+    def joint_neg_log_lik_c(self, x0, opts):
+        """Evaluate the joint negative log-likelihood for the given weights, s2 and admix. prop. c, but taking as input all three sets of parameters
+        (prototype function: only works with option 'n-dim')
+        """
+
+        n_edges = self.sp_graph.size()
+        self.sp_graph.comp_graph_laplacian(np.exp(x0[:n_edges]))
+        self.sp_graph.comp_precision(s2=np.exp(x0[n_edges:-1]))
+        self.inv(); #self.grad(reg=False)
+
+        c = x0[-1]
+        # print(c)
+
+        Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
+        Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) 
+        resmat = Rmat + (Q1mat + Q1mat.T); resmat[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
+
+        resmat[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+c)/self.sp_graph.q[opts['lre'][0][0]] + (1-c)/self.sp_graph.q[opts['lre'][0][1]]
+        resmat[opts['lre'][0][1],opts['lre'][0][0]] = resmat[opts['lre'][0][0],opts['lre'][0][1]]
+
+        for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]):
+            resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,opts['lre'][0][0]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c/self.sp_graph.q[opts['lre'][0][0]]
+            resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
+
+        D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
+
+        nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
+
+        term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w)
+        term_1 = self.alpha * self.sp_graph.w + np.log(term_0)
+        pen = 0.5 * self.lamb * np.linalg.norm(self.sp_graph.Delta @ term_1) ** 2
+
+        term_0 = 1.0 - np.exp(-self.alpha_q * self.sp_graph.s2)
+        term_1 = self.alpha_q * self.sp_graph.s2 + np.log(term_0)
+        pen += 0.5 * self.lamb_q * np.linalg.norm(self.sp_graph.Delta_q @ term_1) ** 2
+
+        return nll + pen
+
+    def neg_log_lik_c(self, c, opts):
         """Evaluate the full negative log-likelihood for the given weights & admix. prop. c
         (changing function to only take in single long-range edge with a flag for 'sampled' vs 'unsampled' source)
         """
 
-        c = ct
-        # c = 10**ct/(1+10**ct)
-
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.reshape(np.diag(self.Linv),(1,-1)).T @ np.ones((self.sp_graph.n_observed_nodes,1)).T + np.ones((self.sp_graph.n_observed_nodes,1)) @ np.reshape(np.diag(self.Linv),(1,-1))
-        Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
-        resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag
+        # Rmat = -2*2/self.sp_graph.number_of_nodes()*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(2/self.sp_graph.number_of_nodes()*np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(2/self.sp_graph.number_of_nodes()*np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
+        Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) #np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) #np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
+        ## both variations below gives not posdef errors with 6x6
+        # Q1mat = 0.5*(1-self.Linv.diagonal()).reshape(-1,1) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) 
+        # Q1mat = self.sp_graph.number_of_nodes()/2*np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
+        resmat = Rmat + (Q1mat + Q1mat.T); resmat[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
 
         if opts['mode']=='sampled':
-            resmat[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+c)/self.sp_graph.q[opts['lre'][0][0]] + (1-c)/self.sp_graph.q[opts['lre'][0][1]]
+            # resmat[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+c)/self.sp_graph.q[opts['lre'][0][0]] + (1-c)/self.sp_graph.q[opts['lre'][0][1]]
+            resmat[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+c)*Q1mat[opts['lre'][0][0],opts['lre'][0][0]] + (1-c)*Q1mat[opts['lre'][0][1],opts['lre'][0][1]]
+            # resmat[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+c)*(1/self.sp_graph.q[opts['lre'][0][0]] + self.Linv[opts['lre'][0][0],opts['lre'][0][0]]) + (1-c)*(1/self.sp_graph.q[opts['lre'][0][1]] + self.Linv[opts['lre'][0][1],opts['lre'][0][1]])
             resmat[opts['lre'][0][1],opts['lre'][0][0]] = resmat[opts['lre'][0][0],opts['lre'][0][1]]
 
             for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]):
-                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,opts['lre'][0][0]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c/self.sp_graph.q[opts['lre'][0][0]]
+                # resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,opts['lre'][0][0]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c/self.sp_graph.q[opts['lre'][0][0]]
+                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,opts['lre'][0][0]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)*Q1mat[opts['lre'][0][1],opts['lre'][0][1]] + c*Q1mat[opts['lre'][0][0],opts['lre'][0][0]]
+                # resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,opts['lre'][0][0]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1/self.sp_graph.q[i] + self.Linv[i,i]) + (1-c)*(1/self.sp_graph.q[opts['lre'][0][1]] + self.Linv[opts['lre'][0][1],opts['lre'][0][1]]) + c*(1/self.sp_graph.q[opts['lre'][0][0]] + self.Linv[opts['lre'][0][0],opts['lre'][0][0]])
                 resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
         else:
+            ## picking the 3 closest sampled demes (using the old approach)
+            # TODO: this is very slow ->  see if you can speed up by using permuted_idx vector
+            # gets the 6 neighboring demes
             neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[opts['lre'][0][0]]))
+            # finds the neighboring deme that has samples
             neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
 
             R1d = -2*self.Lpinv[opts['lre'][0][0],opts['lre'][0][1]] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]] + self.Lpinv[opts['lre'][0][1],opts['lre'][0][1]]
+            R1 = np.array(-2*self.Lpinv[:self.sp_graph.n_observed_nodes,opts['lre'][0][0]].T + np.diag(self.Linv) + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]])
 
-            for s in neighs:
+            # apply this formula only to neighboring sampled demes
+            for n in neighs:
                 # convert back to appropriate indexing excluding the unsampled demes
-                s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==s][0]
+                s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==n][0]
+                # (1+c)q_s gives an overestimate of the c value (slide 61) ->  keeping it at 1-c
                 resmat[s,opts['lre'][0][1]] = Rmat[s,opts['lre'][0][1]] + 0.5*(c**2-c)*R1d + (1-c)/self.sp_graph.q[s] + (1+c)/self.sp_graph.q[opts['lre'][0][1]]
                 resmat[opts['lre'][0][1],s] = resmat[s,opts['lre'][0][1]]
 
-            proxs = np.argmin([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])
+            # find the closest sampled deme to 1 (this is just the proxy source, use q from here but do not model this as the source)
+            # proxs = np.argmin([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])
+            # proxs = np.argsort([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])[:1]
+            ## TODO: cache entries for a specific unsampled node here (so rerunning on a new destination will be much faster)
+            proxs = np.argsort([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set(self.perm_idx[:self.sp_graph.n_observed_nodes])-set([opts['lre'][0][0]])])[:self.sp_graph.n_observed_nodes]
+            # qprox = np.dot(1/self.sp_graph.q[proxs], (1/R1[0,proxs].T)/np.sum(1/R1[0,proxs]))
+            qprox = np.dot(1/self.sp_graph.q[proxs], (R1[0,proxs]*np.exp(-2*R1[0,proxs]))/np.sum(R1[0,proxs]*np.exp(-2*R1[0,proxs])))
             ## id
             for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
                 Ri1 = -2*self.Lpinv[i,opts['lre'][0][0]] + self.Lpinv[i,i] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
-                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c/self.sp_graph.q[proxs]
+                # resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts  ['lre'][0][1]] + c/self.sp_graph.q[proxs]
+                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*qprox
                 resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
 
+            ## if picking the closest sampled deme as a proxy (treating the unsampled deme with the same equations as above)
+            ## (this gives a very smooth loglik contour and produces same results as doing topidx=1)
+            # R1 = -2*self.Lpinv[:self.sp_graph.n_observed_nodes,opts['lre'][0][0]].T + np.diag(self.Linv) + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
+            # one = np.argmin(R1)
+
+            # resmat[one,opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[one,opts['lre'][0][1]] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + (1+c)/self.sp_graph.q[one]*np.exp(-2*R1[0,one]) 
+            # resmat[one,opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[one,opts['lre'][0][1]] + (1+c)*(1/self.sp_graph.q[one] + self.Linv[one,one]) + (1-c)*(1/self.sp_graph.q[opts['lre'][0][1]] + self.Linv[opts['lre'][0][1],opts['lre'][0][1]])
+            # resmat[opts['lre'][0][1],one] = resmat[one,opts['lre'][0][1]]
+            # for i in set(range(self.sp_graph.n_observed_nodes))-set([one,opts['lre'][0][1]]):
+            #     # resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,one] + 0.5*(c**2-c)*Rmat[one,opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c/self.sp_graph.q[one]*np.exp(-2*R1[0,one])
+            #     resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,one] + 0.5*(c**2-c)*Rmat[one,opts['lre'][0][1]] + (1/self.sp_graph.q[i] + self.Linv[i,i]) + (1-c)*(1/self.sp_graph.q[opts['lre'][0][1]] + self.Linv[opts['lre'][0][1],opts['lre'][0][1]]) + c*(1/self.sp_graph.q[one] + self.Linv[one,one])
+            #     resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
+
+            # ## picking the n closest demes and doing a weighted average
+            # R1 = -2*self.Lpinv[:self.sp_graph.n_observed_nodes,opts['lre'][0][0]].T + np.diag(self.Linv) + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
+            # topidx = np.ravel(np.argsort(R1)[0,:1]).tolist()
+            # q1 = np.dot(1/self.sp_graph.q[topidx], (1/R1[0,topidx].T)/np.sum(1/R1[0,topidx]))
+            # # q1 = 1/self.sp_graph.q[topidx]*np.exp(-2*R1[0,topidx])
+            
+            # for it in topidx:
+            #     ## doing this gives me a very low log-lik for neighboring unsampled deme compared to sampled deme 
+            #     # resmat[it,opts['lre'][0][1]] = Rmat[it,opts['lre'][0][1]] + 0.5*(c**2-c)*R1[0,opts['lre'][0][1]] + (1+c)/self.sp_graph.q[opts['lre'][0][1]] - c*q1 + 1/self.sp_graph.q[it]
+            #     resmat[it,opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[it,opts['lre'][0][1]] + (1+c)/self.sp_graph.q[it] + (1-c)/self.sp_graph.q[opts['lre'][0][1]]
+            #     resmat[opts['lre'][0][1],it] = resmat[it,opts['lre'][0][1]]                
+            # for i in set(range(self.sp_graph.n_observed_nodes))-set(topidx+[opts['lre'][0][1]]):
+            #     resmat[i,opts['lre'][0][1]] = (1-c)*Rmat[i,opts['lre'][0][1]] + c*R1[0,i] + 0.5*(c**2-c)*R1[0,opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*q1
+            #     resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
+
+        D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
         # basically, smaller the coefficient in front of CRCt, the more downward biased the admix. prop. estimates 
-        # but also getting unintuitive estimates with tau for -0.5*CRCt (based on 1:1 scatterplot of estimates to observed values)
-        nll = -wishart.logpdf(2*self.sp_graph.n_snps*self.C @ self.sp_graph.S @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
+        # nll = -wishart.logpdf(2*self.sp_graph.n_snps*self.C @ self.sp_graph.S @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
+        nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
 
         return nll
     
@@ -231,7 +498,7 @@ class FEEMSmix_Objective(Objective):
         fit_dist = cov_to_dist(fit_cov)[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)]
         emp_dist = cov_to_dist(emp_cov)[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)]
 
-        perm_idx = query_node_attributes(self.sp_graph, "permuted_idx")
+        self.perm_idx = query_node_attributes(self.sp_graph, "permuted_idx")
 
         print('Using a significance threhsold of {:g}:\n'.format(pthresh))
         ls = []; x, y = [], []
@@ -242,17 +509,17 @@ class FEEMSmix_Objective(Objective):
             # code to convert single index to matrix indices
             x.append(np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1); y.append(int(k - 0.5*x[-1]*(x[-1]-1)))
 
-            Gi = self.sp_graph.genotypes[self.sp_graph.nodes[perm_idx[x[-1]]]['sample_idx'], :]
+            Gi = self.sp_graph.genotypes[self.sp_graph.nodes[self.perm_idx[x[-1]]]['sample_idx'], :]
             acs[0, :, 0] = np.sum(Gi, axis=0)
             acs[0, :, 1] = (2 * Gi.shape[0]) - np.sum(Gi, axis=0)
 
-            Gi = self.sp_graph.genotypes[self.sp_graph.nodes[perm_idx[y[-1]]]['sample_idx'], :]
+            Gi = self.sp_graph.genotypes[self.sp_graph.nodes[self.perm_idx[y[-1]]]['sample_idx'], :]
             acs[1, :, 0] = np.sum(Gi, axis=0)
             acs[1, :, 1] = (2 * Gi.shape[0]) - np.sum(Gi, axis=0)
 
             fst = mean_pairwise_differences_between(acs[0, :, :].astype(np.int32), acs[1, :, :].astype(np.int32))
 
-            ls.append([perm_idx[x[-1]], perm_idx[y[-1]], tuple(self.sp_graph.nodes[x[-1]]['pos'][::-1]), tuple(self.sp_graph.nodes[y[-1]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k], (self.sp_graph.nodes[perm_idx[x[-1]]]['n_samples'], self.sp_graph.nodes[perm_idx[y[-1]]]['n_samples']), fst])
+            ls.append([self.perm_idx[x[-1]], self.perm_idx[y[-1]], tuple(self.sp_graph.nodes[x[-1]]['pos'][::-1]), tuple(self.sp_graph.nodes[y[-1]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k], (self.sp_graph.nodes[self.perm_idx[x[-1]]]['n_samples'], self.sp_graph.nodes[self.perm_idx[y[-1]]]['n_samples']), fst])
 
         rm = []
         for k in range(len(ls)):
@@ -265,15 +532,14 @@ class FEEMSmix_Objective(Objective):
                 rm.append(k)
             else:
                 if rescopp.fun < resc.fun:
-                    ls[k][0] = perm_idx[y[k]]
-                    ls[k][1] = perm_idx[x[k]]
+                    ls[k][0] = self.perm_idx[y[k]]
+                    ls[k][1] = self.perm_idx[x[k]]
 
         # removing demes that have estimated admix. prop. ≈ 0 
         for i in sorted(rm, reverse=True):
             del ls[i]
         
-        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', \
-                                         'raw diff.', '# of samples (source, dest.)', 'Fst'])
+        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.', '# of samples (source, dest.)', 'Fst'])
         # TODO: check (lat., long.) values in df (seems to be wrong in the afroeurasia dataset)
 
         if len(df)==0:
@@ -294,7 +560,7 @@ class FEEMSmix_Objective(Objective):
 
         return df
     
-    def calc_contour(self, destpid, search_area='all', sourcepid=None, opts=None):
+    def calc_contour(self, destid, search_area='all', sourceid=None, opts=None, exclude_boundary=True):
         """
         Function to calculate admix. prop. values along with log-lik. values in a contour around the sampled source deme to capture uncertainty in the location of the source. 
         The flag coverage is used to signifiy how large the contour should be:
@@ -306,36 +572,34 @@ class FEEMSmix_Objective(Objective):
             'custom' - specific array of deme ids
                 - 'opts' : list of specific deme ids
         """
-        assert type(destpid) == int, "destpid must be an integer"
+        assert type(destid) == int, "destid must be an integer"
 
-        # convert destid to obs_perm_ids scheme since the Linv matrix is based on this indexing
-        perm_id = query_node_attributes(self.sp_graph, 'permuted_idx')
         try:
-            destid = np.where(perm_id[:self.sp_graph.n_observed_nodes]==destpid)[0][0]
+            destpid = np.where(self.perm_idx[:self.sp_graph.n_observed_nodes]==destid)[0][0] #-> 0:(o-1)
         except:
             print('invalid ID for destination deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
 
         # creating a list of (source, dest.) pairings based on user-picked criteria
         if search_area == 'all':
             # including every possible node in graph as a putative source
-            randedge = [(x,destpid) for x in list(set(range(self.sp_graph.number_of_nodes()))-set([destpid]))]
+            randedge = [(x,destid) for x in list(set(range(self.sp_graph.number_of_nodes()))-set([destid]))]
         elif search_area == 'radius':
-            assert type(sourcepid) == int, "sourcepid must be an integer"
+            assert type(sourceid) == int, "sourceid must be an integer"
             assert type(opts) == int and opts > 0, "radius must be an integer >=1"
             try: 
-                sourceid = np.where(perm_id[:self.sp_graph.n_observed_nodes]==sourcepid)[0][0]
+                sourcepid = np.where(self.perm_idx[:self.sp_graph.n_observed_nodes]==sourceid)[0][0] #-> 0:(o-1)
             except: 
                 print('invalid ID for source deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
             neighs = [] 
-            neighs = list(self.sp_graph.neighbors(sourcepid)) + [sourcepid]
+            neighs = list(self.sp_graph.neighbors(sourceid)) + [sourceid]
 
             # including all nodes within a certain radius
-            for _ in range(opts):
+            for _ in range(opts-1):
                 tempn = [list(self.sp_graph.neighbors(n1)) for n1 in neighs]
                 # dropping repeated nodes 
                 neighs = np.unique(list(it.chain(*tempn)))
 
-            randedge = [(x,destpid) for x in list(set(neighs)-set([destpid]))]
+            randedge = [(x,destid) for x in list(set(neighs)-set([destid]))]
         elif search_area == 'range':
             assert len(opts) == 2, "limits must be list of length 2"
             # reverse coordinates if in Western and Southern hemispheres
@@ -351,28 +615,36 @@ class FEEMSmix_Objective(Objective):
                 # checking for lat. & long. of all possible nodes in graph
                 if self.sp_graph.nodes[n]['pos'][0] > opts[0][0] and self.sp_graph.nodes[n]['pos'][0] < opts[0][1]:
                     if self.sp_graph.nodes[n]['pos'][1] > opts[1][0] and self.sp_graph.nodes[n]['pos'][1] < opts[1][1]:
-                        randedge.append((n,destpid))
+                        randedge.append((n,destid))
 
             # remove tuple of dest -> dest ONLY if it is in randedge
-            if (destpid,destpid) in randedge:
-                randedge.remove((destpid,destpid))
+            if (destid,destid) in randedge:
+                randedge.remove((destid,destid))
         elif search_area == 'custom':
-            randedge = [(x,destpid) for x in list(set(opts)-set([destpid]))]
+            randedge = [(x,destid) for x in list(set(opts)-set([destid]))]
 
         # only include central demes (==6 neighbors), since demes on edge of range exhibit some boundary effects during estimation
-        randedge = list(it.compress(randedge,np.array([sum(1 for _ in self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[i])) for i in list(set(range(self.sp_graph.number_of_nodes()))-set([destid]))])==6))
+        # randedge = list(it.compress(randedge,np.array([sum(1 for _ in self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[i])) for i in list(set(range(self.sp_graph.number_of_nodes()))-set([destid]))])==6))
+        if exclude_boundary:
+            randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.sp_graph.neighbors(e[0]))==6]
 
         # TODO: check if Lpinv has been calculated, if not then calculate it
+        if not hasattr(self, 'Lpinv'):
+            self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
         randpedge = []
         cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
+        print("Optimizing likelihood over {:d} demes in the graph...".format(len(randedge)))
         for ie, e in enumerate(randedge):
             # TODO: put a progress bar here
+            # TODO: int wrapping doesn't work very well here
+            if int(ie*100/len(randedge))%25 == 0 and ie/len(randedge) < 1:
+                print('{:d}%'.format(int(ie*100/len(randedge))), end='...')
             # convert all sources to valid permuted ids (so observed demes should be b/w index 0 & o-1)
-            e2 = (np.where(perm_id==e[0])[0][0], destid)
-            randpedge.append((perm_id[e[0]],destpid))
+            e2 = (np.where(self.perm_idx==e[0])[0][0], destpid) # -> contains the permuted ids, so 0:(o-1) is sampled (useful for indexing Linv & Lpinv)
+            # randpedge.append((e[0],destid)) # -> contains the *un*permuted ids (useful for external viz)
             if e2[0]<self.sp_graph.n_observed_nodes:
                 try:
-                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], tol=1e-6, method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
+                    res = minimize(self.neg_log_lik_c, x0=0.1, bounds=[(0,1)], tol=1e-2, method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
                     # res = minimize(self.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
                     cest2[ie] = res.x; llc2[ie] = res.fun
                     # cest2[ie] = 10**res.x/(1+10**res.x); llc2[ie] = res.fun
@@ -380,13 +652,11 @@ class FEEMSmix_Objective(Objective):
                     cest2[ie] = np.nan; llc2[ie] = np.nan
             else:
                 try:
-                    res = minimize(self.neg_log_lik_c, x0=self.sp_graph.c, bounds=[(0,1)], tol=1e-6, method='L-BFGS-B', args={'lre':[e2],'mode':'unsampled'})
-                    # res = minimize(self.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':[e2],'mode':'unsampled'})
+                    res = minimize(self.neg_log_lik_c, x0=0.1, bounds=[(0,1)], tol=1e-2, method='L-BFGS-B', args={'lre':[e2],'mode':'unsampled'})
                     cest2[ie] = res.x; llc2[ie] = res.fun
-                    # cest2[ie] = 10**res.x/(1+10**res.x); llc2[ie] = res.fun
                 except:
+                    print(e2)
                     cest2[ie] = np.nan; llc2[ie] = np.nan
-
         ## TODO: if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
         ## TODO: if MLE admix. prop. < 1e-4 then just assign 0 
         ## TODO: if there are any nan values, drop it from df (and print warning message but nothing to be alarmed about unless 10%? of values dropped)
@@ -433,59 +703,111 @@ def loss_wrapper(z, obj):
 
     return (loss, grad)
 
-def coordinate_descent(obj, factr, m, maxls, maxiter, verbose):
+def coordinate_descent(obj, factr=1e7, m=10, maxls=50, maxiter=50, verbose=False):
     """
     Minimize the negative log-likelihood iteratively with an admix. prop. c value & refit the new weights based on that until tolerance is reached. We assume the best-fit weights are passed in to this function as x0. 
     """
-    optimc = True
-    # typically don't need 10 iterations, but set as a way to ensure convergence
-    for bigiter in range(10):
-        # first fit admix. prop. c
-        if optimc: # stop it from overly optimizing over c
-            resc = minimize(obj.neg_log_lik_c, x0=obj.sp_graph.c, args={'lre':obj.sp_graph.lre,'mode':'sampled'}, method='L-BFGS-B', bounds=[(0,1)])
-            # resc = minimize(obj.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':obj.sp_graph.lre,'mode':'sampled'})
-            if resc.status != 0:
-                print('Warning: admix. prop. optimization failed')
-            if np.min(np.abs(resc.x - obj.sp_graph.c)) > 1e-4:
-                optimc = False
-                if bigiter > 0:
-                    break
-            obj.sp_graph.c = deepcopy(resc.x)
-            # obj.sp_graph.c = deepcopy(10**resc.x/(1+10**resc.x))
+    if obj.sp_graph.option=='onlyc':
+        # typically don't need 10 iterations, but set as a way to ensure convergence
+        for bigiter in range(10):
+            optimc = True
+            print(bigiter,end='...')
+            # first fit admix. prop. c
+            if optimc: # stop it from overly optimizing over c
+                resc = minimize(obj.neg_log_lik_c, x0=obj.sp_graph.c, args={'lre':obj.sp_graph.lre,'mode':'sampled'}, method='L-BFGS-B', bounds=[(0,1)])
+                # resc = minimize(obj.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':obj.sp_graph.lre,'mode':'sampled'})
+                if resc.status != 0:
+                    print('Warning: admix. prop. optimization failed')
+                if np.min(np.abs(resc.x - obj.sp_graph.c)) > 1e-3:
+                    optimc = False
+                    if bigiter > 10:
+                        break
+                obj.sp_graph.c = deepcopy(resc.x)
+                # obj.sp_graph.c = deepcopy(10**resc.x/(1+10**resc.x))
 
-        if obj.optimize_q is not None:
-            x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
-        else:
-            x0 = np.log(obj.sp_graph.w)
-        # then fit weights & s2 keeping c constant
-        res = fmin_l_bfgs_b(
-            func=loss_wrapper,
-            x0=x0,
-            args=[obj],
-            factr=factr,
-            m=m,
-            maxls=maxls,
-            maxiter=maxiter,
-            approx_grad=False,
-        )
-        if maxiter >= 100:
-            assert res[2]["warnflag"] == 0, "did not converge (increase maxiter)"
-        if obj.optimize_q is not None:
-            neww = np.exp(res[0][:obj.sp_graph.size()])
-            news2 = np.exp(res[0][obj.sp_graph.size():])
-        else:
-            neww = np.exp(res[0])
-            news2 = obj.sp_graph.s2
-        # print('length of s2:',len(news2))
+            if obj.optimize_q is not None:
+                x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
+            else:
+                x0 = np.log(obj.sp_graph.w)
+            # then fit weights & s2 keeping c constant
+            res = fmin_l_bfgs_b(
+                func=loss_wrapper,
+                x0=x0,
+                args=[obj],
+                factr=factr,
+                m=m,
+                maxls=maxls,
+                maxiter=maxiter,
+                approx_grad=False,
+            )
+            if maxiter >= 100:
+                assert res[2]["warnflag"] == 0, "did not converge (increase maxiter)"
+            if obj.optimize_q is not None:
+                neww = np.exp(res[0][:obj.sp_graph.size()])
+                news2 = np.exp(res[0][obj.sp_graph.size():])
+            else:
+                neww = np.exp(res[0])
+                news2 = obj.sp_graph.s2
+            # print('length of s2:',len(news2))
 
-        if np.allclose(obj.sp_graph.w, neww, atol=1e-3) and np.allclose(obj.sp_graph.s2, news2, atol=1e-3):
-            if verbose:
-                print('admix. prop. estimation converged in {} iterations!'.format(bigiter+1))
-            break
-        else: # update weights and s2 & continue
-            obj.sp_graph.w = deepcopy(neww)
-            obj.sp_graph.s2 = deepcopy(news2)
-            obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); obj.grad(reg=False)
+            if np.allclose(obj.sp_graph.w, neww, atol=1e-3) and np.allclose(obj.sp_graph.s2, news2, atol=1e-3):
+                if verbose:
+                    print('admix. prop. estimation converged in {} iterations!'.format(bigiter+1))
+                break
+            else: # update weights and s2 & continue
+                obj.sp_graph.w = deepcopy(neww)
+                obj.sp_graph.s2 = deepcopy(news2)
+                obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); obj.grad(reg=False)
+    elif obj.sp_graph.option=='bothct': # optimize over c & t
+        for bigiter in range(20):
+            optimct = True
+            print(bigiter,end='...')
+            # first fit admix. prop. c & admix. time t
+            if optimct: # stop it from overly optimizing over c & t (should it be a while loop?)
+                #TODO: optimize this upper bound for t as higher values lead to bad fits
+                resct = minimize(obj.neg_log_lik_c_t, x0=[0.1,0.01], args={'lre':obj.sp_graph.lre}, method='L-BFGS-B', bounds=[(0,0.9),(0,0.1)])
+                if resct.status != 0:
+                    print('Warning: admix. prop. & admix. time optimization failed')
+                if np.min(np.abs(resct.x[0] - obj.sp_graph.c)) > 1e-3 and np.min(np.abs(resct.x[1] - obj.sp_graph.t)) > 1e-4:
+                    optimct = False
+                    if bigiter > 20:
+                        break
+                obj.sp_graph.c = np.array([resct.x[0]])
+                obj.sp_graph.t = np.array([resct.x[1]])
+
+            if obj.optimize_q == 'n-dim':
+                x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
+            elif obj.optimize_q == '1-dim':
+                x0 = np.log(obj.sp_graph.w)
+            # then fit weights & s2 keeping c constant
+            res = fmin_l_bfgs_b(
+                func=loss_wrapper,
+                x0=x0,
+                args=[obj],
+                factr=factr,
+                m=m,
+                maxls=maxls,
+                maxiter=maxiter,
+                approx_grad=False,
+            )
+            if maxiter >= 100:
+                assert res[2]["warnflag"] == 0, "did not converge (increase maxiter)"
+            if obj.optimize_q == 'n-dim':
+                neww = np.exp(res[0][:obj.sp_graph.size()])
+                news2 = np.exp(res[0][obj.sp_graph.size():])
+            elif obj.optimize_q == '1-dim':
+                neww = np.exp(res[0])
+                news2 = obj.sp_graph.s2
+            # print('length of s2:',len(news2))
+
+            if np.allclose(obj.sp_graph.w, neww, atol=1e-6) and np.allclose(obj.sp_graph.s2, news2, atol=1e-6):
+                if verbose:
+                    print('admix. prop. estimation converged in {} iterations!'.format(bigiter+1))
+                break
+            else: # update weights and s2 & continue
+                obj.sp_graph.w = deepcopy(neww)
+                obj.sp_graph.s2 = deepcopy(news2)
+                obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); obj.grad(reg=False)
 
     return res
 
@@ -560,7 +882,7 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
         factr=1e7,
         maxls=50,
         m=10,
-        lb=-1e-10,
+        lb=-1e10,
         ub=1e10,
         maxiter=15000,
         verbose=True,
@@ -605,10 +927,11 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
         # self.lre_idx = np.array([val in self.lre for val in list(self.edges)])
 
         self.c = np.random.random(len(self.lre))
+        self.t = np.array([0.04]) # -> should this just be zeros? it serves as init for optimizer and 0 might not be a good starting point...
 
         self.option = option
 
-        if self.option!='onlyc':
+        if self.option == 'default':
             # init from null model if no init weights are provided
             if w_init is None and s2_init is None:
                 # fit null model to estimate the residual variance and init weights
@@ -636,7 +959,7 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
                 alpha_q = 1. / self.s2.mean()
 
             # run l-bfgs
-            obj = FEEMSmix_Objective(self, option=option)
+            obj = FEEMSmix_Objective(self)
             obj.optimize_q = optimize_q; obj.lamb = lamb; obj.alpha = alpha
             x0 = np.log(w_init)
             if obj.optimize_q is not None:
@@ -670,11 +993,12 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
             if alpha_q is None:
                 alpha_q = 1. / self.s2.mean()
 
-            obj = FEEMSmix_Objective(self, option=option)
+            obj = FEEMSmix_Objective(self)
             obj.optimize_q = optimize_q; obj.lamb = lamb; obj.alpha = alpha
             if obj.optimize_q is not None:
                 obj.lamb_q = lamb_q
                 obj.alpha_q = alpha_q
+            #TODO: just need the diagonals (is there an easy way to calculate this?)
             obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); 
             obj.grad(reg=False)
             res = coordinate_descent(
@@ -693,8 +1017,11 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
             self.s2 = np.exp(res[0][self.size():])
         else:    
             self.w = np.exp(res[0])
-            if self.option != 'default':
+            if self.option == 'onlyc':
                 self.c = res[0][-len(self.lre):]
+            elif self.option == 'bothct':
+                self.c = res[0][(-len(self.lre)+1):-len(self.lre)]
+                self.t = res[0][-len(self.lre):]
 
         # print update
         self.train_loss, _ = loss_wrapper(res[0], obj)

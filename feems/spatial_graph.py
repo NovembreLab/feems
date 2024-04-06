@@ -44,6 +44,7 @@ class SpatialGraph(nx.Graph):
         self.sample_pos = sample_pos
         self.node_pos = node_pos
         self.scale_snps = scale_snps
+        self.option = 'default'
 
         # signed incidence_matrix
         self.Delta_q = nx.incidence_matrix(self, oriented=True).T.tocsc()
@@ -293,7 +294,7 @@ class SpatialGraph(nx.Graph):
             s = sample_idx[node_id]
 
             # compute mean at each node
-            allele_counts = np.mean(self.genotypes[s, :], axis=0)
+            allele_counts = np.mean(self.genotypes[s, :], axis=0) # TODO -> needs to be divided by two here (since we have diploid genotypes)?
             self.frequencies[i, :] = allele_counts
 
     def comp_precision(self, s2):

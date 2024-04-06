@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import numpy as np
-
+from scipy.stats import wishart
 
 class Objective(object):
     def __init__(self, sp_graph):
@@ -20,8 +20,6 @@ class Objective(object):
 
         self.pen1 = 0.0
         self.pen2 = 0.0
-
-        self.option = 'default'
 
     def _rank_one_solver(self, B):
         """Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank
@@ -165,10 +163,12 @@ class Objective(object):
     def grad(self, reg=True):
         """Computes relevent gradients the objective"""
         # compute derivatives
-        if self.option == 'default':
+        if self.sp_graph.option == 'default':
             self._comp_grad_obj()
-        else:
+        elif self.sp_graph.option == 'onlyc':
             self._comp_grad_obj_c()
+        else:
+            self._comp_grad_obj_c_t()
 
         if reg is True:
             self._comp_grad_reg()
@@ -191,6 +191,15 @@ class Objective(object):
 
         # negative log-likelihood
         nll = self.sp_graph.n_snps * (self.tr - np.log(self.det))
+
+        # if not hasattr(self, 'Linv'):
+        #     nll = self.sp_graph.n_snps * (self.tr - np.log(self.det))
+        # else:
+        #     D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
+        #     Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
+        #     Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
+        #     resmat = Rmat + (Q1mat + Q1mat.T); resmat[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
+        #     nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -2*self.C @ resmat @ self.C.T)
 
         return nll
 
@@ -252,10 +261,15 @@ def comp_mats(obj):
     assert np.allclose(inv_cov, np.linalg.inv(fit_cov)) == True, "fit_cov must be inverse of inv_cov"
     
     n_snps = sp_graph.n_snps
-    frequencies_ns = sp_graph.frequencies * np.sqrt(sp_graph.mu*(1-sp_graph.mu))
-    mu0 = frequencies_ns.mean(axis=0) / 2 # compute mean of allele frequencies in the original scale
-    mu = 2*mu0 / np.sqrt(sp_graph.mu*(1-sp_graph.mu))
-    frequencies_centered = sp_graph.frequencies - mu
+    # VS: changing code here to run even when scale_snps=False
+    if hasattr(obj.sp_graph.q, 'mu'):
+        frequencies_ns = sp_graph.frequencies * np.sqrt(sp_graph.mu*(1-sp_graph.mu))
+        mu0 = frequencies_ns.mean(axis=0) / 2 # compute mean of allele frequencies in the original scale
+        mu = 2*mu0 / np.sqrt(sp_graph.mu*(1-sp_graph.mu))
+        frequencies_centered = sp_graph.frequencies - mu
+    else:
+        frequencies_centered = sp_graph.frequencies
+
     emp_cov = frequencies_centered @ frequencies_centered.T / n_snps
     
     return fit_cov, inv_cov, emp_cov

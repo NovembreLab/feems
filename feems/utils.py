@@ -31,11 +31,14 @@ def create_tile_dict(tiles, bpoly):
     for c, poly in enumerate(tiles):
         x, y = poly.exterior.xy
         points = zip(np.round(x, 3), np.round(y, 3))
-        points = [wrap_america(p) for p in points]
+        # TODO: make wrap_america a flag in the future releases
+        # points = [wrap_america(p) for p in points] 
+        points = [p for p in points]
         for p in points:
             if p not in pts_in:
                 # check if point is in region
-                pts_in[p] = bpoly.intersects(Point(p))
+                with np.errstate(invalid="ignore"):
+                    pts_in[p] = bpoly.intersects(Point(p))
                 if pts_in[p]:
                     pts[p] = len(pts)  # if so, give id
                     rev_pts[len(rev_pts)] = p

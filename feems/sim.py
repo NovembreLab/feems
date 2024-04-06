@@ -367,7 +367,7 @@ def simulate_genotypes(
     return genotypes.T
 
 def simulate_genotypes_w_admixture(
-    graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50, long_range_nodes=[(0,0)], admixture_props=[0], time_of_adm=[1], replic=0, Ne=1, dump=False
+    graph, chrom_length=1, mu=1e-3, n_e=1, target_n_snps=1000, n_print=50, long_range_nodes=[(0,0)], admixture_props=[0], time_of_adm=[1], replic=0, dump=False
 ):
     """Simulates genotypes under the stepping-stone model with a habitat specified by the graph
 
@@ -425,7 +425,7 @@ def simulate_genotypes_w_admixture(
         population_configurations = [
             msprime.PopulationConfiguration(sample_size=sample_sizes[i], initial_size=n_e) for i in range(d)
         ]
-
+        
     # tree sequences
     ts = msprime.simulate(
         population_configurations=population_configurations,
@@ -434,16 +434,34 @@ def simulate_genotypes_w_admixture(
         length=chrom_length,
         mutation_rate=mu,
         num_replicates=target_n_snps,
-        Ne=Ne
+        Ne=1
     )
 
-    if long_range_nodes!=[(0,0)]:
-        migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
-        for id, node in enumerate(long_range_nodes):
-            migmat[node[1], node[0]] = admixture_props[id]
-            migmat[node[0], node[1]] = 0.
-    else:
-        migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
+    # Create a demography object
+    # demography = msprime.Demography.from_old_style(population_configurations=population_configurations,
+    #                                                migration_matrix=np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist()),
+    #                                                ignore_sample_size=True, 
+    #                                                Ne=n_e)
+    # demography.add_mass_migration(time=time_of_adm[0], source=long_range_nodes[0][1], dest=long_range_nodes[0][0], proportion=admixture_props[0])
+
+    # # Simulate tree sequences
+    # ts = msprime.sim_ancestry(
+    #     samples=[msprime.SampleSet(sample_sizes[i]//2,i,ploidy=2) for i in range(d)],
+    #     demography=demography,
+    #     sequence_length=chrom_length,
+    #     recombination_rate=0,  # No recombination
+    #     record_migrations=False, record_full_arg=False,
+    #     # model=[msprime.DiscreteTimeWrightFisher(duration=time_of_adm[0]+1), msprime.StandardCoalescent()],
+    #     num_replicates=target_n_snps
+    # )
+
+    # if long_range_nodes!=[(0,0)]:
+    #     migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
+    #     for id, node in enumerate(long_range_nodes):
+    #         migmat[node[1], node[0]] = admixture_props[id]
+    #         migmat[node[0], node[1]] = 0.
+    # else:
+    #     migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
     # plt.imshow(migmat,cmap='Greys'); plt.colorbar()
 
     # simulate haplotypes
@@ -451,9 +469,10 @@ def simulate_genotypes_w_admixture(
     for i, tree_sequence in enumerate(ts):
 
         if dump:
-            tree_sequence.dump("/Volumes/GoogleDrive/Other computers/My Mac mini/Documents/feemsResults/trees/tree{:d}_8x10_c{:.1f}_t{:d}.tree".format(i,admixture_props[0],time_of_adm[0]))
+            tree_sequence.dump("/Volumes/GoogleDrive/Other computers/My Mac mini/Documents/feemsResults/trees/tree{:d}_Ne{:d}_8x10_c{:.1f}_t{:d}.tree".format(i,n_e,admixture_props[0],time_of_adm[0]))
 
         # extract haps from ts
+        # H = msprime.sim_mutations(tree_sequence, rate=mu, model=msprime.BinaryMutationModel()).genotype_matrix()
         H = tree_sequence.genotype_matrix()
         p, n = H.shape
 
