@@ -264,48 +264,47 @@ class FEEMSmix_Objective(Objective):
             for i in list(set(range(dT0.shape[0]))-set([opts['lre'][0][0],opts['lre'][0][1]])):
                 dT0[i,opts['lre'][0][1]] = ct[0]*Tstar[i,opts['lre'][0][0]] - ct[0]*Tstar[i,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]]; dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
 
-            T0 = Tstar+dT0
+            T0 = Tstar + dT0
 
             ## changing diag(1/q) to diag(1/q)+diag(Linv) does not change the estimates...
-            resmat = T0 + ct[1]*(-np.diag(1/self.sp_graph.q)@np.diag(np.diag(T0)) - self.sp_graph.L@T0 - T0@self.sp_graph.L.T + np.ones((self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes))) 
             # resmat = T0 + ct[1]*(-np.diag(1/self.sp_graph.q)@np.diag(np.diag(T0)) - self.Linv@T0 - T0@self.Linv + np.ones((self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)))
 
         else:
-            Tstar = Rmat + (Q1mat + Q1mat.T); Tstar[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
+            T0 = np.copy(Tstar)
 
-            dT0 = np.zeros_like(Tstar)
             # gets the 6 neighboring demes
             neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[opts['lre'][0][0]]))
             # finds the neighboring deme that has samples
             neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
 
             R1d = -2*self.Lpinv[opts['lre'][0][0],opts['lre'][0][1]] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]] + self.Lpinv[opts['lre'][0][1],opts['lre'][0][1]]
-            R1 = -2*self.Lpinv[:self.sp_graph.n_observed_nodes,opts['lre'][0][0]].T + np.diag(self.Linv) + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
+            R1 = np.array(-2*self.Lpinv[:self.sp_graph.n_observed_nodes,opts['lre'][0][0]].T + np.diag(self.Linv) + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]])
 
             # apply this formula only to neighboring sampled demes
             for n in neighs:
                 # convert back to appropriate indexing excluding the unsampled demes
                 s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==n][0]
-                dT0[s,opts['lre'][0][1]] = ct[0]*Tstar[s,s] - ct[0]*Tstar[s,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[s,opts['lre'][0][1]] + 2*ct[0]*Q1mat[s,s]
-                dT0[opts['lre'][0][1],s] = dT0[s,opts['lre'][0][1]]
-                # resmat[s,opts['lre'][0][1]] = Rmat[s,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*R1d + (1-ct[0])/self.sp_graph.q[s] + (1+ct[0])/self.sp_graph.q[opts['lre'][0][1]]
-                # resmat[opts['lre'][0][1],s] = resmat[s,opts['lre'][0][1]]
+                # dT0[s,opts['lre'][0][1]] = ct[0]*Tstar[s,s] - ct[0]*Tstar[s,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[s,opts['lre'][0][1]] + 2*ct[0]*Q1mat[s,s]
+                # dT0[opts['lre'][0][1],s] = dT0[s,opts['lre'][0][1]]
+                T0[s,opts['lre'][0][1]] = Rmat[s,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*R1d + (1-ct[0])/self.sp_graph.q[s] + (1+ct[0])/self.sp_graph.q[opts['lre'][0][1]]
+                T0[opts['lre'][0][1],s] = T0[s,opts['lre'][0][1]]
 
             # find the closest sampled deme to 1 (this is just the proxy source, use q from here but do not model this as the source)
             # proxs = np.argmin([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])
-            proxs = np.argsort([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])[:3]
-            qprox = np.dot(1/self.sp_graph.q[proxs], (1/R1[0,proxs].T)/np.sum(1/R1[0,proxs]))
+            #TODO: need a fast way of computing proxs
+            proxs = np.argsort([nx.shortest_path_length(self.sp_graph,source=opts['lre'][0][0],target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([opts['lre'][0][0]])])[:self.sp_graph.n_observed_nodes]
+            qprox = np.dot(1/self.sp_graph.q[proxs], (R1[0,proxs]*np.exp(-2*R1[0,proxs]))/np.sum(R1[0,proxs]*np.exp(-2*R1[0,proxs])))
             # print(proxs)
             ## id
             ## this needs a more alert mind and quiet morning (not one in which I've had <6 hours of sleep)
             for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
                 Ri1 = -2*self.Lpinv[i,opts['lre'][0][0]] + self.Lpinv[i,i] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
-                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*qprox
-                resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
-                dT0[i,opts['lre'][0][1]] = ct[0]*Tstar[i,opts['lre'][0][0]] - ct[0]*Tstar[i,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]]
-                dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
+                T0[i,opts['lre'][0][1]] = (1-ct[0])*(Rmat[i,opts['lre'][0][1]]) + ct[0]*Ri1 + 0.5*(ct[0]**2-ct[0])*R1d + 1/self.sp_graph.q[i] + (1-ct[0])/self.sp_graph.q[opts['lre'][0][1]] + ct[0]*qprox
+                T0[opts['lre'][0][1],i] = T0[i,opts['lre'][0][1]]
+                # dT0[i,opts['lre'][0][1]] = ct[0]*Tstar[i,opts['lre'][0][0]] - ct[0]*Tstar[i,opts['lre'][0][1]] + 0.5*(ct[0]**2-ct[0])*Rmat[opts['lre'][0][0],opts['lre'][0][1]]
+                # dT0[opts['lre'][0][1],i] = dT0[i,opts['lre'][0][1]]
 
-
+        resmat = T0 + ct[1]*(-np.diag(1/self.sp_graph.q)@np.diag(np.diag(T0)) - self.sp_graph.L[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes]@T0 - T0@self.sp_graph.L[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes].T + np.ones((self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes))) 
 
         D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
 
@@ -451,6 +450,7 @@ class FEEMSmix_Objective(Objective):
             for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
                 Ri1 = -2*self.Lpinv[i,opts['lre'][0][0]] + self.Lpinv[i,i] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
                 # resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts  ['lre'][0][1]] + c/self.sp_graph.q[proxs]
+                # should there be a (1+c)q_d here?
                 resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*qprox
                 resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
 
@@ -635,16 +635,17 @@ class FEEMSmix_Objective(Objective):
         cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
         print("Optimizing likelihood over {:d} demes in the graph...".format(len(randedge)))
         for ie, e in enumerate(randedge):
-            # TODO: put a progress bar here
-            # TODO: int wrapping doesn't work very well here
+            # TODO: add a message for 100% or done (do it for num_nodes-1)
+            # TODO: int wrapping doesn't work very well here 
             if int(ie*100/len(randedge))%25 == 0 and ie/len(randedge) < 1:
                 print('{:d}%'.format(int(ie*100/len(randedge))), end='...')
             # convert all sources to valid permuted ids (so observed demes should be b/w index 0 & o-1)
             e2 = (np.where(self.perm_idx==e[0])[0][0], destpid) # -> contains the permuted ids, so 0:(o-1) is sampled (useful for indexing Linv & Lpinv)
             # randpedge.append((e[0],destid)) # -> contains the *un*permuted ids (useful for external viz)
+            ## TODO: add an option to only calculate c or calculate both c & t (df should now reflect that, maybe include as an extra column?) 
             if e2[0]<self.sp_graph.n_observed_nodes:
                 try:
-                    res = minimize(self.neg_log_lik_c, x0=0.1, bounds=[(0,1)], tol=1e-2, method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
+                    res = minimize(self.neg_log_lik_c, x0=0.1, bounds=[(0,1)], tol=1e-4, method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
                     # res = minimize(self.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':[e2],'mode':'sampled'})
                     cest2[ie] = res.x; llc2[ie] = res.fun
                     # cest2[ie] = 10**res.x/(1+10**res.x); llc2[ie] = res.fun
@@ -652,7 +653,7 @@ class FEEMSmix_Objective(Objective):
                     cest2[ie] = np.nan; llc2[ie] = np.nan
             else:
                 try:
-                    res = minimize(self.neg_log_lik_c, x0=0.1, bounds=[(0,1)], tol=1e-2, method='L-BFGS-B', args={'lre':[e2],'mode':'unsampled'})
+                    res = minimize(self.neg_log_lik_c, x0=0.1, bounds=[(0,1)], tol=1e-4, method='L-BFGS-B', args={'lre':[e2],'mode':'unsampled'})
                     cest2[ie] = res.x; llc2[ie] = res.fun
                 except:
                     print(e2)
