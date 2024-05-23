@@ -6,6 +6,8 @@ from __future__ import absolute_import, division, print_function
 
 import fiona
 import numpy as np
+import scipy as sp
+from allel import pca
 from shapely.affinity import translate
 from shapely.geometry import MultiPoint, Point, Polygon, shape
 
@@ -123,16 +125,117 @@ def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None):
     res = (outer, edges, grid, ipmap)
     return res
 
+def get_outlier_idx(emp_dist, fit_dist, fdr=0.25):
+    pvals = sp.stats.norm.cdf(np.log(emp_dist)-np.log(fit_dist)-np.mean(np.log(emp_dist)-np.log(fit_dist)), 0, np.std(np.log(emp_dist)-np.log(fit_dist)))
 
-def mean_pairwise_differences_between(ac1, ac2):
-    "(borrowed completely from allel package to compute Fst)"
-    an1 = np.sum(ac1, axis=1); an2 = np.sum(ac2, axis=1)
-    n_pairs = an1 * an2
-    n_same = np.sum(ac1 * ac2, axis=1)
-    n_diff = n_pairs - n_same
-    mpd = np.where(n_pairs > 0, n_diff / n_pairs, np.nan)
-    return np.mean(mpd)
+    bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
 
+    max_res_node = []
+    for k in np.where(bh)[0]:
+        # code to convert single index to matrix indices
+        x = np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1; y = int(k - 0.5*x*(x-1))
+
+        max_res_node.append([x, y])
+
+    return max_res_node
+
+def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
+    """
+    Apply the Benjamini-Hochberg procedure to a list of p-values to determine significance
+    and the largest k such that p_(k) <= k/m * FDR.
+    Args:
+    p_values (list or array): Array of p-values from multiple hypothesis tests.
+    fdr (float): False discovery rate threshold.
+    Returns:
+    tuple:
+        array: Boolean array where True indicates the hypotheses that are accepted.
+        int: The largest k for which p_(k) <= k/m * FDR.
+    """
+
+    logratio=np.log(emp_dist/fit_dist)
+    mean_logratio=np.mean(logratio)
+    var_logratio=np.var(logratio,ddof=1)
+    logratio_norm=(logratio-mean_logratio)/np.sqrt(var_logratio)
+    p_value_neg=sp.stats.norm.cdf(logratio_norm)
+    # p_value_pos=1-p_value_neg
+    # p_values=np.minimum(p_value_pos,p_value_neg)
+    p_values = p_value_neg
+
+    m = len(p_values)  # total number of hypotheses
+    sorted_p_values = np.sort(p_values)
+
+    sorted_indices = np.argsort(p_values)
+    critical_values = np.array([fdr * (i + 1) / m for i in range(m)])
+
+    # Find the largest p-value that meets the Benjamini-Hochberg criterion
+    is_significant = sorted_p_values <= critical_values
+    if np.any(is_significant):
+        max_significant = np.max(np.where(is_significant)[0])  # max index where condition is true
+    else:
+        max_significant = -1  # no significant results
+    # All p-values with rank <= max_significant are significant
+    significant_indices = sorted_indices[:max_significant + 1]
+    results = np.zeros(m, dtype=bool)
+    results[significant_indices] = True
+    # max_significant + 1 because indices are 0-based, but k should be 1-based
+    return results
+
+# def mean_pairwise_differences_between(ac1, ac2):
+#     "(borrowed completely from allel package to compute Fst)"
+#     an1 = np.sum(ac1, axis=1); an2 = np.sum(ac2, axis=1)
+#     n_pairs = an1 * an2
+#     n_same = np.sum(ac1 * ac2, axis=1)
+#     n_diff = n_pairs - n_same
+#     mpd = np.where(n_pairs > 0, n_diff / n_pairs, np.nan)
+#     return np.mean(mpd)
+
+def pairwise_PCA_distances(genotypes, numPCs = 10):
+    """Function to compute pairwise distance between individuals on a PCA plot
+    genotypes (matrix) : input used for FEEMSmix
+    PCs (int) : number of PCs to use when computing the distances
+    """
+    n, p = genotypes.shape
+    pcacoord, mod = pca(genotypes.T, n_components=numPCs, scaler='standard')
+
+    pcdist = sp.spatial.distance.squareform(sp.spatial.distance.pdist(pcacoord[:,:numPCs], metric='euclidean'))
+    D_geno = sp.spatial.distance.squareform(sp.spatial.distance.pdist(genotypes, metric="sqeuclidean")) / p
+    tril_idx = np.tril_indices(n, k=-1)
+    y = D_geno[tril_idx]
+    x = pcdist[tril_idx]
+
+    return x, y
+
+def pairwise_admixture_distances(pfile, qfile, genotypes):
+    """Function to compute pairwise distance between individuals based on the admixture model G = 2QP^\top
+    K (number of ancestral populations) will be inferred from the shape of the .P and .Q file
+    pfile (path) : path to .P file
+    qfile (path) : path to .Q file
+    genotypes (matrix) : input used for FEEMSmix
+    """
+
+    print("Reading in .P file...")
+    P = np.loadtxt(pfile)
+    K = P.shape[1]
+    print("Number of loci: {:d}, K: {:d}".format(P.shape[0], K))
+
+    print("Reading in .Q file...")
+    Q = np.loadtxt(qfile)
+    if K != Q.shape[1]:
+        print("The number of source populations (K) do not match between the .P and .Q files")
+        return 
+    print("Number of individuals: {:d}".format(Q.shape[0]))
+
+    G = 2 * Q @ P.T
+
+    admixdist = sp.spatial.distance.squareform(sp.spatial.distance.pdist(G, metric='euclidean'))
+
+    D_geno = sp.spatial.distance.squareform(sp.spatial.distance.pdist(genotypes, metric="sqeuclidean")) / P.shape[0]
+    tril_idx = np.tril_indices(Q.shape[0], k=-1)
+    y = D_geno[tril_idx]
+    x = admixdist[tril_idx]
+
+    return x, y
+    
 
 def cov_to_dist(S):
     """Convert a covariance matrix to a distance matrix

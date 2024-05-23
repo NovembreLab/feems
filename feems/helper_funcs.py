@@ -27,14 +27,6 @@ from .joint_ver import FEEMSmix_SpatialGraph, FEEMSmix_Objective
 plt.rcParams["font.family"] = "Arial"
 plt.rcParams["font.sans-serif"] = "Arial"
 
-def cov_to_dist(S):
-    """Convert a covariance matrix to a distance matrix
-    """
-    s2 = np.diag(S).reshape(-1, 1)
-    ones = np.ones((s2.shape[0], 1))
-    D = s2 @ ones.T + ones @ s2.T - 2 * S
-    return(D)
-
 def plot_default_vs_long_range(
     sp_Graph_def, 
     sp_Graph, 

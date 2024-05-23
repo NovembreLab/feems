@@ -294,7 +294,7 @@ class SpatialGraph(nx.Graph):
             s = sample_idx[node_id]
 
             # compute mean at each node
-            allele_counts = np.mean(self.genotypes[s, :], axis=0) # TODO -> needs to be divided by two here (since we have diploid genotypes)?
+            allele_counts = np.mean(self.genotypes[s, :], axis=0) / 2 # TODO -> needs to be divided by two here (since we have diploid genotypes)?
             self.frequencies[i, :] = allele_counts
 
     def comp_precision(self, s2):
@@ -440,5 +440,5 @@ def query_node_attributes(graph, name):
     and returns an array of values for each node instead of the dict
     """
     d = nx.get_node_attributes(graph, name)
-    arr = np.array(list(d.values()),dtype='int')
+    arr = np.array(list(d.values()))
     return arr

@@ -352,7 +352,7 @@ class Viz(object):
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
-    def draw_arrow(self, lre, c, lw=2, hw=0.8, hl=0.8, fs=10, alpha=0.8, mode='unsampled'):
+    def draw_arrow(self, lre, c, lw=2, hw=0.8, hl=0.8, fs=10, alpha=0.8):
         # self.ax.arrow(self.grid[lre[0][0],0],self.grid[lre[0][0],1],dx=self.grid[lre[0][1],0]-self.grid[lre[0][0],0],dy=self.grid[lre[0][1],1]-self.grid[lre[0][0],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
         ## the code below is for cases when we have unsampled demes so the node IDs are permuted
         # if mode=='sampled':
@@ -369,14 +369,14 @@ class Viz(object):
         # style = "Simple, tail_width=3, head_width=8, head_length=15"
         # kw = dict(arrowstyle=style, edgecolor='k', facecolor='k', zorder=5)
         # self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
-        style = "Simple, tail_width=1.25, head_width=5, head_length=10"
+        style = "Simple, tail_width=1.25, head_width=4, head_length=6"
         kw = dict(arrowstyle=style, edgecolor='k', facecolor=self.c_cmap(c), zorder=5)
         self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
 
     def draw_c_colorbar(self, df=None):
         "Draws simple colorbar from 0 to 1 scale for admixture proportion"
-        self.c_axins = inset_axes(self.ax, loc='center right', width = "10%", height = "2%", borderpad=2)
-        self.c_axins.set_title(r"$\hat{c}$", fontsize = self.cbar_font_size, loc='left')
+        self.c_axins = inset_axes(self.ax, loc='upper right', width = "10%", height = "2%", borderpad=2)
+        self.c_axins.set_title(r"$\hat{c}$", fontsize = self.cbar_font_size, loc='center')
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=np.linspace(0,1,3))
         self.c_cbar.ax.tick_params(labelsize = self.cbar_ticklabelsize)
         if df is not None:
@@ -428,34 +428,28 @@ class Viz(object):
         # plt.axvline(np.max(df['admix. prop.'].iloc[np.where(df['scaled log-lik']>-20)]),color='red',ls='--',linewidth=0.7)
 
         ## profile likelihood for c at MLE
-        lre = [(np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0][0],np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][1])[0][0])] #if np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0]<self.sp_graph.n_observed_nodes else [df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()]]
+        # lre = [(np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0][0],np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][1])[0][0])] #if np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0]<self.sp_graph.n_observed_nodes else [df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()]]
         cgrid = np.linspace(0,1,40)
-        mode = 'sampled' if lre[0][0]<self.sp_graph.n_observed_nodes else 'unsampled'
+        # source = 'sampled' if lre[0][0]<self.sp_graph.n_observed_nodes else 'unsampled'
         cprofll = np.zeros(len(cgrid))
         for ic, c in enumerate(cgrid):
             try:
-                cprofll[ic] = -self.obj.neg_log_lik_c(c, {'lre':lre, 'mode':mode})
+                cprofll[ic] = -self.obj.eems_neg_log_lik(c, {'edge':[df['(source, dest.)'].iloc[np.argmax(df['log-lik'])]], 'mode':'compute'})
             except:
                 cprofll[ic] = np.nan
 
         cprofll2 = np.zeros((np.sum(df['scaled log-lik']>-2),len(cgrid)))
-        for id, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-2]):
-            lre = [(np.where(permuted_idx==ed[0])[0][0],np.where(permuted_idx==ed[1])[0][0])]
-            psrc = np.where(permuted_idx==ed[0])[0]
-            if psrc<self.sp_graph.n_observed_nodes:
-                mode = 'sampled'
-            else:
-                mode = 'unsampled'
+        for idx, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-2]):
             for ic, c in enumerate(cgrid):
                 try:
-                    cprofll2[id,ic] = -self.obj.neg_log_lik_c(c, {'lre':lre, 'mode':mode})
+                    cprofll2[idx,ic] = -self.obj.eems_neg_log_lik(c, {'edge':[ed], 'mode':'compute'})
                 except:
                     cprofll2[id,ic] = np.nan
 
         # inset_axes(self.ax, loc = "lower left", bbox_to_anchor=(0.15, 0.1, 1, 1), bbox_transform=self.ax.transAxes, width = '15%', height = '10%')
         inset_axes(self.ax, loc = "lower left", width = '15%', height = '10%')            
-        #TODO: take care of discretization here
-        #TODO: change font size here (maybe it's ok but labels seem a bit big)
+        # #TODO: take care of discretization here
+        # #TODO: change font size here (maybe it's ok but labels seem a bit big)
         plt.plot(cgrid,cprofll,color='grey'); 
         plt.ylim((np.nanmax(cprofll)+np.min(levels),np.nanmax(cprofll)-np.min(levels)/20)); #plt.axvline(df['admix. prop.'].iloc[df['scaled log-lik'].argmax()],color='k',linewidth=0.4); 
         plt.plot(cgrid,cprofll2.T,color='grey',alpha=0.5,linewidth=0.3)

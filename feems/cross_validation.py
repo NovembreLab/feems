@@ -2,12 +2,12 @@ import math
 from copy import deepcopy
 
 import numpy as np
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, GroupKFold
 
 from .objective import Objective, comp_mats
 from .joint_ver import FEEMSmix_Objective
 from .spatial_graph import query_node_attributes
-
+from .utils import cov_to_dist
 
 def run_cv(
     sp_graph,
@@ -20,7 +20,8 @@ def run_cv(
     random_state=500,
     outer_verbose=True,
     inner_verbose=False,
-    alpha_fact=1.0
+    alpha_fact=1.0, 
+    mode='frequencies'
 ):
     """Run cross-validation."""
     # s2 initialization
@@ -84,6 +85,7 @@ def run_cv(
 
                 # evaluate on the validation set
                 _, err = predict_snps(sp_graph, sp_graph_train, sp_graph_test)
+    
                 cv_err[fold, i, a] = err
 
                 w_init = deepcopy(sp_graph_train.w)
@@ -305,7 +307,6 @@ def setup_k_fold_cv(sp_graph, n_splits=5, random_state=12):
 
     return is_train
 
-
 def copy_spatial_graph(sp_graph, subsample_idx):
     """Copy SpatialGraph object and reassign spatial positions for subsamples
 
@@ -414,3 +415,44 @@ def predict_snps(sp_graph, sp_graph_train, sp_graph_test):
     ) ** 2 / (len(test_ids) * n_snps)
 
     return pred_frequencies, l2_err
+
+# def predict_dist(sp_graph, sp_graph_train, sp_graph_test):
+#     # create obj
+#     obj = FEEMSmix_Objective(sp_graph)
+
+#     # update graph laplacian
+#     obj.sp_graph.comp_graph_laplacian(sp_graph_train.w)
+
+#     # fitted covariance
+#     fit_cov, _, emp_cov = comp_mats(obj)
+#     fit_dist = cov_to_dist(fit_cov)
+#     emp_dist = cov_to_dist(emp_cov)
+
+#     # predict SNPs
+#     n_snps = sp_graph.n_snps
+
+#     ids = np.empty(sp_graph.n_observed_nodes, dtype=bool)
+#     permuted_idx = query_node_attributes(sp_graph, "permuted_idx")
+#     permuted_idx_train = query_node_attributes(sp_graph_train, "permuted_idx")
+#     for i, idx in enumerate(permuted_idx[: sp_graph.n_observed_nodes]):
+#         if idx in permuted_idx_train[: sp_graph_train.n_observed_nodes]:
+#             ids[i] = True
+#         else:
+#             ids[i] = False
+#     train_ids = np.argwhere(ids == True).reshape(-1)
+#     test_ids = np.argwhere(ids == False).reshape(-1)
+
+#     fit_dist_tr = fit_dist[np.ix_(train_ids, train_ids)].ravel()
+#     emp_dist_tr = emp_dist[np.ix_(train_ids, train_ids)].ravel()
+
+#     mu, beta = np.polyfit(fit_dist_tr, emp_dist_tr, deg=1)
+
+#     fit_dist_te = fit_dist[np.ix_(test_ids, train_ids)].ravel()
+#     emp_pred = mu * fit_dist_te + beta
+    
+#     # predict the empirical distance based on the OLS from the fit distance of train data
+#     emp_dist_te = emp_cov[np.ix_(test_ids, train_ids)].ravel()
+
+#     l2_err = np.linalg.norm(emp_dist_te - emp_pred) ** 2 / (len(test_ids) * n_snps)
+
+#     return emp_pred, l2_err
