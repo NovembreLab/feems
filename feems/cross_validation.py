@@ -46,7 +46,7 @@ def run_cv(
     # loop
     for fold in range(n_folds):
         if outer_verbose:
-            print("\n fold=", fold)
+            print("\n fold: ", fold)
 
         # partition into train and test sets
         if sp_graph.factor is not None:
@@ -135,7 +135,7 @@ def run_cv_joint(
     # loop
     for fold in range(n_folds):
         if outer_verbose:
-            print("\n fold=", fold)
+            print("\n fold: ", fold)
 
         # partition into train and test sets
         if sp_graph.factor is not None:
@@ -199,6 +199,7 @@ def run_cvq(
     alpha_fact=1.0
 ): 
     """Run cross validation on lamb_q & alpha_q, but holding lamb & alpha constant at previously found values."""
+    
     assert lamb_cv is not None, "provide CV lambda value as float"
     assert lamb_cv >= 0.0, "lambda must be non-negative"
 
@@ -378,7 +379,7 @@ def train_test_split(sp_graph, is_train):
 
 def predict_snps(sp_graph, sp_graph_train, sp_graph_test):
     # create obj
-    obj = FEEMSmix_Objective(sp_graph)
+    obj = Objective(sp_graph)
 
     # update graph laplacian
     obj.sp_graph.comp_graph_laplacian(sp_graph_train.w)

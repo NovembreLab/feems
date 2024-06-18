@@ -46,6 +46,8 @@ class SpatialGraph(nx.Graph):
         self.scale_snps = scale_snps
         self.option = 'default'
 
+        self.optimize_q = None
+
         # signed incidence_matrix
         self.Delta_q = nx.incidence_matrix(self, oriented=True).T.tocsc()
 
@@ -366,7 +368,7 @@ class SpatialGraph(nx.Graph):
         """
         # check inputs
         assert lamb >= 0.0, "lambda must be non-negative"
-        assert type(lamb) == float, "lambda must be float"
+        assert type(lamb) == float or type(lamb) == np.float64, "lambda must be float"
         assert beta >= 0.0, "beta must be non-negative"
         assert type(factr) == float, "factr must be float"
         assert maxls > 0, "maxls must be at least 1"

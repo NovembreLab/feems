@@ -131,27 +131,28 @@ class Objective(object):
         gradW = 2 * self.grad_obj_L[self.sp_graph.nnz_idx_perm]  # use symmetry
         self.grad_obj = gradD - gradW
 
-    def _comp_grad_reg(self):
-        """Computes gradient"""
-        lamb = self.lamb
-        alpha = self.alpha
+    # def _comp_grad_reg(self):
+    #     """Computes gradient"""
+    #     lamb = self.lamb
+    #     alpha = self.alpha
 
-        # avoid overflow in exp
-        # term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
-        # term_1 = alpha * self.sp_graph.w + np.log(term_0)
-        # term_2 = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term_1)
-        # self.grad_pen = term_2 * (alpha / term_0)
-        term = alpha * self.sp_graph.w + np.log(
-            1 - np.exp(-alpha * self.sp_graph.w)
-        )  # avoid overflow in exp
-        self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
-        self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w)))  
-        # only fill the long range edge indices with this derivative
-        ## Feb 26, 2023 - set the derivative to 0? 
-        # self.grad_pen[self.sp_graph.lre_idx] = 0
-        # beta * np.ones(np.sum(self.sp_graph.lre_idx))  
-        # 2.0 * self.graph.w[lre_idx] if Frobenius/L-2 norm
-        # np.ones(np.sum(lre_idx)) if L-1 norm
+    #     # avoid overflow in exp
+    #     # term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
+    #     # term_1 = alpha * self.sp_graph.w + np.log(term_0)
+    #     # term_2 = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term_1)
+    #     # self.grad_pen = term_2 * (alpha / term_0)
+    #     term = alpha * self.sp_graph.w + np.log(
+    #         1 - np.exp(-alpha * self.sp_graph.w)
+    #     )  # avoid overflow in exp
+    #     self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
+    #     self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w))) 
+        
+    #     # only fill the long range edge indices with this derivative
+    #     ## Feb 26, 2023 - set the derivative to 0? 
+    #     # self.grad_pen[self.sp_graph.lre_idx] = 0
+    #     # beta * np.ones(np.sum(self.sp_graph.lre_idx))  
+    #     # 2.0 * self.graph.w[lre_idx] if Frobenius/L-2 norm
+    #     # np.ones(np.sum(lre_idx)) if L-1 norm
 
     def inv(self):
         """Computes relevant inverses for gradient computations"""
@@ -261,6 +262,7 @@ def comp_mats(obj):
     assert np.allclose(inv_cov, np.linalg.inv(fit_cov)) == True, "fit_cov must be inverse of inv_cov"
     
     n_snps = sp_graph.n_snps
+    
     # VS: changing code here to run even when scale_snps=False
     if hasattr(obj.sp_graph.q, 'mu'):
         frequencies_ns = sp_graph.frequencies * np.sqrt(sp_graph.mu*(1-sp_graph.mu))
