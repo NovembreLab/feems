@@ -192,7 +192,7 @@ class Viz(object):
                 gl.top_labels=False; gl.right_labels=False
                 gl.xlabel_style = {'rotation': 45}; gl.ylabel_style = {'rotation': 315}
             else:
-                print('Please specify valid option for latlong: True (default) or tuple of ([lats],[longs]) for custom gridlines. When specifying just a single coordinate list, leave an empty list in tuple for the other coordinate.')
+                print('Please specify valid option for latlong: True (default) or tuple/list of [[lats],[longs]] for custom gridlines. When specifying just a single coordinate list, leave an empty list for the other coordinate.')
             
 
     def draw_samples(self, labels=None):
@@ -352,7 +352,7 @@ class Viz(object):
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
-    def draw_arrow(self, lre, c, lw=2, hw=0.8, hl=0.8, fs=10, alpha=0.8):
+    def draw_arrow(self, lre, c, lw=1, hw=4, hl=6, tw=1.25, fs=10, alpha=0.8):
         # self.ax.arrow(self.grid[lre[0][0],0],self.grid[lre[0][0],1],dx=self.grid[lre[0][1],0]-self.grid[lre[0][0],0],dy=self.grid[lre[0][1],1]-self.grid[lre[0][0],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
         ## the code below is for cases when we have unsampled demes so the node IDs are permuted
         # if mode=='sampled':
@@ -369,8 +369,8 @@ class Viz(object):
         # style = "Simple, tail_width=3, head_width=8, head_length=15"
         # kw = dict(arrowstyle=style, edgecolor='k', facecolor='k', zorder=5)
         # self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
-        style = "Simple, tail_width=1.25, head_width=4, head_length=6"
-        kw = dict(arrowstyle=style, edgecolor='k', facecolor=self.c_cmap(c), zorder=5)
+        style = "Simple, tail_width={}, head_width={}, head_length={}".format(tw,hw,hl)
+        kw = dict(arrowstyle=style, edgecolor='k', facecolor=self.c_cmap(c), zorder=5, linewidth=lw)
         self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
 
     def draw_c_colorbar(self, df=None):
@@ -399,8 +399,8 @@ class Viz(object):
         # self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0],self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='*', zorder=2, facecolors='k', edgecolors='k')
         self.draw_c_colorbar(df)
 
-    def draw_ll_contour(self, df, levels=[-20,-10,-2,0], fs=8): 
-        #TODO: check if there are any nan and drop (also do for above function)
+    def draw_ll_contour(self, df, levels=-10, fs=8, draw_c_contour=False): 
+        
         ## drawing contours
         # self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels, zorder=2) 
         # CS = self.ax.tricontour([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels, zorder=2)
@@ -411,11 +411,11 @@ class Viz(object):
 
         ## drawing points
         permuted_idx = query_node_attributes(self.sp_graph, "permuted_idx")
-        ll = plt.get_cmap('Greens_r').resampled(np.abs(np.min(levels))+2)
+        ll = plt.get_cmap('Greens_r').resampled(np.abs(levels)+2)
         
         # only display points that have scaled log-lik > -20
-        for idx, row in df.loc[df['scaled log-lik']>=np.min(levels)].iterrows():
-            self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], marker='o', zorder=2, edgecolors='white', facecolors=ll(-row['scaled log-lik']-1), linewidth=0.1, s=40)
+        for idx, row in df.loc[df['scaled log-lik']>=levels].iterrows():
+            self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], marker='o', zorder=2, edgecolors='white', facecolors=ll(int(-row['scaled log-lik'])), linewidth=0.5, s=50)
         # for ix, x in enumerate(df['(source, dest.)']):
         #     self.ax.scatter(self.grid[x[0],0], self.grid[x[0],1], marker='o', zorder=2, edgecolors='white', facecolors=ll(int(-df['scaled log-lik'].iloc[ix])), linewidth=0.1, s=20)
             # self.ax.scatter(self.grid[permuted_idx[x[0]],0], self.grid[permuted_idx[x[0]],1], marker='o', zorder=2, edgecolors='white', facecolors=ll(int(-df['scaled log-lik'].iloc[ix])), linewidth=0.1, s=6)
@@ -433,7 +433,7 @@ class Viz(object):
         
         ## profile likelihood for c at MLE
         # lre = [(np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0][0],np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][1])[0][0])] #if np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0]<self.sp_graph.n_observed_nodes else [df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()]]
-        cgrid = np.linspace(0,1,40)
+        cgrid = np.linspace(0,1,30)
         # source = 'sampled' if lre[0][0]<self.sp_graph.n_observed_nodes else 'unsampled'
         cprofll = np.zeros(len(cgrid))
         for ic, c in enumerate(cgrid):
@@ -454,19 +454,20 @@ class Viz(object):
         inset_axes(self.ax, loc = "lower left", width = '15%', height = '10%')            
         # #TODO: take care of discretization here
         # #TODO: change font size here (maybe it's ok but labels seem a bit big)
-        plt.plot(cgrid,cprofll,color='grey'); 
-        plt.ylim((np.nanmax(cprofll)+np.min(levels),np.nanmax(cprofll)-np.min(levels)/20)); #plt.axvline(df['admix. prop.'].iloc[df['scaled log-lik'].argmax()],color='k',linewidth=0.4); 
-        plt.plot(cgrid,cprofll2.T,color='grey',alpha=0.5,linewidth=0.3)
+        plt.plot(cgrid, cprofll, color='grey'); 
+        plt.ylim((np.nanmax(cprofll)+levels, np.nanmax(cprofll)-levels/20)); #plt.axvline(df['admix. prop.'].iloc[df['scaled log-lik'].argmax()],color='k',linewidth=0.4); 
+        plt.plot(cgrid, cprofll2.T, color='grey', alpha=0.5, linewidth=0.3)
         #TODO: change font size of MLE value to be 70% of 0 & 1 (may need two commands for this)
-        plt.xticks(ticks=[0,cgrid[np.nanargmax(cprofll)],1],labels=[0,round(cgrid[np.nanargmax(cprofll)],2),1]); 
+        plt.xticks(ticks=[0, cgrid[np.nanargmax(cprofll)], 1],labels=[0, round(cgrid[np.nanargmax(cprofll)], 2), 1]); 
         lb = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][-1]
-        plt.axvline(cgrid[lb],color='red',ls='--',linewidth=0.5); plt.axvline(cgrid[ub],color='red',ls='--',linewidth=0.5)
+        plt.axvline(cgrid[lb], color='red', ls='--', linewidth=0.5) 
+        plt.axvline(cgrid[ub], color='red', ls='--', linewidth=0.5)
         
         ## drawing the colorbar for the log-lik surface
         self.c_axins = inset_axes(self.ax, loc = 'center right', width = "10%", height = "2%",)
         self.c_axins.set_title(r"scaled $\ell$", fontsize = self.cbar_font_size)
-        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(np.min(levels)-1,0), cmap=ll.reversed()), boundaries=np.arange(np.min(levels)-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
-        self.c_cbar.set_ticks([np.min(levels),0])
+        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
+        self.c_cbar.set_ticks([levels,0])
 
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""

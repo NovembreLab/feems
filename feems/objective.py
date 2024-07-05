@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import numpy as np
 from scipy.stats import wishart
+from scipy.linalg import det
 
 class Objective(object):
     def __init__(self, sp_graph):
@@ -16,10 +17,6 @@ class Objective(object):
         # reg params
         self.lamb = None
         self.alpha = None
-        self.beta = None
-
-        self.pen1 = 0.0
-        self.pen2 = 0.0
 
     def _rank_one_solver(self, B):
         """Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank
@@ -131,28 +128,21 @@ class Objective(object):
         gradW = 2 * self.grad_obj_L[self.sp_graph.nnz_idx_perm]  # use symmetry
         self.grad_obj = gradD - gradW
 
-    # def _comp_grad_reg(self):
-    #     """Computes gradient"""
-    #     lamb = self.lamb
-    #     alpha = self.alpha
+    def _comp_grad_reg(self):
+        """Computes gradient"""
+        lamb = self.lamb
+        alpha = self.alpha
 
-    #     # avoid overflow in exp
-    #     # term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
-    #     # term_1 = alpha * self.sp_graph.w + np.log(term_0)
-    #     # term_2 = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term_1)
-    #     # self.grad_pen = term_2 * (alpha / term_0)
-    #     term = alpha * self.sp_graph.w + np.log(
-    #         1 - np.exp(-alpha * self.sp_graph.w)
-    #     )  # avoid overflow in exp
-    #     self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
-    #     self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w))) 
-        
-    #     # only fill the long range edge indices with this derivative
-    #     ## Feb 26, 2023 - set the derivative to 0? 
-    #     # self.grad_pen[self.sp_graph.lre_idx] = 0
-    #     # beta * np.ones(np.sum(self.sp_graph.lre_idx))  
-    #     # 2.0 * self.graph.w[lre_idx] if Frobenius/L-2 norm
-    #     # np.ones(np.sum(lre_idx)) if L-1 norm
+        # avoid overflow in exp
+        # term_0 = 1.0 - np.exp(-alpha * self.sp_graph.w)
+        # term_1 = alpha * self.sp_graph.w + np.log(term_0)
+        # term_2 = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term_1)
+        # self.grad_pen = term_2 * (alpha / term_0)
+        term = alpha * self.sp_graph.w + np.log(
+            1 - np.exp(-alpha * self.sp_graph.w)
+        )  # avoid overflow in exp
+        self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
+        self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w))) 
 
     def inv(self):
         """Computes relevant inverses for gradient computations"""
@@ -168,8 +158,6 @@ class Objective(object):
             self._comp_grad_obj()
         elif self.sp_graph.option == 'onlyc':
             self._comp_grad_obj_c()
-        else:
-            self._comp_grad_obj_c_t()
 
         if reg is True:
             self._comp_grad_reg()
@@ -188,19 +176,14 @@ class Objective(object):
 
         # det
         # E = self.X + np.diag(self.sp_graph.q)
-        self.det = np.linalg.det(self.inv_cov) * o / self.denom
+        # self.det = np.linalg.det(self.inv_cov) * o / self.denom
+        # VS: made a change here to accommodate larger matrices (was leading to overflow)
+        # ignorning sign here since det of a pos def matrix > 0 
+        self.logdet = np.linalg.slogdet(self.inv_cov)[1]
 
         # negative log-likelihood
-        nll = self.sp_graph.n_snps * (self.tr - np.log(self.det))
-
-        # if not hasattr(self, 'Linv'):
-        #     nll = self.sp_graph.n_snps * (self.tr - np.log(self.det))
-        # else:
-        #     D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
-        #     Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
-        #     Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
-        #     resmat = Rmat + (Q1mat + Q1mat.T); resmat[np.diag_indices(self.sp_graph.n_observed_nodes)] = 0 
-        #     nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -2*self.C @ resmat @ self.C.T)
+        # nll = self.sp_graph.n_snps * (self.tr - np.log(self.det))
+        nll = self.sp_graph.n_snps * (self.tr - self.logdet - np.log(o/self.denom))
 
         return nll
 
@@ -226,11 +209,13 @@ def neg_log_lik_w0_s2(z, obj):
     theta = np.exp(z)
     obj.lamb = 0.0
     obj.alpha = 1.0
+    
     obj.sp_graph.w = theta[0] * np.ones(obj.sp_graph.size())
     obj.sp_graph.comp_graph_laplacian(obj.sp_graph.w)
     obj.sp_graph.comp_precision(s2=theta[1])
     obj.inv()
     nll = obj.neg_log_lik()
+    
     return nll
 
 

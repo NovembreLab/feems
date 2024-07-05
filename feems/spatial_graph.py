@@ -12,7 +12,7 @@ from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 
 
 class SpatialGraph(nx.Graph):
-    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True, c=0):
+    def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True):
         """Represents the spatial network which the data is defined on and
         stores relevant matrices / performs linear algebra routines needed for
         the model and optimization. Inherits from the networkx Graph object.
@@ -34,7 +34,8 @@ class SpatialGraph(nx.Graph):
         assert (
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
-        assert c >=0, "c must be non-negative"
+
+        #TODO add progress messages as the graph is being initialized
 
         # inherits from networkx Graph object -- changed this to new signature for python3
         super().__init__()
@@ -314,7 +315,7 @@ class SpatialGraph(nx.Graph):
         under the model that all the edge weights have the same value
         """
         obj = Objective(self)
-        res = minimize(neg_log_lik_w0_s2, [0.0, 0.0], method="Nelder-Mead", args=(obj))
+        res = minimize(neg_log_lik_w0_s2, [-1.0, 1.0], method="Powell", args=(obj))
         assert res.success is True, "did not converge"
         w0_hat = np.exp(res.x[0])
         s2_hat = np.exp(res.x[1])

@@ -75,7 +75,7 @@ class FEEMSmix_Objective(Objective):
         self._comp_inv_lap()
 
         if not hasattr(self, 'Lpinv'):
-            self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
+            self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
 
         sid = np.where(self.perm_idx == self.sp_graph.edge[0][0])[0][0]
         did = np.where(self.perm_idx == self.sp_graph.edge[0][1])[0][0]
@@ -111,7 +111,6 @@ class FEEMSmix_Objective(Objective):
 
             rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
             rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-            # qprox = np.dot(1/self.sp_graph.q[proxs], 1/R1[0,proxs]*np.exp(-0.5*np.abs(rsm-R1[0,proxs])/rsd)/np.sum(1/R1[0,proxs]*np.exp(-0.5*np.abs(rsm-R1[0,proxs])/rsd)))
             ## smaller coefficients inside the exp make the log-lik more peaked around the maximum value
             qprox = np.dot(1/self.sp_graph.q, 1/R1[0,:]*np.exp(-np.abs(rsm-R1[0,:])/rsd)/np.sum(1/R1[0,:]*np.exp(-np.abs(rsm-R1[0,:])/rsd)))
 
@@ -122,7 +121,7 @@ class FEEMSmix_Objective(Objective):
                 resmat[did,i] = resmat[i,did]
 
         
-        # convert distance matrix to covariance matrix (from rwc in Hanks & Hooten 2013)
+        # convert distance matrix to covariance matrix (using code from rwc package in Hanks & Hooten 2013)
         rwsm = np.mean(resmat, 0).reshape(-1,1) @ np.ones(resmat.shape[0]).reshape(1,-1)
         clsm = np.ones(resmat.shape[0]).reshape(-1, 1) @ np.mean(resmat, 1).reshape(1,-1)
         Sigma = 0.5 * (-resmat + rwsm + clsm - np.sum(resmat)/resmat.shape[0]**2)
@@ -228,6 +227,15 @@ class FEEMSmix_Objective(Objective):
             self.grad_pen_q = self.sp_graph.Delta_q.T @ self.sp_graph.Delta_q @ (lamb_q * term)
             self.grad_pen_q = self.grad_pen_q * (alpha_q / (1 - np.exp(-alpha_q * self.sp_graph.s2)))
 
+    def _update_graph(self, basew, bases2):
+        self.sp_graph.option = 'default'
+        # TODO check the dimensions here to make sure that s2 assignment is correct for s2 
+        self.sp_graph.w = basew; self.sp_graph.s2 = bases2
+        self.sp_graph.comp_graph_laplacian(basew); self.sp_graph.comp_precision(bases2)
+        self.inv(); self.grad(reg=False)
+        self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
+        # print('{:.1f}'.format(self.eems_neg_log_lik()))
+        
     def loss(self):
         """Evaluate the loss function given the current params"""
         lamb = self.lamb
@@ -277,14 +285,14 @@ class FEEMSmix_Objective(Objective):
         opts['lre'] = [(sid,did)]
 
         if sid<self.sp_graph.n_observed_nodes:
-            self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
+            self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
         if did>self.sp_graph.n_observed_nodes:
             print("Enter a valid destination deme ID")
             return 
             
         D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
 
-        opts['delta'] = self.compute_delta_matrix(x0[-1], opts)
+        opts['delta'] = self._compute_delta_matrix(x0[-1], opts)
         nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ opts['delta'] @ self.C.T)
         
         term_0 = 1.0 - np.exp(-self.alpha * self.sp_graph.w)
@@ -306,26 +314,29 @@ class FEEMSmix_Objective(Objective):
             did = np.where(self.perm_idx == opts['edge'][0][1])[0][0]
             assert did < self.sp_graph.n_observed_nodes, "ensure that the destination is a sampled deme (check ID from the map or from output of extract_outliers"
             opts['lre'] = [(sid,did)]
+            # print(opts['lre'])
         else:
             opts = {}
             # if no edge is passed in, just use a dummy index with c=0
-            opts['lre'] = [(0,0)]
+            opts['lre'] = [(0,1)]
 
+        # TODO make D into an internal variable for sp_graph
+        # TODO also make C D C^T an internal variable (unnecessary computations)
         D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
 
-        # TODO is it better to make this a True/False flag instead?
         if c is not None:
+            # TODO is it better to make this a True/False flag instead?
             if opts['mode'] != 'update':
-                dd = self.compute_delta_matrix(c, opts)
+                dd = self._compute_delta_matrix(c, opts)
+                # print(np.where(np.isnan(dd)))
                 nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
             else:
-                opts['delta'] = self.compute_delta_matrix(c, opts)
+                opts['delta'] = self._compute_delta_matrix(c, opts)
                 nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ opts['delta'] @ self.C.T)
         else:
-            dd = self.compute_delta_matrix(0, opts)
+            dd = self._compute_delta_matrix(0, opts)
             nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
-            
-        
+                   
         return nll
 
     # def eems_neg_log_lik_sigma(self, x, opts):
@@ -347,23 +358,27 @@ class FEEMSmix_Objective(Objective):
     #         nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -np.exp(x[1])*self.C @ opts['delta'] @ self.C.T)
         
     #     return nll
-        
-    def compute_delta_matrix(self, c, opts):
-        """
-        Compute a new delta matrix given a previous delta matrix as a perturbation from a single long range gene flow event
-        """
 
-        if not hasattr(self, 'Lpinv'):
-            self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
+    # TODO include an underscore at the start of the function name (internal use only)
+    def _compute_delta_matrix(self, c, opts):
+        """
+        Compute a new delta matrix given a previous delta matrix as a perturbation from a single long range gene flow event OR create a new delta matrix from resmat
+        """
 
         if not hasattr(self, 'Linv'):
             self.inv(); self.grad(reg=False)
+        
+        if not hasattr(self, 'Lpinv'):
+            self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
+
+        # print(self.sp_graph.w[:10])
 
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
         Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes))
         ## both variations below gives not posdef errors with 6x6
         # Q1mat = 0.5*(1-self.Linv.diagonal()).reshape(-1,1) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) 
         # Q1mat = self.sp_graph.number_of_nodes()/2*np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1)
+        
         if 'delta' in opts:
             resmat = np.copy(opts['delta'])
         else:
@@ -416,8 +431,7 @@ class FEEMSmix_Objective(Objective):
             ## id
             for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
                 Ri1 = -2*self.Lpinv[i,opts['lre'][0][0]] + self.Lpinv[i,i] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
-                # resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts  ['lre'][0][1]] + c/self.sp_graph.q[proxs]
-                # should there be a (1+c)q_d here?
+                # resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c/self.sp_graph.q[proxs]
                 resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*qprox
                 resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
 
@@ -480,6 +494,7 @@ class FEEMSmix_Objective(Objective):
         # mvals = (np.log(emp_dist)-np.log(fit_dist) - med)/mad
 
         bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
+        
         # for k in np.where(pvals < pthresh)[0]:
         # for k in np.where(mvals < -mthresh)[0]:
         for k in np.where(bh)[0]:
@@ -498,8 +513,6 @@ class FEEMSmix_Objective(Objective):
             Ga2[Gi == 2] = 1
 
             fst = allel.average_hudson_fst(allel.GenotypeArray(Ga1).count_alleles(), allel.GenotypeArray(Ga2).count_alleles(), blen=int(self.sp_graph.genotypes.shape[1]/10))[0]
-            ## gives an overestimate (for human populations, ~0.35)
-            # fst = np.sum(allel.mean_pairwise_difference_between(allel.GenotypeArray(Ga1).count_alleles(), allel.GenotypeArray(Ga2).count_alleles()))/self.sp_graph.genotypes.shape[1]
 
             ls.append([self.perm_idx[x[-1]], self.perm_idx[y[-1]], tuple(self.sp_graph.nodes[self.perm_idx[x[-1]]]['pos'][::-1]), tuple(self.sp_graph.nodes[self.perm_idx[y[-1]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k], fst])
 
@@ -541,19 +554,22 @@ class FEEMSmix_Objective(Objective):
                 print(df.sort_values(by='pval').to_string(index=False))
                 print('\nPutative destination demes (and # of times the deme appears as an outlier) experiencing admixture:')
                 print(df['dest.'].value_counts())
-            return df
+            else:
+                print('\nPutative destination demes:{}'.format(np.unique(df['dest.'])))
+            return df.sort_values('pval', ascending=True)
     
     def calc_contour(self, destid, search_area='all', sourceid=None, opts=None, exclude_boundary=True, delta=None):
         """
         Function to calculate admix. prop. values along with log-lik. values in a contour around the sampled source deme to capture uncertainty in the location of the source. 
-        The flag coverage is used to signifiy how large the contour should be:
+        destid 
+        The flag search_area is used to signifiy how large the contour should be:
             'all'    - include all demes (sampled & unsampled) from the entire graph
-            'radius' - include all demes within a certain radius of a sampled source deme (sourceid output from extract_outliers)
-                - 'opts' : integer specifying radius around the sampled source deme
+            'radius' - include all demes within a certain radius of a sampled source deme 
+                - 'opts' : integer specifying radius (as an `int`) around the sampled source deme
             'range'  - include all demes within a certain long. & lat. rectangle 
                 - 'opts' : list of lists specifying long. & lat. limits (e.g., [[-120,-70],[25,50]] for contiguous USA)
             'custom' - specific array of deme ids
-                - 'opts' : list of specific deme ids
+                - 'opts' : list of specific deme ids as index
         """
         assert isinstance(destid, (int, np.integer)), "destid must be an integer"
 
@@ -568,13 +584,9 @@ class FEEMSmix_Objective(Objective):
             # including every possible node in graph as a putative source
             randedge = [(x,destid) for x in list(set(range(self.sp_graph.number_of_nodes()))-set([destid]))]
         elif search_area == 'radius':
-            # TODO: also ok if type is np.int64 (which is currently flagged) 
             assert isinstance(sourceid, (int, np.integer)), "sourceid must be an integer"
             assert isinstance(opts, (int, np.integer)) and opts > 0, "radius must be an integer >=1"
-            try: 
-                sourcepid = np.where(self.perm_idx[:self.sp_graph.n_observed_nodes]==sourceid)[0][0] #-> 0:(o-1)
-            except: 
-                print('invalid ID for source deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
+            
             neighs = [] 
             neighs = list(self.sp_graph.neighbors(sourceid)) + [sourceid]
 
@@ -614,7 +626,7 @@ class FEEMSmix_Objective(Objective):
             randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.sp_graph.neighbors(e[0]))==6]
 
         if not hasattr(self, 'Lpinv'):
-            self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
+            self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
 
         # just want to perturb it a bit instead of updating the entire matrix
         args = {}
@@ -623,9 +635,9 @@ class FEEMSmix_Objective(Objective):
             args['delta'] = np.copy(delta)
         else:
             # adding a dummy edge in since c=0 doesn't change any terms anyway
-            args['delta'] = self.compute_delta_matrix(0, {'lre':[(0, 2)], 'mode':'compute'})
+            args['delta'] = self._compute_delta_matrix(0, {'lre':[(0, 2)], 'mode':'compute'})
         
-        randpedge = []
+        # randpedge = []
         cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
         print("Optimizing likelihood over {:d} demes in the graph".format(len(randedge)),end='...')
         checkpoints = {int(np.percentile(range(len(self.perm_idx)),25)): 25, int(np.percentile(range(len(self.perm_idx)),50)): 50, int(np.percentile(range(len(self.perm_idx)),75)): 75}
@@ -653,6 +665,204 @@ class FEEMSmix_Objective(Objective):
             print("(warning: log-likelihood could not be computed for ~{:.2f}% of demes)".format(np.sum(df['log-lik'].isna())*100/len(df)))
             
         return df#.dropna()
+
+
+    def calc_joint_contour(self, contour_df=None, top=0.01, lamb=None, lamb_q=None, destid=None, search_area='all', sourceid=None, opts=None, exclude_boundary=True, usew=None, uses2=None):
+        """
+        Function to calculate admix. prop. values in a joint manner with weights w & deme-specific variance s2 (as opposed to just admix. prop. values in `calc_contour`).
+        contour_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_contour` 
+        top (:obj:`float`) : how many top entries (based on log-lik) to consider for the joint fitting? (if top >= 1, then it is the number of top entries, but if top < 1 then it is the top percent of total entries to consider)
+        NOTE: if the above two flags are specified, then none of the flags below need to be specified. 
+        destid (:obj:`int`) : 
+        The flag coverage is used to signifiy how large the contour should be:
+            'all'    - include all demes (sampled & unsampled) from the entire graph
+            'radius' - include all demes within a certain radius of a sampled source deme 
+                - 'opts' : integer specifying radius (as an `int`) around the sampled source deme
+            'range'  - include all demes within a certain long. & lat. rectangle 
+                - 'opts' : list of lists specifying long. & lat. limits (e.g., [[-120,-70],[25,50]] for contiguous USA)
+            'custom' - specific array of deme ids
+                - 'opts' : list of specific deme ids as index
+        """
+        if contour_df is None:
+            assert isinstance(lamb, (float, np.float)) and lamb >= 0, "lamb must be a float >=0"
+            assert isinstance(lamb_q, (float, np.float)) and lamb_q >= 0, "lamb_q must be a float >= 0"
+
+            assert isinstance(destid, (int, np.integer)), "destid must be an integer"
+            try:
+                destpid = np.where(self.perm_idx[:self.sp_graph.n_observed_nodes]==destid)[0][0]
+            except:
+                print('invalid ID for destination deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
+                return None
+            # creating a list of (source, dest.) pairings based on user-picked criteria
+            if search_area == 'all':
+                # including every possible node in graph as a putative source
+                randedge = [(x,destid) for x in list(set(range(self.sp_graph.number_of_nodes()))-set([destid]))]
+            elif search_area == 'radius':
+                assert isinstance(sourceid, (int, np.integer)), "sourceid must be an integer"
+                assert isinstance(opts, (int, np.integer)) and opts > 0, "radius must be an integer >=1"
+                
+                neighs = [] 
+                neighs = list(self.sp_graph.neighbors(sourceid)) + [sourceid]
+    
+                # including all nodes within a certain radius
+                for _ in range(opts-1):
+                    tempn = [list(self.sp_graph.neighbors(n1)) for n1 in neighs]
+                    # dropping repeated nodes 
+                    neighs = np.unique(list(it.chain(*tempn)))
+    
+                randedge = [(x,destid) for x in list(set(neighs)-set([destid]))]
+            elif search_area == 'range':
+                assert len(opts) == 2, "limits must be list of length 2"
+                # reverse coordinates if in Western and Southern hemispheres
+                if opts[0][0] > opts[0][1]:
+                    opts[0] = opts[0][::-1]
+                elif opts[1][0] > opts[1][1]:
+                    opts[1] = opts[1][::-1]
+                elif opts[0][0] > opts[0][1] & opts[1][0] > opts[1][1]:
+                    opts[0] = opts[0][::-1]
+                    opts[1] = opts[1][::-1]          
+                randedge = []
+                for n in range(self.sp_graph.number_of_nodes()):
+                    # checking for lat. & long. of all possible nodes in graph
+                    if self.sp_graph.nodes[n]['pos'][0] > opts[0][0] and self.sp_graph.nodes[n]['pos'][0] < opts[0][1]:
+                        if self.sp_graph.nodes[n]['pos'][1] > opts[1][0] and self.sp_graph.nodes[n]['pos'][1] < opts[1][1]:
+                            randedge.append((n,destid))
+    
+                # remove tuple of dest -> dest ONLY if it is in randedge
+                if (destid,destid) in randedge:
+                    randedge.remove((destid,destid))
+            elif search_area == 'custom':
+                randedge = [(x,destid) for x in list(set(opts)-set([destid]))]
+    
+            if exclude_boundary:
+                randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.sp_graph.neighbors(e[0]))==6]
+
+            if not hasattr(self, 'Lpinv'):
+                self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
+
+            # fit the baseline graph if no w or s2 is passed in 
+            # baseline w and s2 to be stored in an object
+            if usew is None:
+                self.sp_graph.fit(lamb=lamb, optimize_q='n-dim', lamb_q=lamb_q, option='default', verbose=False);
+                self.inv(); self.grad(reg=False)
+                baselinell = -self.eems_neg_log_lik()
+                usew = deepcopy(self.sp_graph.w); uses2 = deepcopy(self.sp_graph.s2) 
+                # container for storing the MLE weights & s2
+                mlew = deepcopy(usew); mles2 = deepcopy(uses2)
+            else:
+                self._update_graph(usew, uses2)
+                # container for storing the MLE weights & s2
+                mlew = deepcopy(usew); mles2 = deepcopy(uses2)            
+            
+            cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
+            print("Optimizing likelihood over {:d} demes in the graph".format(len(randedge)),end='...')
+            checkpoints = {int(np.percentile(range(len(self.perm_idx)),25)): 25, int(np.percentile(range(len(self.perm_idx)),50)): 50, int(np.percentile(range(len(self.perm_idx)),75)): 75}
+            
+            for ie, e in enumerate(randedge):
+
+                if ie in checkpoints:
+                    print('{:d}%'.format(checkpoints[ie]), end='...')
+                    
+                # initializing at baseline values
+                self._update_graph(usew, uses2)
+
+                ## TODO CHANGE THIS
+                # using a try/except here as some configs lead to not pos def errors in simulations
+                try:
+                    self.sp_graph.fit(lamb=lamb, optimize_q='n-dim', lamb_q=lamb_q, long_range_edges=[e], option='onlyc', verbose=False)
+                    cest2[ie] = self.sp_graph.c
+                    llc2[ie] = -self.eems_neg_log_lik(self.sp_graph.c, {'edge':self.sp_graph.edge,'mode':'compute'})
+                    # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
+                    if llc2[ie] > np.max(llc2[:ie]):
+                        mlew = deepcopy(self.sp_graph.w); mles2 = deepcopy(self.sp_graph.s2)
+                except: 
+                    self._update_graph(usew, uses2)
+
+                    # using a larger lambda value to avoid not pos def error from Cholesky decompoisition
+                    try:
+                        self.sp_graph.fit(lamb=lamb*10, optimize_q='n-dim', lamb_q=lamb_q*10, long_range_edges=[e], option='onlyc', verbose=False)
+                        cest2[ie] = self.sp_graph.c
+                        llc2[ie] = -self.eems_neg_log_lik(self.sp_graph.c, {'edge':self.sp_graph.edge,'mode':'compute'})
+                        if llc2[ie] > np.max(llc2[:ie]):
+                            mlew = deepcopy(self.sp_graph.w); mles2 = deepcopy(self.sp_graph.s2)
+                    except: 
+                        cest2[ie] = np.nan
+                        llc2[ie] = np.nan
+    
+            print('done!')
+
+            ## TODO: if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
+            df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
+            df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = llc2
+    
+            if np.sum(df['log-lik'].isna()) > 0.25*len(df):
+                print("(warning: log-likelihood could not be computed for ~{:.0f}% of demes)".format(np.sum(df['log-lik'].isna())*100/len(df)))
+
+            joint_contour_df = df
+        else:
+            assert isinstance(lamb, (float, np.float)) and lamb >= 0, "lamb must be a float >=0"
+            assert isinstance(lamb_q, (float, np.float)) and lamb_q >= 0, "lamb_q must be a float >= 0"
+            # get indices of the top hits
+            if top<1:
+                # treat as a percentage
+                topidx = contour_df['log-lik'].nlargest(int(top * len(contour_df))).index
+            else: 
+                # treat as a number 
+                topidx = contour_df['log-lik'].nlargest(int(top)).index
+            print("Jointly optimizing likelihood over {:d} demes in the graph...".format(len(topidx)))
+
+            if usew is None:
+                # baseline w and s2 to be stored in an object
+                self.sp_graph.fit(lamb=lamb, optimize_q='n-dim', lamb_q=lamb_q, option='default', verbose=False);
+                self.inv(); self.grad(reg=False)
+                baselinell = -self.eems_neg_log_lik()
+                usew = deepcopy(self.sp_graph.w); uses2 = deepcopy(self.sp_graph.s2)
+                mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
+            else:
+                self._update_graph(usew, uses2)
+                mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
+            
+            # run the joint fitting scheme for each top hit
+            joint_contour_df = contour_df.loc[topidx]
+            for i, row in joint_contour_df.iterrows():
+                # print(row['(source, dest.)'])
+                # initializing at baseline values
+                # TODO make these baseline w & s2 as private variables? or even better, create a function that takes as input the w & s2 and updates the sp_graph object?
+                self._update_graph(usew, uses2)
+
+                # using a try/except here as some configs lead to not pos def errors in simulations
+                try:
+                    self.sp_graph.fit(lamb=lamb, optimize_q='n-dim', lamb_q=lamb_q, long_range_edges=[row['(source, dest.)']], option='onlyc', verbose=True)
+                    joint_contour_df.at[i, 'admix. prop.'] = self.sp_graph.c
+                    joint_contour_df.at[i, 'log-lik'] = -self.eems_neg_log_lik(self.sp_graph.c, {'edge':self.sp_graph.edge,'mode':'compute'})
+                    # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
+                    if joint_contour_df.at[i, 'log-lik'] > np.max(joint_contour_df['log-lik'].loc[:i]):
+                        mlew = deepcopy(self.sp_graph.w); mles2 = deepcopy(self.sp_graph.s2)
+                except: 
+                    self._update_graph(usew, uses2)
+
+                    # using a larger lambda value to avoid not pos def error from Cholesky decompoisition
+                    try:
+                        self.sp_graph.fit(lamb=lamb*10, optimize_q='n-dim', lamb_q=lamb_q*10, long_range_edges=[row['(source, dest.)']], option='onlyc', verbose=True)
+                        joint_contour_df.at[i, 'admix. prop.'] = self.sp_graph.c
+                        joint_contour_df.at[i, 'log-lik'] = -self.eems_neg_log_lik(self.sp_graph.c, {'edge':self.sp_graph.edge,'mode':'compute'})
+                        if joint_contour_df.at[i, 'log-lik'] > np.max(joint_contour_df['log-lik'].loc[:i]):
+                            mlew = deepcopy(self.sp_graph.w); mles2 = deepcopy(self.sp_graph.s2)
+                    except: 
+                        joint_contour_df.at[i, 'admix. prop.'] = np.nan
+                        joint_contour_df.at[i, 'log-lik'] = np.nan
+
+        joint_contour_df['scaled log-lik'] = joint_contour_df['log-lik'] - np.nanmax(joint_contour_df['log-lik']) 
+
+        # updating the graph with MLE weights so it does not need to be fit again
+        # print(mlew[:10], self.sp_graph.w[:10])
+        self._update_graph(mlew, mles2)
+        # print(self.eems_neg_log_lik())
+
+        # # checking whether adding an extra admixture parameter improves model fit using a LRT
+        # joint_contour_df['pval'] = chi2.sf(2*(joint_contour_df['log-lik'] - baselinell), df=1)
+        
+        return joint_contour_df                
               
 def loss_wrapper(z, obj):
     """Wrapper function to optimize z=log(w,q) which returns the loss and gradient"""                
@@ -687,7 +897,7 @@ def loss_wrapper(z, obj):
 
 def coordinate_descent(obj, factr=1e7, m=10, maxls=50, maxiter=100, verbose=False):
     """
-    Minimize the negative log-likelihood iteratively with an admix. prop. c value & refit the new weights based on that until tolerance is reached. We assume the best-fit weights are passed in to this function as x0. 
+    Minimize the negative log-likelihood iteratively with an admix. prop. c value & refit the new weights based on that until tolerance is reached. 
     """
     # obj.sp_graph.edge = edge
     # obj.sp_graph.option = 'onlyc'
@@ -701,15 +911,18 @@ def coordinate_descent(obj, factr=1e7, m=10, maxls=50, maxiter=100, verbose=Fals
         
         # first fit admix. prop. c given the weights
         resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
+        # print(resc.x)
         # resc = minimize(obj.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':obj.sp_graph.edge,'mode':'sampled'})
         # print(resc.x, obj.sp_graph.c)
         if resc.status != 0:
             # TODO print a more explanatory message here
-            print('Warning: admix. prop. optimization failed')
+            print('Warning: admix. prop. optimization failed (consider increasing factr)')
+            return None
         if np.allclose(resc.x, obj.sp_graph.c, atol=1e-3):
             optimc = False
 
         obj.sp_graph.c = deepcopy(resc.x)
+        # print(resc.x)
         # obj.sp_graph.c = deepcopy(10**resc.x/(1+10**resc.x))
 
         ## TODO need an option here for 1-dim (currently only have n-dim and None options)
@@ -717,11 +930,12 @@ def coordinate_descent(obj, factr=1e7, m=10, maxls=50, maxiter=100, verbose=Fals
             x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
         else:
             x0 = np.log(obj.sp_graph.w)
-            
+
         # then fit weights & s2 keeping c constant
         res = fmin_l_bfgs_b(
             func=loss_wrapper,
             x0=x0,
+            # bounds=[(-1e10,1e10) for _ in x0], #-> setting bounds on how far the value can be perturbed (produces Singular matrix errors so leaving it blank)
             args=[obj],
             factr=factr,
             m=m,
@@ -730,7 +944,7 @@ def coordinate_descent(obj, factr=1e7, m=10, maxls=50, maxiter=100, verbose=Fals
             approx_grad=False,
         )
         if maxiter >= 100:
-            assert res[2]["warnflag"] == 0, "did not converge (increase maxiter or increase factr slightly)"
+            assert res[2]["warnflag"] == 0, "did not converge (increase maxiter or factr slightly)"
         if obj.sp_graph.optimize_q is not None:
             neww = np.exp(res[0][:obj.sp_graph.size()])
             news2 = np.exp(res[0][obj.sp_graph.size():])
@@ -745,60 +959,10 @@ def coordinate_descent(obj, factr=1e7, m=10, maxls=50, maxiter=100, verbose=Fals
             diffw = np.abs(np.exp(x0) - neww)
             diffs2 = [0]
 
-        if np.allclose(diffw, np.zeros(len(diffw)), atol=1e-6) and np.allclose(diffs2, np.zeros(len(diffs2)), atol=1e-6) and not optimc:
+        if np.allclose(diffw, np.zeros(len(diffw)), atol=1e-8) and np.allclose(diffs2, np.zeros(len(diffs2)), atol=1e-8) and not optimc:
             if verbose:
                 print("joint estimation converged in {:d} iterations!".format(bigiter+1))
             break
-            
-    # elif obj.sp_graph.option=='bothct': # optimize over c & t
-    #     for bigiter in range(20):
-    #         optimct = True
-    #         print(bigiter,end='...')
-    #         # first fit admix. prop. c & admix. time t
-    #         if optimct: # stop it from overly optimizing over c & t (should it be a while loop?)
-    #             resct = minimize(obj.neg_log_lik_c_t, x0=[0.1,0.01], args={'lre':obj.sp_graph.edge}, method='L-BFGS-B', bounds=[(0,0.9),(0,0.1)])
-    #             if resct.status != 0:
-    #                 print('Warning: admix. prop. & admix. time optimization failed')
-    #             if np.min(np.abs(resct.x[0] - obj.sp_graph.c)) > 1e-3 and np.min(np.abs(resct.x[1] - obj.sp_graph.t)) > 1e-4:
-    #                 optimct = False
-    #                 if bigiter > 20:
-    #                     break
-    #             obj.sp_graph.c = np.array([resct.x[0]])
-    #             obj.sp_graph.t = np.array([resct.x[1]])
-
-    #         if obj.optimize_q == 'n-dim':
-    #             x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
-    #         elif obj.optimize_q == '1-dim':
-    #             x0 = np.log(obj.sp_graph.w)
-    #         # then fit weights & s2 keeping c constant
-    #         res = fmin_l_bfgs_b(
-    #             func=loss_wrapper,
-    #             x0=x0,
-    #             args=[obj],
-    #             factr=factr,
-    #             m=m,
-    #             maxls=maxls,
-    #             maxiter=maxiter,
-    #             approx_grad=False,
-    #         )
-    #         if maxiter >= 100:
-    #             assert res[2]["warnflag"] == 0, "did not converge (increase maxiter)"
-    #         if obj.optimize_q == 'n-dim':
-    #             neww = np.exp(res[0][:obj.sp_graph.size()])
-    #             news2 = np.exp(res[0][obj.sp_graph.size():])
-    #         elif obj.optimize_q == '1-dim':
-    #             neww = np.exp(res[0])
-    #             news2 = obj.sp_graph.s2
-    #         # print('length of s2:',len(news2))
-
-    #         if np.allclose(obj.sp_graph.w, neww, atol=1e-6) and np.allclose(obj.sp_graph.s2, news2, atol=1e-6):
-    #             if verbose:
-    #                 print('admix. prop. estimation converged in {} iterations!'.format(bigiter+1))
-    #             break
-    #         else: # update weights and s2 & continue
-    #             obj.sp_graph.w = deepcopy(neww)
-    #             obj.sp_graph.s2 = deepcopy(news2)
-    #             obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); obj.grad(reg=False)
 
     return res
 
@@ -840,8 +1004,9 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
         """Estimates of the edge weights and residual variance
         under the model that all the edge weights have the same value
         """
-        obj = FEEMSmix_Objective(self)
-        res = minimize(neg_log_lik_w0_s2, [0.0, 0.0], method="Nelder-Mead", args=(obj))
+        # TODO check whether FEEMSmix matters here (prob want to just keep Objective)
+        obj = Objective(self)
+        res = minimize(neg_log_lik_w0_s2, [0.0, 0.0], method="L-BFGS-B", args=(obj))
         assert res.success is True, "did not converge"
         w0_hat = np.exp(res.x[0])
         s2_hat = np.exp(res.x[1])
@@ -866,18 +1031,59 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
         fdr=0.25, 
         pval=0.05,
         stop=5,
+        maxls=50,
+        m=10,
         factr=1e7,
+        lb=-1e10,
+        ub=1e10,
+        maxiter=15000,
+        lamb=None,
+        lamb_q=None,
     ):
         """
-        Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (alternative method)
+        Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (alternate method)
+        Args:
+            lamb (:obj:`float`): penalty strength on weights
+            w_init (:obj:`numpy.ndarray`): initial value for the edge weights
+            s2_init (:obj:`int`): initial value for s2
+            alpha (:obj:`float`): penalty strength on log weights
+            optimize_q (:obj:'str'): indicator whether optimizing residual variances (one of 'n-dim', '1-dim' or None)
+            lamb_q (:obj:`float`): penalty strength on the residual variances
+            alpha_q (:obj:`float`): penalty strength on log residual variances
+            factr (:obj:`float`): tolerance for convergence
+            maxls (:obj:`int`): maximum number of line search steps
+            m (:obj:`int`): the maximum number of variable metric corrections
+            lb (:obj:`int`): lower bound of log weights
+            ub (:obj:`int`): upper bound of log weights
+            maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
+            verbose (:obj:`Bool`): boolean to print summary of results
+
+            fdr (:obj:`float`): false-discovery rate of outlier edges 
+            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
+            stop (:obj:`int`): number of admixture edges to add sequentially 
         """
 
+        # check inputs
+        assert lamb >= 0.0, "lambda must be non-negative"
+        assert type(lamb) == float or type(lamb) == np.float64, "lambda must be float"
+        assert lamb_q >= 0.0, "lambda must be non-negative"
+        assert type(lamb_q) == float or type(lamb_q) == np.float64, "lambda must be float"
+        assert type(factr) == float, "factr must be float"
+        assert maxls > 0, "maxls must be at least 1"
+        assert type(maxls) == int, "maxls must be int"
+        assert type(m) == int, "m must be int"
+        assert type(lb) == float, "lb must be float"
+        assert type(ub) == float, "ub must be float"
+        assert lb < ub, "lb must be less than ub"
+        assert type(maxiter) == int, "maxiter must be int"
+        assert maxiter > 0, "maxiter be at least 1"
+        
         # TODO: include code here to fit the baseline FEEMS plot as well (with the same options)
     
 
         obj = FEEMSmix_Objective(self)
         # TODO: is there a faster way to calculate this pinv?
-        obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.todense()); 
+        obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.T.todense()); 
         obj.grad(reg=False)
 
         # dict storing all the results for plotting
@@ -914,7 +1120,8 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
         results[0] = {'log-lik': -nll[-1], 
                      'emp_dist': emp_dist,
                      'fit_dist': fit_dist,
-                     'outliers_df': outliers_df}
+                     'outliers_df': outliers_df,
+                     'fdr': fdr}
 
         # X = sm.add_constant(fit_dist)
         # mod = sm.OLS(emp_dist, X)
@@ -932,41 +1139,39 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
             # fit the contour on the deme to get the log-lik surface across the landscape
             # TODO: include the options in the function definition above
             df = obj.calc_contour(destid=int(destid[-1]), search_area='all', delta=opts['delta'])
+            usew = deepcopy(obj.sp_graph.w); uses2 = deepcopy(obj.sp_graph.s2)
+            joint_df = obj.calc_joint_contour(df, top=10, lamb=lamb, lamb_q=lamb_q, usew=usew, uses2=uses2)
+            # print(obj.eems_neg_log_lik())
 
-            # TODO: show the contour on the map
+            # TODO check whether the log-lik is being updated to be the joint MLE instead of the point MLE (w & s2 seems to be updated) -> as the next edge should be built on the weights estimated from the previous edge? 
 
-            # update the resmat matrix with the fit to the destination deme based on the MLE parameters estimated above
-            # lre = [(np.where(obj.perm_idx==df['(source, dest.)'].iloc[df['log-lik'].argmax()][0])[0][0],np.where(obj.perm_idx==df['(source, dest.)'].iloc[df['log-lik'].argmax()][1])[0][0])] 
-            # source = 'sampled' if lre[0][0]<self.sp_graph.n_observed_nodes else 'unsampled'
-            opts['edge'] = [df['(source, dest.)'].iloc[df['log-lik'].argmax()]]; opts['mode'] = 'update'
-            nll.append(obj.eems_neg_log_lik(c=df['admix. prop.'].iloc[np.argmax(df['log-lik'])], opts=opts))
-            print('Log-likelihood after fitting deme {:d}: {:.1f}\n'.format(destid[-1], -nll[-1]))
+            nll.append(-np.nanmax(joint_df['log-lik']))
+            print('\nLog-likelihood after fitting deme {:d}: {:.1f}'.format(destid[-1], -nll[-1]))
+            
+            opts['edge'] = [joint_df['(source, dest.)'].iloc[joint_df['log-lik'].argmax()]]; opts['mode'] = 'update'
+            obj.eems_neg_log_lik(c=joint_df['admix. prop.'].iloc[np.argmax(joint_df['log-lik'])], opts=opts)
+            # assert nll[-1] == obj.eems_neg_log_lik(c=joint_df['admix. prop.'].iloc[np.argmax(joint_df['log-lik'])], opts=opts), "difference in internal log-lik values (rerun the function)"
+            # print('\nLog-likelihood after fitting deme {:d}: {:.1f}'.format(destid[-1], -nll[ -1]))
 
             if chi2.sf(2*(nll[-2]-nll[-1]), df=1) > pval: 
-                print("Previous edge did not significantly increase the log-likelihood of the fit at a p-value of {:g}".format(pval))
+                print("Previous edge did not significantly increase the log-likelihood of the fit at a p-value of {:g}\n".format(pval))
                 keepgoing=False
                 break
+            else:
+                print("Previous edge to deme {:d} significantly increased the log-likelihood of the fit.\n".format(destid[-1]))
 
             res_dist = np.array(cov_to_dist(-0.5*opts['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
 
-            # X = sm.add_constant(res_dist)
-            # mod = sm.OLS(emp_dist, X)
-            # res = mod.fit()
-            # muhat, betahat = res.params
-            # plt.plot(res_dist, emp_dist, 'o', color='grey', alpha=0.1, markersize=5)
-            # plt.axline((np.min(res_dist), muhat+np.min(res_dist)), slope=betahat, color='orange', ls='--', lw=3) 
-            # plt.grid(); plt.box(False); plt.xlabel('fit distance (after modeling deme(s) {:})'.format(destid)); plt.ylabel('empirical distance')
-            # # plt.plot(res_dist.T[mvals<-3], emp_dist[mvals<-3], 'k+', alpha=0.8, markersize=8)
-            # plt.text(np.mean(res_dist), np.mean(emp_dist)*0.2, "R²={:.3f}".format(np.around(res.rsquared_adj,3)), size='x-large'); plt.show()
-            
             # function to obtain outlier indices given two pairwise distances 
             outliers_df = obj.extract_outliers(fdr=fdr, res_dist=res_dist, verbose=False)
 
             results[cnt] = {'deme': destid[-1], 
                            'contour_df': df,
+                           'joint_contour_df': joint_df, 
                            'log-lik': -nll[-1],
                            'fit_dist': res_dist,
-                           'outliers_df': outliers_df}
+                           'outliers_df': outliers_df, 
+                           'pval': chi2.sf(2*(nll[-2]-nll[-1]), df=1)}
 
             if outliers_df is None:
                 keepgoing = False
@@ -979,6 +1184,8 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
                 destid.append(maxidx[0])
 
             cnt += 1
+
+        print("Exiting sequential fitting algorithm after adding {:d} edge(s).".format(cnt-1))
 
         return results          
     
@@ -999,7 +1206,7 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
         maxiter=15000,
         verbose=True,
         option='default',
-        long_range_edges=[(0,0)]
+        long_range_edges=[(0,1)]
     ):
         """Estimates the edge weights of the full model holding the residual
         variance fixed using a quasi-newton algorithm, specifically L-BFGS.
@@ -1111,12 +1318,11 @@ class FEEMSmix_SpatialGraph(SpatialGraph):
             if obj.sp_graph.optimize_q is not None:
                 obj.lamb_q = lamb_q
                 obj.alpha_q = alpha_q
-            # TODO: is there a faster way to calculate this pinv?
-            obj.inv(); obj.Lpinv = np.linalg.pinv(self.L.todense()); 
+            # TODO: is there a faster way to calculate this pinv? ALSO does this need to be calculated here?
+            obj.inv(); obj.Lpinv = np.linalg.pinv(self.L.T.todense()); 
             obj.grad(reg=False)
             res = coordinate_descent(
                 obj=obj,
-                # edge=self.edge,
                 factr=factr,
                 m=m,
                 maxls=maxls,

@@ -11,6 +11,8 @@ from allel import pca
 from shapely.affinity import translate
 from shapely.geometry import MultiPoint, Point, Polygon, shape
 
+import matplotlib.pyplot as plt
+
 
 def load_tiles(s):
     tiles = fiona.collection(s)
@@ -144,22 +146,24 @@ def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
     Apply the Benjamini-Hochberg procedure to a list of p-values to determine significance
     and the largest k such that p_(k) <= k/m * FDR.
     Args:
-    p_values (list or array): Array of p-values from multiple hypothesis tests.
-    fdr (float): False discovery rate threshold.
+        p_values (list or array): Array of p-values from multiple hypothesis tests.
+        fdr (float): False discovery rate threshold.
     Returns:
     tuple:
         array: Boolean array where True indicates the hypotheses that are accepted.
         int: The largest k for which p_(k) <= k/m * FDR.
     """
 
-    logratio=np.log(emp_dist/fit_dist)
-    mean_logratio=np.mean(logratio)
-    var_logratio=np.var(logratio,ddof=1)
-    logratio_norm=(logratio-mean_logratio)/np.sqrt(var_logratio)
-    p_value_neg=sp.stats.norm.cdf(logratio_norm)
+    logratio = np.log(emp_dist/fit_dist)
+    # logratio = emp_dist/fit_dist - 1
+    mean_logratio = np.mean(logratio)
+    var_logratio = np.var(logratio,ddof=1)
+    logratio_norm = (logratio-mean_logratio)/np.sqrt(var_logratio)
+    p_value_neg = sp.stats.norm.cdf(logratio_norm)
+    p_values = p_value_neg
+    ## if you want to look for outliers in both directions
     # p_value_pos=1-p_value_neg
     # p_values=np.minimum(p_value_pos,p_value_neg)
-    p_values = p_value_neg
 
     m = len(p_values)  # total number of hypotheses
     sorted_p_values = np.sort(p_values)
