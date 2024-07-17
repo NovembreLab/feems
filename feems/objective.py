@@ -6,7 +6,7 @@ import itertools as it
 import networkx as nx
 import numpy as np
 import pandas as pd
-from scipy.linalg import det
+from scipy.linalg import det, pinvh
 from scipy.optimize import fmin_l_bfgs_b, minimize
 import scipy.sparse as sp
 from scipy.stats import wishart, norm, chi2
@@ -35,8 +35,9 @@ class Objective(object):
         self.C = np.vstack((-np.ones(self.sp_graph.n_observed_nodes-1), np.eye(self.sp_graph.n_observed_nodes-1))).T
         
         # genetic distance matrix
-        D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
-        self.CDCt = self.C @ D @ self.C.T
+        self.sp_graph.D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
+
+        self.CDCt = self.C @ self.sp_graph.D @ self.C.T
 
     def _rank_one_solver(self, B):
         """Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank
@@ -163,7 +164,7 @@ class Objective(object):
         self._comp_inv_lap()
 
         if not hasattr(self, 'Lpinv'):
-            self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
+            self.Lpinv = pinvh(self.sp_graph.L.todense())
 
         sid = np.where(self.sp_graph.perm_idx == self.sp_graph.edge[0][0])[0][0]
         did = np.where(self.sp_graph.perm_idx == self.sp_graph.edge[0][1])[0][0]
@@ -200,14 +201,13 @@ class Objective(object):
             rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
             rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
             ## smaller coefficients inside the exp make the log-lik more peaked around the maximum value
-            qprox = np.dot(1/self.sp_graph.q, 1/R1[0,:]*np.exp(-np.abs(rsm-R1[0,:])/rsd)/np.sum(1/R1[0,:]*np.exp(-np.abs(rsm-R1[0,:])/rsd)))
+            qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
 
             ## id
             for i in set(range(self.sp_graph.n_observed_nodes))-set([sid,did]+neighs):
                 Ri1 = -2*self.Lpinv[i,sid] + self.Lpinv[i,i] + self.Lpinv[sid,sid]
                 resmat[i,did] = (1-self.sp_graph.c)*(Rmat[i,did]) + self.sp_graph.c*Ri1 + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[did] + self.sp_graph.c*qprox
                 resmat[did,i] = resmat[i,did]
-
         
         # convert distance matrix to covariance matrix (using code from rwc package in Hanks & Hooten 2013)
         rwsm = np.mean(resmat, 0).reshape(-1,1) @ np.ones(resmat.shape[0]).reshape(1,-1)
@@ -332,7 +332,7 @@ class Objective(object):
         
         self.sp_graph.comp_graph_laplacian(basew); self.sp_graph.comp_precision(bases2)
         self.inv(); self.grad(reg=False)
-        self.Lpinv = np.linalg.pinv(self.sp_graph.L.todense())
+        self.Lpinv = pinvh(self.sp_graph.L.todense())
 
     def loss(self):
         """Evaluate the loss function given the current params"""
@@ -376,7 +376,6 @@ class Objective(object):
             opts['lre'] = [(0,1)]
             
         if c is not None:
-            # TODO is it better to make this a True/False flag instead?
             if opts['mode'] != 'update':
                 dd = self._compute_delta_matrix(c, opts)
                 # print(np.where(np.isnan(dd)))
@@ -399,7 +398,7 @@ class Objective(object):
             self.inv(); self.grad(reg=False)
         
         if not hasattr(self, 'Lpinv'):
-            self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
+            self.Lpinv = pinvh(self.sp_graph.L.todense())
 
         # print(self.sp_graph.w[:10])
 
@@ -456,7 +455,7 @@ class Objective(object):
             rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
             # qprox = np.dot(1/self.sp_graph.q[proxs], 1/R1[0,proxs]*np.exp(-0.5*np.abs(rsm-R1[0,proxs])/rsd)/np.sum(1/R1[0,proxs]*np.exp(-0.5*np.abs(rsm-R1[0,proxs])/rsd)))
             ## smaller coefficients inside the exp make the log-lik more peaked around the maximum value
-            qprox = np.dot(1/self.sp_graph.q, 1/R1[0,:]*np.exp(-np.abs(rsm-R1[0,:])/rsd)/np.sum(1/R1[0,:]*np.exp(-np.abs(rsm-R1[0,:])/rsd)))
+            qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
 
             ## id
             for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
@@ -493,13 +492,11 @@ class Objective(object):
             #     resmat[i,opts['lre'][0][1]] = (1-c)*Rmat[i,opts['lre'][0][1]] + c*R1[0,i] + 0.5*(c**2-c)*R1[0,opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*q1
             #     resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
 
-        # TODO: use a function to compute the negative log-likelihood given the two matrices (instead of doing it in a single function?)
-        # D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
         # # basically, smaller the coefficient in front of CRCt, the more downward biased the admix. prop. estimates 
         # # nll = -wishart.logpdf(2*self.sp_graph.n_snps*self.C @ self.sp_graph.S @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
         # nll = -wishart.logpdf(-self.sp_graph.n_snps*self.C @ D @ self.C.T, self.sp_graph.n_snps, -self.C @ resmat @ self.C.T)
 
-        return resmat
+        return np.array(resmat)
 
     def calc_joint_contour(
         self, 
@@ -581,7 +578,7 @@ class Objective(object):
                 randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.sp_graph.neighbors(e[0]))==6]
 
             if not hasattr(self, 'Lpinv'):
-                self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
+                self.Lpinv = pinvh(self.sp_graph.L.todense())
 
             # fit the baseline graph if no w or s2 is passed in 
             # baseline w and s2 to be stored in an object
@@ -622,12 +619,16 @@ class Objective(object):
     
             print('done!')
 
-            ## TODO: if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
             df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
             df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = llc2
+            # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
+            if search_area == 'radius' or search_area == 'range':
+                mles = df['(source, dest.)'].iloc[np.argmax(df['log-lik'])][0]
+                if len(list(self.sp_graph.neighbors(mles))) == 6:
+                    print("(Warning: MLE location of source found to be at the edge of the specified {:g}, consider increasing the `opts` to include a larger area.)".format(search_area))
     
             if np.sum(df['log-lik'].isna()) > 0.25*len(df):
-                print("(warning: log-likelihood could not be computed for ~{:.0f}% of demes)".format(np.sum(df['log-lik'].isna())*100/len(df)))
+                print("(Warning: log-likelihood could not be computed for ~{:.0f}% of demes. Try increasing lambda.)".format(np.sum(df['log-lik'].isna())*100/len(df)))
 
             joint_contour_df = df
         else:
@@ -760,7 +761,7 @@ class Objective(object):
             randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.sp_graph.neighbors(e[0]))==6]
 
         if not hasattr(self, 'Lpinv'):
-            self.Lpinv = np.linalg.pinv(self.sp_graph.L.T.todense())
+            self.Lpinv = pinvh(self.sp_graph.L.todense())
 
         # just want to perturb it a bit instead of updating the entire matrix
         args = {}
@@ -791,9 +792,14 @@ class Objective(object):
                 cest2[ie] = np.nan; llc2[ie] = np.nan
 
         print('done!')
-        ## TODO: if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
+        
         df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
         df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = -llc2; df['scaled log-lik'] = df['log-lik']-np.nanmax(df['log-lik'])
+        # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
+        if search_area == 'radius' or search_area == 'range':
+                mles = df['(source, dest.)'].iloc[np.argmax(df['log-lik'])][0]
+                if len(list(self.sp_graph.neighbors(mles))) == 6:
+                    print("(Warning: MLE location of source found to be at the edge of the specified {}, consider increasing the `opts` to include a larger area.)".format(search_area))
 
         if np.sum(df['log-lik'].isna()) > 0.3*len(df):
             print("(warning: log-likelihood could not be computed for ~{:.2f}% of demes)".format(np.sum(df['log-lik'].isna())*100/len(df)))

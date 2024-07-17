@@ -6,6 +6,7 @@ import allel
 from copy import deepcopy
 import networkx as nx
 import numpy as np
+from scipy.linalg import pinvh
 from scipy.optimize import fmin_l_bfgs_b, minimize
 import scipy.sparse as sp
 from scipy.stats import chi2
@@ -39,9 +40,8 @@ class SpatialGraph(nx.Graph):
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
 
-        #TODO add progress messages as the graph is being initialized
-
         # inherits from networkx Graph object -- changed this to new signature for python3
+        print("initializing graph...")
         super().__init__()
         self._init_graph(node_pos, edges)  # init graph
 
@@ -53,6 +53,7 @@ class SpatialGraph(nx.Graph):
 
         self.optimize_q = None
 
+        print("computing graph attributes...")
         # signed incidence_matrix
         self.Delta_q = nx.incidence_matrix(self, oriented=True).T.tocsc()
 
@@ -66,6 +67,7 @@ class SpatialGraph(nx.Graph):
         # vectorization operator on the edges
         self.diag_oper = self._create_vect_matrix()
 
+        print("assigning samples to nodes", end="...")
         self._assign_samples_to_nodes(sample_pos, node_pos)  # assn samples
         self._permute_nodes()  # permute nodes
         n_samples_per_node = query_node_attributes(self, "n_samples")
@@ -98,6 +100,8 @@ class SpatialGraph(nx.Graph):
 
         # creating an internal index for easier access
         self.perm_idx = query_node_attributes(self, "permuted_idx") 
+
+        print("done.")
 
     def _init_graph(self, node_pos, edges):
         """Initialize the graph and related graph objects
@@ -304,7 +308,7 @@ class SpatialGraph(nx.Graph):
             s = sample_idx[node_id]
 
             # compute mean at each node
-            allele_counts = np.mean(self.genotypes[s, :], axis=0) / 2 # TODO -> needs to be divided by two here (since we have diploid genotypes)?
+            allele_counts = np.mean(self.genotypes[s, :], axis=0) / 2 
             self.frequencies[i, :] = allele_counts
 
     def comp_precision(self, s2):
@@ -355,7 +359,7 @@ class SpatialGraph(nx.Graph):
 
     def sequential_fit(
         self, 
-        fdr=0.25, 
+        fdr=0.3, 
         pval=0.05,
         stop=5,
         top=10,
@@ -378,7 +382,7 @@ class SpatialGraph(nx.Graph):
             w_init (:obj:`numpy.ndarray`): initial value for the edge weights
             s2_init (:obj:`int`): initial value for s2
             alpha (:obj:`float`): penalty strength on log weights
-            optimize_q (:obj:'str'): indicator whether optimizing residual variances (one of 'n-dim', '1-dim' or None)
+            optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
             lamb_q (:obj:`float`): penalty strength on the residual variances
             alpha_q (:obj:`float`): penalty strength on log residual variances
             factr (:obj:`float`): tolerance for convergence
@@ -409,12 +413,14 @@ class SpatialGraph(nx.Graph):
         assert type(maxiter) == int, "maxiter must be int"
         assert maxiter > 0, "maxiter be at least 1"
         
-        # TODO: include code here to fit the baseline FEEMS plot as well (with the same options)
-    
+        # fit baseline graph if all weights are equal to 1
+        if np.all(self.w == 1):
+            self.fit(lamb = lamb, lamb_q = lamb_q, optimize_q = optimize_q) 
 
         obj = Objective(self)
-        # TODO: is there a faster way to calculate this pinv?
-        obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.T.todense()); 
+        obj.inv()
+        if not hasattr(obj, 'Lpinv'):
+            obj.Lpinv = pinvh(obj.sp_graph.L.todense()) 
         obj.grad(reg=False)
 
         # dict storing all the results for plotting
@@ -467,8 +473,6 @@ class SpatialGraph(nx.Graph):
             usew = deepcopy(obj.sp_graph.w); uses2 = deepcopy(obj.sp_graph.s2)
             joint_df = obj.calc_joint_contour(df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
             # print(obj.eems_neg_log_lik())
-
-            # TODO check whether the log-lik is being updated to be the joint MLE instead of the point MLE (w & s2 seems to be updated) -> as the next edge should be built on the weights estimated from the previous edge? 
 
             nll.append(-np.nanmax(joint_df['log-lik']))
             print('\nLog-likelihood after fitting deme {:d}: {:.1f}'.format(destid[-1], -nll[-1]))
@@ -639,8 +643,8 @@ class SpatialGraph(nx.Graph):
             if obj.sp_graph.optimize_q is not None:
                 obj.lamb_q = lamb_q
                 obj.alpha_q = alpha_q
-            # TODO: is there a faster way to calculate this pinv? ALSO does this need to be calculated here?
-            obj.inv(); obj.Lpinv = np.linalg.pinv(self.L.T.todense()); 
+                
+            obj.inv(); obj.Lpinv = pinvh(self.L.todense()); 
             obj.grad(reg=False)
             res = coordinate_descent(
                 obj=obj,
@@ -674,7 +678,8 @@ def coordinate_descent(
     factr=1e7, 
     m=10, 
     maxls=50, 
-    maxiter=100, 
+    maxiter=100,
+    atol=1e-3,
     verbose=False
 ):
     """
@@ -697,17 +702,15 @@ def coordinate_descent(
         # resc = minimize(obj.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':obj.sp_graph.edge,'mode':'sampled'})
         # print(resc.x, obj.sp_graph.c)
         if resc.status != 0:
-            # TODO print a more explanatory message here
-            print('Warning: admix. prop. optimization failed (consider increasing factr)')
+            print('Warning: admix. prop. optimization failed (increase atol or factr slightly)')
             return None
-        if np.allclose(resc.x, obj.sp_graph.c, atol=1e-3):
+        if np.allclose(resc.x, obj.sp_graph.c, atol=atol):
             optimc = False
 
         obj.sp_graph.c = deepcopy(resc.x)
         # print(resc.x)
         # obj.sp_graph.c = deepcopy(10**resc.x/(1+10**resc.x))
 
-        ## TODO need an option here for 1-dim (currently only have n-dim and None options)
         if obj.sp_graph.optimize_q is not None:
             x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
         else:

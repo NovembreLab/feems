@@ -2,16 +2,18 @@ from __future__ import absolute_import, division, print_function
 
 import cartopy.feature as cfeature
 import matplotlib.colors as clr
+import matplotlib.patches as patches
+from matplotlib import ticker
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-from matplotlib import ticker
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pyproj import Proj
-import matplotlib.patches as patches
+import statsmodels.api as sm
 
 from .spatial_graph import query_node_attributes
 from .objective import Objective
+from .utils import benjamini_hochberg
 
 class Viz(object):
     def __init__(
@@ -469,6 +471,46 @@ class Viz(object):
         self.c_axins.set_title(r"scaled $\ell$", fontsize = self.cbar_font_size)
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
         self.c_cbar.set_ticks([levels,0])
+
+def plot_seq_results(seq_results, dpi=200, figsize=(5,3)):
+    # TODO include option to savefig in a path?
+    fig, axs = plt.subplots(1, len(seq_results), dpi=dpi, figsize=figsize, sharey=True, constrained_layout=True)
+    # plt.ylabel('genetic distance'); plt.xlabel('fitted distance')
+    X = sm.add_constant(seq_results[0]['fit_dist'])
+    mod = sm.OLS(seq_results[0]['emp_dist'], X)
+    res = mod.fit()
+    muhat, betahat = res.params
+    axs[0].scatter(seq_results[0]['fit_dist'], seq_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
+    bh = benjamini_hochberg(seq_results[0]['emp_dist'], seq_results[0]['fit_dist'], fdr=seq_results[0]['fdr'])
+    axs[0].scatter(seq_results[0]['fit_dist'][bh], seq_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
+    x_ = np.linspace(np.min(seq_results[0]['fit_dist']), np.max(seq_results[0]['fit_dist']), 20);
+    axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1.5);
+    axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
+    axs[0].set_title('Baseline')
+    fig.supxlabel('fitted distance'); fig.supylabel('genetic distance');
+    for i in range(1, len(seq_results)):
+        X = sm.add_constant(seq_results[i]['fit_dist'])
+        mod = sm.OLS(seq_results[0]['emp_dist'], X)
+        res = mod.fit()
+        muhat, betahat = res.params
+        axs[i].scatter(seq_results[i]['fit_dist'], seq_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
+        axs[i].scatter(seq_results[i]['fit_dist'][bh], seq_results[0]['emp_dist'][bh], marker='.', color='r', s=20, alpha=0.8)
+        axs[i].scatter(seq_results[i-1]['fit_dist'][bh], seq_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
+        for il in range(np.sum(bh)):
+            axs[i].annotate(
+                '',  # No text
+                xy=(seq_results[i-1]['fit_dist'][bh][il], seq_results[0]['emp_dist'][bh][il]),  # Arrow end (head)
+                xytext=(seq_results[i]['fit_dist'][bh][il], seq_results[0]['emp_dist'][bh][il]),  # Arrow start (tail)
+                arrowprops=dict(
+                    arrowstyle="<-",  # Arrow style
+                    color='r',  # Color of the arrow
+                    linewidth=1  # Width of the arrow line
+                )
+            )
+        x_ = np.linspace(np.min(seq_results[i]['fit_dist']), np.max(seq_results[i]['fit_dist']), 20); 
+        axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1.5); 
+        axs[i].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
+        axs[i].set_title('On fitting deme {:d}'.format(seq_results[i]['deme']))
 
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""
