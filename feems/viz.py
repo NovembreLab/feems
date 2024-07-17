@@ -11,7 +11,7 @@ from pyproj import Proj
 import matplotlib.patches as patches
 
 from .spatial_graph import query_node_attributes
-from .joint_ver import FEEMSmix_Objective
+from .objective import Objective
 
 class Viz(object):
     def __init__(
@@ -72,7 +72,7 @@ class Viz(object):
         self.seed = seed
         np.random.seed = self.seed
         self.sp_graph.option = 'default'
-        self.obj = FEEMSmix_Objective(sp_graph); self.obj.inv(); self.obj.grad(reg=False)
+        self.obj = Objective(sp_graph); self.obj.inv(); self.obj.grad(reg=False)
 
         # ------------------------- Attributes -------------------------
         self.coastline_m = coastline_m
@@ -310,7 +310,8 @@ class Viz(object):
         self.edge_cbar.locator = self.edge_tick_locator
         self.edge_cbar.update_ticks()
         self.edge_cbar.ax.tick_params(which="minor", length=0)
-        self.edge_cbar.ax.set_title(r"$w/\bar{w}$", loc="center")
+        # TODO make this nicefrac instead
+        self.edge_cbar.ax.set_title(r"$w/\widebar{w}$", loc="center")
         self.edge_cbar.ax.set_title(
             self.edge_cbar.ax.get_title(), fontsize=self.cbar_font_size
         )

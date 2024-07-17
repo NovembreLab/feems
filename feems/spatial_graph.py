@@ -2,14 +2,18 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
+import allel
+from copy import deepcopy
 import networkx as nx
 import numpy as np
-import scipy.sparse as sp
-import sksparse.cholmod as cholmod
 from scipy.optimize import fmin_l_bfgs_b, minimize
+import scipy.sparse as sp
+from scipy.stats import chi2
+import sksparse.cholmod as cholmod
+import pandas as pd
 
-from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
-
+from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2, comp_mats
+from .utils import cov_to_dist
 
 class SpatialGraph(nx.Graph):
     def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True):
@@ -91,6 +95,9 @@ class SpatialGraph(nx.Graph):
 
         # estimate sample covariance matrix
         self.S = self.frequencies @ self.frequencies.T / self.n_snps
+
+        # creating an internal index for easier access
+        self.perm_idx = query_node_attributes(self, "permuted_idx") 
 
     def _init_graph(self, node_pos, edges):
         """Initialize the graph and related graph objects
@@ -302,11 +309,22 @@ class SpatialGraph(nx.Graph):
 
     def comp_precision(self, s2):
         """Computes the residual precision matrix"""
+        o = self.n_observed_nodes
         self.s2 = s2
-        self.q = self.n_samples_per_obs_node_permuted / self.s2 ## NOTE: variable q is inverse of q from FEEMS & proportional to q in EEMS manuscript
+        if 'array' in str(type(s2)) and len(s2) > 1:
+            self.q = self.n_samples_per_obs_node_permuted/self.s2[:o]
+        elif 'array' in str(type(s2)) and len(s2) == 1:
+            self.s2 = s2[0]
+            self.q = self.n_samples_per_obs_node_permuted / self.s2
+        else:
+            self.q = self.n_samples_per_obs_node_permuted / self.s2
         self.q_diag = sp.diags(self.q).tocsc()
         self.q_inv_diag = sp.diags(1.0 / self.q).tocsc()
         self.q_inv_grad = -1.0 / self.n_samples_per_obs_node_permuted
+        if 'array' in str(type(s2)) and len(s2) > 1:
+            self.q_inv_grad = -sp.diags(1./self.n_samples_per_obs_node_permuted).tocsc()    
+        else:
+            self.q_inv_grad = -1./self.n_samples_per_obs_node_permuted   
 
     # ------------------------- Optimizers -------------------------
 
@@ -315,13 +333,13 @@ class SpatialGraph(nx.Graph):
         under the model that all the edge weights have the same value
         """
         obj = Objective(self)
-        res = minimize(neg_log_lik_w0_s2, [-1.0, 1.0], method="Powell", args=(obj))
+        res = minimize(neg_log_lik_w0_s2, [0.0, 0.0], method="L-BFGS-B", args=(obj))
         assert res.success is True, "did not converge"
         w0_hat = np.exp(res.x[0])
         s2_hat = np.exp(res.x[1])
-        self.w0 = w0_hat * np.ones(self.w.shape[0])
-        self.s2 = s2_hat
         self.s2_hat = s2_hat
+        self.w0 = w0_hat * np.ones(self.w.shape[0])
+        self.s2 = s2_hat * np.ones(len(self))
         self.comp_precision(s2=s2_hat)
 
         # print update
@@ -335,13 +353,176 @@ class SpatialGraph(nx.Graph):
                 ).format(res.nfev, self.train_loss)
             )
 
+    def sequential_fit(
+        self, 
+        fdr=0.25, 
+        pval=0.05,
+        stop=5,
+        top=10,
+        maxls=50,
+        m=10,
+        factr=1e7,
+        lb=-1e10,
+        ub=1e10,
+        maxiter=15000,
+        lamb=None,
+        lamb_q=None,
+        optimize_q='n-dim',
+        search_area='all',
+        opts=None
+    ):
+        """
+        Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (alternate method)
+        Args:
+            lamb (:obj:`float`): penalty strength on weights
+            w_init (:obj:`numpy.ndarray`): initial value for the edge weights
+            s2_init (:obj:`int`): initial value for s2
+            alpha (:obj:`float`): penalty strength on log weights
+            optimize_q (:obj:'str'): indicator whether optimizing residual variances (one of 'n-dim', '1-dim' or None)
+            lamb_q (:obj:`float`): penalty strength on the residual variances
+            alpha_q (:obj:`float`): penalty strength on log residual variances
+            factr (:obj:`float`): tolerance for convergence
+            maxls (:obj:`int`): maximum number of line search steps
+            m (:obj:`int`): the maximum number of variable metric corrections
+            lb (:obj:`int`): lower bound of log weights
+            ub (:obj:`int`): upper bound of log weights
+            maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
+            verbose (:obj:`Bool`): boolean to print summary of results
+
+            fdr (:obj:`float`): false-discovery rate of outlier edges 
+            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
+            stop (:obj:`int`): number of admixture edges to add sequentially 
+        """
+
+        # check inputs
+        assert lamb >= 0.0, "lambda must be non-negative"
+        assert type(lamb) == float or type(lamb) == np.float64, "lambda must be float"
+        assert lamb_q >= 0.0, "lambda must be non-negative"
+        assert type(lamb_q) == float or type(lamb_q) == np.float64, "lambda must be float"
+        assert type(factr) == float, "factr must be float"
+        assert maxls > 0, "maxls must be at least 1"
+        assert type(maxls) == int, "maxls must be int"
+        assert type(m) == int, "m must be int"
+        assert type(lb) == float, "lb must be float"
+        assert type(ub) == float, "ub must be float"
+        assert lb < ub, "lb must be less than ub"
+        assert type(maxiter) == int, "maxiter must be int"
+        assert maxiter > 0, "maxiter be at least 1"
+        
+        # TODO: include code here to fit the baseline FEEMS plot as well (with the same options)
+    
+
+        obj = Objective(self)
+        # TODO: is there a faster way to calculate this pinv?
+        obj.inv(); obj.Lpinv = np.linalg.pinv(obj.sp_graph.L.T.todense()); 
+        obj.grad(reg=False)
+
+        # dict storing all the results for plotting
+        results = {}
+
+        # store the deme id of each consecutive maximum outlier
+        destid = []; nll = []
+
+        # passing in dummy variables just to initialize the procedure
+        args = {'edge':[(0,self.perm_idx[0])], 'mode':'update'}
+        nll.append(obj.eems_neg_log_lik(0 , args))
+        print('Log-likelihood of initial fit: {:.1f}\n'.format(-nll[-1]))
+
+        # get the first round of outliers from the baseline fit
+        outliers_df = obj.extract_outliers(fdr = fdr)
+
+        if outliers_df is None:
+            return None
+            
+        # choice to pick the deme with the largest number of implicated outliers
+        concat = pd.concat([outliers_df['dest.']]).value_counts()
+        print(concat.iloc[:5])
+
+        # resolving ties if any...
+        maxidx = outliers_df['dest.'].value_counts()[outliers_df['dest.'].value_counts() == outliers_df['dest.'].value_counts().max()].index.tolist()
+        if len(maxidx) > 1:        
+            print("Multiple putative outlier demes ({:}) found, but only adding deme {:d}".format(maxidx, maxidx[0]))
+        destid.append(maxidx[0])
+
+        fit_cov, _, emp_cov = comp_mats(obj)
+        fit_dist = cov_to_dist(fit_cov)[np.tril_indices(self.n_observed_nodes, k=-1)]
+        emp_dist = cov_to_dist(emp_cov)[np.tril_indices(self.n_observed_nodes, k=-1)]
+
+        results[0] = {'log-lik': -nll[-1], 
+                     'emp_dist': emp_dist,
+                     'fit_dist': fit_dist,
+                     'outliers_df': outliers_df,
+                     'fdr': fdr}
+
+        cnt = 1; keepgoing = True
+        while keepgoing and cnt <= stop:
+            print('\nFitting long range edge to deme {:d}...'.format(destid[-1]))
+            # fit the contour on the deme to get the log-lik surface across the landscape
+            if search_area=='radius':
+                # picking the source deme with the lowest p-value
+                df = obj.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, delta=args['delta'])
+            else:
+                df = obj.calc_contour(destid=int(destid[-1]), search_area=search_area, delta=args['delta'])
+                
+            usew = deepcopy(obj.sp_graph.w); uses2 = deepcopy(obj.sp_graph.s2)
+            joint_df = obj.calc_joint_contour(df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
+            # print(obj.eems_neg_log_lik())
+
+            # TODO check whether the log-lik is being updated to be the joint MLE instead of the point MLE (w & s2 seems to be updated) -> as the next edge should be built on the weights estimated from the previous edge? 
+
+            nll.append(-np.nanmax(joint_df['log-lik']))
+            print('\nLog-likelihood after fitting deme {:d}: {:.1f}'.format(destid[-1], -nll[-1]))
+            
+            args['edge'] = [joint_df['(source, dest.)'].iloc[joint_df['log-lik'].argmax()]]; args['mode'] = 'update'
+            obj.eems_neg_log_lik(c=joint_df['admix. prop.'].iloc[np.argmax(joint_df['log-lik'])], opts=args)
+            # assert nll[-1] == obj.eems_neg_log_lik(c=joint_df['admix. prop.'].iloc[np.argmax(joint_df['log-lik'])], opts=opts), "difference in internal log-lik values (rerun the function)"
+            # print('\nLog-likelihood after fitting deme {:d}: {:.1f}'.format(destid[-1], -nll[ -1]))
+
+            if chi2.sf(2*(nll[-2]-nll[-1]), df=1) > pval: 
+                print("Previous edge did not significantly increase the log-likelihood of the fit at a p-value of {:g}\n".format(pval))
+                keepgoing=False
+                break
+            else:
+                print("Previous edge to deme {:d} significantly increased the log-likelihood of the fit.\n".format(destid[-1]))
+
+            res_dist = np.array(cov_to_dist(-0.5*args['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
+
+            # function to obtain outlier indices given two pairwise distances 
+            outliers_df = obj.extract_outliers(fdr=fdr, res_dist=res_dist, verbose=False)
+
+            results[cnt] = {'deme': destid[-1], 
+                           'contour_df': df,
+                           'joint_contour_df': joint_df, 
+                           'log-lik': -nll[-1],
+                           'fit_dist': res_dist,
+                           'outliers_df': outliers_df, 
+                           'pval': chi2.sf(2*(nll[-2]-nll[-1]), df=1)}
+
+            if outliers_df is None:
+                keepgoing = False
+            else:
+                maxidx = outliers_df['dest.'].value_counts()[outliers_df['dest.'].value_counts() == outliers_df['dest.'].value_counts().max()].index.tolist()
+                print('Deme ID and # of times it was implicated as an outlier:')
+                print(pd.concat([outliers_df['dest.']]).value_counts().iloc[:5])
+                if len(maxidx) > 1:        
+                    print("Multiple putative outlier demes ({:}) found, but only adding deme {:d}".format(maxidx, maxidx[0]))
+                destid.append(maxidx[0])
+
+            cnt += 1
+
+        print("Exiting sequential fitting algorithm after adding {:d} edge(s).".format(cnt-1))
+
+        return results          
+    
     def fit(
         self,
         lamb,
         w_init=None,
         s2_init=None,
         alpha=None,
-        beta=0.0, 
+        lamb_q=None, 
+        alpha_q=None,
+        optimize_q='n-dim',
         factr=1e7,
         maxls=50,
         m=10,
@@ -349,6 +530,8 @@ class SpatialGraph(nx.Graph):
         ub=np.Inf,
         maxiter=15000,
         verbose=True,
+        option='default',
+        long_range_edges=[(0,1)]
     ):
         """Estimates the edge weights of the full model holding the residual
         variance fixed using a quasi-newton algorithm, specifically L-BFGS.
@@ -358,7 +541,8 @@ class SpatialGraph(nx.Graph):
             w_init (:obj:`numpy.ndarray`): initial value for the edge weights
             s2_init (:obj:`int`): initial value for s2
             alpha (:obj:`float`): penalty strength on log weights
-            beta (:obj:`float`): penalty strength for long range weights
+            lamb_q (:obj:`float`): penalty strength on the residual variances
+            alpha_q (:obj:`float`): penalty strength on log residual variances
             factr (:obj:`float`): tolerance for convergence
             maxls (:obj:`int`): maximum number of line search steps
             m (:obj:`int`): the maximum number of variable metric corrections
@@ -370,7 +554,6 @@ class SpatialGraph(nx.Graph):
         # check inputs
         assert lamb >= 0.0, "lambda must be non-negative"
         assert type(lamb) == float or type(lamb) == np.float64, "lambda must be float"
-        assert beta >= 0.0, "beta must be non-negative"
         assert type(factr) == float, "factr must be float"
         assert maxls > 0, "maxls must be at least 1"
         assert type(maxls) == int, "maxls must be int"
@@ -381,61 +564,189 @@ class SpatialGraph(nx.Graph):
         assert type(maxiter) == int, "maxiter must be int"
         assert maxiter > 0, "maxiter be at least 1"
 
-        # init from null model if no init weights are provided
-        if w_init is None and s2_init is None:
-            # fit null model to estimate the residual variance and init weights
-            self.fit_null_model(verbose=verbose)            
-            w_init = self.w0
-        else:
-            # check initial edge weights
-            assert w_init.shape == self.w.shape, (
-                "weights must have shape of edges"
+        # creating a container to store these edges 
+        self.edge = long_range_edges
+
+        self.c = np.random.random(len(self.edge))
+
+        self.optimize_q = optimize_q
+        self.option = option
+
+        if self.option == 'default':
+            # init from null model if no init weights are provided
+            if w_init is None and s2_init is None:
+                # fit null model to estimate the residual variance and init weights
+                self.fit_null_model(verbose=verbose)              
+                w_init = self.w0
+            else:
+                # check initial edge weights
+                assert w_init.shape == self.w.shape, (
+                    "weights must have shape of edges"
+                )
+                assert np.all(w_init > 0.0), "weights must be non-negative"
+                self.w0 = w_init
+                self.comp_precision(s2=s2_init)
+
+            # prefix alpha if not provided
+            if alpha is None:
+                alpha = 1.0 / self.w0.mean()
+            else:
+                assert type(alpha) == float, "alpha must be float"
+                assert alpha >= 0.0, "alpha must be non-negative"
+
+            if lamb_q is None:
+                lamb_q = lamb
+            if alpha_q is None:
+                alpha_q = 1. / self.s2.mean()
+
+            # run l-bfgs
+            obj = Objective(self)
+            obj.sp_graph.optimize_q = optimize_q; obj.lamb = lamb; obj.alpha = alpha
+            x0 = np.log(w_init)
+            if obj.sp_graph.optimize_q is not None:
+                obj.lamb_q = lamb_q
+                obj.alpha_q = alpha_q
+            s2_init = self.s2 if obj.sp_graph.optimize_q=="1-dim" else self.s2*np.ones(len(self))
+            if obj.sp_graph.optimize_q is not None:
+                x0 = np.r_[np.log(w_init), np.log(s2_init)]
+            else:
+                x0 = np.log(w_init)
+
+            res = fmin_l_bfgs_b(
+                func=loss_wrapper,
+                x0=x0,
+                args=[obj],
+                factr=factr,
+                m=m,
+                maxls=maxls,
+                maxiter=maxiter,
+                approx_grad=False,
             )
-            assert np.all(w_init > 0.0), "weights must be non-negative"
-            self.w0 = w_init
-            self.comp_precision(s2=s2_init)
+        else: 
+            if alpha is None:
+                alpha = 1.0 / self.w.mean()
+            else:
+                assert type(alpha) == float, "alpha must be float"
+                assert alpha >= 0.0, "alpha must be non-negative"
 
-        # prefix alpha if not provided
-        if alpha is None:
-            alpha = 1.0 / self.w0.mean()
-        else:
-            assert type(alpha) == float, "alpha must be float"
-            assert alpha >= 0.0, "alpha must be non-negative"
+            if lamb_q is None:
+                lamb_q = lamb
+            if alpha_q is None:
+                alpha_q = 1. / self.s2.mean()
 
-        # run l-bfgs
-        obj = Objective(self)
-        obj.lamb = lamb
-        obj.alpha = alpha
-        obj.beta = beta
+            obj = Objective(self)
+            obj.sp_graph.optimize_q = optimize_q; obj.lamb = lamb; obj.alpha = alpha
+            if obj.sp_graph.optimize_q is not None:
+                obj.lamb_q = lamb_q
+                obj.alpha_q = alpha_q
+            # TODO: is there a faster way to calculate this pinv? ALSO does this need to be calculated here?
+            obj.inv(); obj.Lpinv = np.linalg.pinv(self.L.T.todense()); 
+            obj.grad(reg=False)
+            res = coordinate_descent(
+                obj=obj,
+                factr=factr,
+                m=m,
+                maxls=maxls,
+                maxiter=maxiter,
+                verbose=verbose
+            )
+
+        if obj.sp_graph.optimize_q is not None:
+            self.w = np.exp(res[0][:self.size()])
+            self.s2 = np.exp(res[0][self.size():])
+        else:    
+            self.w = np.exp(res[0])
+            
+        # print update
+        self.train_loss, _ = loss_wrapper(res[0], obj)
+        if verbose:
+            sys.stdout.write(
+                (
+                    "lambda={:.3f}, "
+                    "alpha={:.4f}, "
+                    "converged in {} iterations, "
+                    "train_loss={:.3f}\n"
+                ).format(lamb, alpha, res[2]["nit"], self.train_loss)
+            ) 
+
+def coordinate_descent(
+    obj, 
+    factr=1e7, 
+    m=10, 
+    maxls=50, 
+    maxiter=100, 
+    verbose=False
+):
+    """
+    Minimize the negative log-likelihood iteratively with an admix. prop. c value & refit the new weights based on that until tolerance is reached. 
+    """
+    
+    # obj.sp_graph.edge = edge
+    # obj.sp_graph.option = 'onlyc'
+
+    # flag to optimize admixture proportion
+    optimc = True
+    
+    for bigiter in range(maxiter):
+        if verbose:
+            print(bigiter,end='...')
         
-        x0 = np.log(w_init)
+        # first fit admix. prop. c given the weights
+        resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
+        # print(resc.x)
+        # resc = minimize(obj.neg_log_lik_c, x0=np.log10(self.sp_graph.c/(1-self.sp_graph.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':obj.sp_graph.edge,'mode':'sampled'})
+        # print(resc.x, obj.sp_graph.c)
+        if resc.status != 0:
+            # TODO print a more explanatory message here
+            print('Warning: admix. prop. optimization failed (consider increasing factr)')
+            return None
+        if np.allclose(resc.x, obj.sp_graph.c, atol=1e-3):
+            optimc = False
+
+        obj.sp_graph.c = deepcopy(resc.x)
+        # print(resc.x)
+        # obj.sp_graph.c = deepcopy(10**resc.x/(1+10**resc.x))
+
+        ## TODO need an option here for 1-dim (currently only have n-dim and None options)
+        if obj.sp_graph.optimize_q is not None:
+            x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
+        else:
+            x0 = np.log(obj.sp_graph.w)
+
+        # then fit weights & s2 keeping c constant
         res = fmin_l_bfgs_b(
             func=loss_wrapper,
             x0=x0,
+            # bounds=[(-1e10,1e10) for _ in x0], #-> setting bounds on how far the value can be perturbed (produces Singular matrix errors so leaving it blank)
             args=[obj],
             factr=factr,
             m=m,
             maxls=maxls,
             maxiter=maxiter,
             approx_grad=False,
-            bounds=[(lb, ub) for _ in range(x0.shape[0])],
         )
         if maxiter >= 100:
-            assert res[2]["warnflag"] == 0, "did not converge"
-        self.w = np.exp(res[0])
+            assert res[2]["warnflag"] == 0, "did not converge (increase maxiter or factr slightly)"
+        if obj.sp_graph.optimize_q is not None:
+            neww = np.exp(res[0][:obj.sp_graph.size()])
+            news2 = np.exp(res[0][obj.sp_graph.size():])
+            # difference in parameters for this step
+            diffw = np.abs(np.exp(x0[:obj.sp_graph.size()]) - neww)
+            diffs2 = np.abs(np.exp(x0[obj.sp_graph.size():]) - news2)
+            # print(np.sum(diffw), np.sum(diffs2))
+        else:
+            neww = np.exp(res[0])
+            news2 = obj.sp_graph.s2
+            # difference in parameters for this step
+            diffw = np.abs(np.exp(x0) - neww)
+            diffs2 = [0]
 
-        # print update
-        self.train_loss, _ = loss_wrapper(res[0], obj)
-        if verbose:
-            sys.stdout.write(
-                (
-                    "lambda={:.5f}, "
-                    "alpha={:.5f}, "
-                    "beta={:.5f}, "
-                    "converged in {} iterations, "
-                    "train_loss={:.5f}\n"
-                ).format(lamb, alpha, beta, res[2]["nit"], self.train_loss)
-            )
+        if np.allclose(diffw, np.zeros(len(diffw)), atol=1e-8) and np.allclose(diffs2, np.zeros(len(diffs2)), atol=1e-8) and not optimc:
+            if verbose:
+                print("joint estimation converged in {:d} iterations!".format(bigiter+1))
+            break
+
+    return res
 
 
 def query_node_attributes(graph, name):
