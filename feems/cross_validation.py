@@ -20,7 +20,6 @@ def run_cv(
     outer_verbose=True,
     inner_verbose=False,
     alpha_fact=1.0, 
-    mode='frequencies'
 ):
     """Run cross-validation."""
     # s2 initialization
