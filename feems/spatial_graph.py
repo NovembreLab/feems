@@ -2,8 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import sys
 
-import allel
-from copy import deepcopy
+from copy import copy, deepcopy
 import itertools as it
 import networkx as nx
 import numpy as np
@@ -214,6 +213,16 @@ class SpatialGraph(nx.Graph):
         vect_idx_c = col + len(self) * row
         self.P = self.diag_oper[:, vect_idx_r] + self.diag_oper[:, vect_idx_c]
 
+    def _update_graph(self, basew, bases2):
+        self.option = 'default'
+        
+        self.w = basew; self.s2 = bases2
+
+        self.comp_graph_laplacian(basew); self.comp_precision(bases2)
+        # obj = Objective(self)
+        # obj.inv(); obj.grad(reg=False)
+        # obj.Lpinv = pinvh(self.L.todense())
+    
     def inv_triu(self, w, perm=True):
         """Take upper triangular vector as input and return symmetric weight
         sparse matrix
@@ -360,11 +369,12 @@ class SpatialGraph(nx.Graph):
 
     def independent_fit(
         self, 
+        outliers_df,
         lamb,
         lamb_q,
         optimize_q='n-dim',
+        fdr=0.3,
         stop=None,
-        fdr=0.3, 
         top=0.05,
         maxls=50,
         m=10,
@@ -375,10 +385,27 @@ class SpatialGraph(nx.Graph):
         search_area='all',
         opts=None
     ):
-        # fit baseline graph ONLY if weights have not previously been fit
-        if np.all(self.w == 1):
-            self.fit(lamb = lamb, lamb_q = lamb_q, optimize_q = optimize_q) 
-
+        """Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (`alternate method`).
+        Required:
+            lamb (:obj:`float`): penalty strength on weights
+            lamb_q (:obj:`float`): penalty strength on the residual variances
+            
+        Optional:
+            optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
+            alpha (:obj:`float`): penalty strength on log weights
+            lamb_q (:obj:`float`): penalty strength on the residual variances
+            alpha_q (:obj:`float`): penalty strength on log residual variances
+            factr (:obj:`float`): tolerance for convergence
+            maxls (:obj:`int`): maximum number of line search steps
+            m (:obj:`int`): the maximum number of variable metric corrections
+            lb (:obj:`int`): lower bound of log weights
+            ub (:obj:`int`): upper bound of log weights
+            maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
+            verbose (:obj:`Bool`): boolean to print summary of results
+            fdr (:obj:`float`): false-discovery rate of outlier edges 
+            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
+            stop (:obj:`int`): number of admixture edges to add sequentially 
+        """
         
         obj = Objective(self)
         obj.inv()
@@ -392,13 +419,6 @@ class SpatialGraph(nx.Graph):
         # dict storing all the results for plotting
         results = {}
         
-        # get the first round of outliers from the baseline fit
-        outliers_df = self.extract_outliers(fdr = fdr)
-
-        if outliers_df is None:
-            print('No outliers found with this FDR={:.2f}, consider raising this threshold slightly.'.format(fdr))
-            return None
-
         # passing in dummy variables just to initialize the procedure
         args = {'edge':[(0,self.perm_idx[0])], 'mode':'update'}
         nllnull = -obj.eems_neg_log_lik(0, args)
@@ -424,7 +444,7 @@ class SpatialGraph(nx.Graph):
         
         while cnt <= stop:
             print('\nFitting admixture edge to deme {:d}:'.format(dest[cnt-1]))
-            obj._update_graph(usew, uses2)
+            self._update_graph(usew, uses2)
             
             # get the log-lik surface across the landscape
             if search_area=='radius':
@@ -434,7 +454,7 @@ class SpatialGraph(nx.Graph):
                 df = self.calc_contour(destid=dest[cnt-1], search_area=search_area)
                 
             
-            joint_df = self.calc_joint_contour(df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
+            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
 
             print('\n  MLE edge found from source {:d} to destination {:d} with strength {:.2f}'.format(joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])][0], dest[cnt-1], joint_df['admix. prop.'].iloc[np.nanargmax(joint_df['log-lik'])]))
             print('\n  Log-likelihood after adding MLE edge: {:.1f} (p-val = {:.2e})\n'.format(np.nanmax(joint_df['log-lik']),chi2.sf(2*(np.nanmax(joint_df['log-lik'])-nllnull),df=1)))
@@ -448,6 +468,8 @@ class SpatialGraph(nx.Graph):
                            'contour_df': df,
                            'joint_contour_df': joint_df, 
                            'log-lik': np.nanmax(joint_df['log-lik']),
+                           'mle_w': self.w,
+                           'mle_s2': self.s2,
                            'fit_dist': res_dist,
                            'pval': chi2.sf(2*(-np.nanmax(joint_df['log-lik'])-nllnull), df=1)}
             cnt += 1
@@ -457,7 +479,8 @@ class SpatialGraph(nx.Graph):
         return results
             
     def sequential_fit(
-        self, 
+        self,
+        outliers_df, 
         lamb,
         lamb_q,
         optimize_q='n-dim',
@@ -474,8 +497,7 @@ class SpatialGraph(nx.Graph):
         search_area='all',
         opts=None
     ):
-        """
-        Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (`alternate method`).
+        """Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (`alternate method`).
         Required:
             lamb (:obj:`float`): penalty strength on weights
             lamb_q (:obj:`float`): penalty strength on the residual variances
@@ -492,7 +514,6 @@ class SpatialGraph(nx.Graph):
             ub (:obj:`int`): upper bound of log weights
             maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
             verbose (:obj:`Bool`): boolean to print summary of results
-
             fdr (:obj:`float`): false-discovery rate of outlier edges 
             pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
             stop (:obj:`int`): number of admixture edges to add sequentially 
@@ -513,10 +534,6 @@ class SpatialGraph(nx.Graph):
         assert type(maxiter) == int, "maxiter must be int"
         assert maxiter > 0, "maxiter be at least 1"
         
-        # fit baseline graph ONLY if weights have not previously been fit
-        if np.all(self.w == 1):
-            self.fit(lamb = lamb, lamb_q = lamb_q, optimize_q = optimize_q) 
-
         obj = Objective(self)
         obj.inv()
         if not hasattr(obj, 'Lpinv'):
@@ -533,12 +550,6 @@ class SpatialGraph(nx.Graph):
         args = {'edge':[(0,self.perm_idx[0])], 'mode':'update'}
         nll.append(obj.eems_neg_log_lik(0 , args))
         print('Log-likelihood of initial fit: {:.1f}\n'.format(-nll[-1]))
-
-        # get the first round of outliers from the baseline fit
-        outliers_df = self.extract_outliers(fdr = fdr)
-
-        if outliers_df is None:
-            return None
             
         # choice to pick the deme with the largest number of implicated outliers
         concat = pd.concat([outliers_df['dest.']]).value_counts()
@@ -572,7 +583,7 @@ class SpatialGraph(nx.Graph):
                 df = self.calc_contour(destid=int(destid[-1]), search_area=search_area, delta=args['delta'])
                 
             usew = deepcopy(obj.sp_graph.w); uses2 = deepcopy(obj.sp_graph.s2)
-            joint_df = self.calc_joint_contour(df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
+            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
             # print(obj.eems_neg_log_lik())
 
             nll.append(-np.nanmax(joint_df['log-lik']))
@@ -582,11 +593,11 @@ class SpatialGraph(nx.Graph):
             obj.eems_neg_log_lik(c=joint_df['admix. prop.'].iloc[np.argmax(joint_df['log-lik'])], opts=args)
 
             if chi2.sf(2*(nll[-2]-nll[-1]), df=1) > pval: 
-                print("Previous edge to deme {:d} did not significantly increase the log-likelihood of the fit at a p-value of {:g}\n".format(destid[-1],pval))
+                print("Previous edge to deme {:d} did not significantly increase the log-likelihood at a p-value of {:g}\n".format(destid[-1],pval))
                 keepgoing=False
                 break
             else:
-                print("Previous edge to deme {:d} significantly increased the log-likelihood of the fit.\n".format(destid[-1]))
+                print("Previous edge to deme {:d} significantly increased the log-likelihood.\n".format(destid[-1]))
 
             res_dist = np.array(cov_to_dist(-0.5*args['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
 
@@ -598,6 +609,8 @@ class SpatialGraph(nx.Graph):
                            'joint_contour_df': joint_df, 
                            'log-lik': -nll[-1],
                            'fit_dist': res_dist,
+                           'mle_w': self.w,
+                           'mle_s2': self.s2,
                            'outliers_df': outliers_df, 
                            'pval': chi2.sf(2*(nll[-2]-nll[-1]), df=1)}
 
@@ -804,19 +817,19 @@ class SpatialGraph(nx.Graph):
             x.append(np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1); y.append(int(k - 0.5*x[-1]*(x[-1]-1)))
 
             # Gi = self.genotypes[self.nodes[self.perm_idx[x[-1]]]['sample_idx'], :]
-            Gi = self.genotypes[self.nodes[self.perm_idx[x[-1]]]['sample_idx'], :].astype('int').T
-            Ga1 = np.zeros((Gi.shape[0], Gi.shape[1], 2), dtype=int)
-            Ga1[Gi == 1, 1] = 1
-            Ga1[Gi == 2] = 1
+            # Gi = self.genotypes[self.nodes[self.perm_idx[x[-1]]]['sample_idx'], :].astype('int').T
+            # Ga1 = np.zeros((Gi.shape[0], Gi.shape[1], 2), dtype=int)
+            # Ga1[Gi == 1, 1] = 1
+            # Ga1[Gi == 2] = 1
 
-            Gi = self.genotypes[self.nodes[self.perm_idx[y[-1]]]['sample_idx'], :].astype('int').T
-            Ga2 = np.zeros((Gi.shape[0], Gi.shape[1], 2), dtype=int)
-            Ga2[Gi == 1, 1] = 1
-            Ga2[Gi == 2] = 1
+            # Gi = self.genotypes[self.nodes[self.perm_idx[y[-1]]]['sample_idx'], :].astype('int').T
+            # Ga2 = np.zeros((Gi.shape[0], Gi.shape[1], 2), dtype=int)
+            # Ga2[Gi == 1, 1] = 1
+            # Ga2[Gi == 2] = 1
 
-            fst = allel.average_hudson_fst(allel.GenotypeArray(Ga1).count_alleles(), allel.GenotypeArray(Ga2).count_alleles(), blen=int(self.genotypes.shape[1]/10))[0]
+            # fst = allel.average_hudson_fst(allel.GenotypeArray(Ga1).count_alleles(), allel.GenotypeArray(Ga2).count_alleles(), blen=int(self.genotypes.shape[1]/10))[0]
 
-            ls.append([self.perm_idx[x[-1]], self.perm_idx[y[-1]], tuple(self.nodes[self.perm_idx[x[-1]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[y[-1]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k], fst])
+            ls.append([self.perm_idx[x[-1]], self.perm_idx[y[-1]], tuple(self.nodes[self.perm_idx[x[-1]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[y[-1]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k]])
 
         rm = []
         newls = []
@@ -844,7 +857,7 @@ class SpatialGraph(nx.Graph):
         for i in sorted(rm, reverse=True):
             del ls[i]
         
-        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.', 'Fst'])
+        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.'])
 
         if len(df)==0:
             print('No outliers found.')
@@ -862,18 +875,17 @@ class SpatialGraph(nx.Graph):
             return df.sort_values('pval', ascending=True)
 
     def calc_joint_contour(
-        self, 
-        contour_df, 
+        self,  
         lamb, 
         lamb_q,
         optimize_q='n-dim',
+        contour_df=None,
         top=0.05, 
         destid=None, search_area='all', sourceid=None, opts=None, 
         exclude_boundary=True, 
         usew=None, uses2=None
     ):
-        """
-        Function to calculate admix. prop. values in a joint manner with weights w & deme-specific variance s2 (as opposed to just admix. prop. values in `calc_contour`).
+        """Function to calculate admix. prop. values in a joint manner with weights w & deme-specific variance s2 (as opposed to just admix. prop. values in `calc_contour`).
         contour_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_contour` 
         top (:obj:`float`) : how many top entries (based on log-lik) to consider for the joint fitting? (if top >= 1, then it is the number of top entries, but if top < 1 then it is the top percent of total entries to consider)
         NOTE: if the above two flags are specified, then none of the flags below need to be specified. 
@@ -956,7 +968,7 @@ class SpatialGraph(nx.Graph):
                 # container for storing the MLE weights & s2
                 mlew = deepcopy(usew); mles2 = deepcopy(uses2)
             else:
-                obj._update_graph(usew, uses2)
+                self._update_graph(usew, uses2)
                 # container for storing the MLE weights & s2
                 mlew = deepcopy(usew); mles2 = deepcopy(uses2)            
                 baselinell = -obj.eems_neg_log_lik()
@@ -972,20 +984,20 @@ class SpatialGraph(nx.Graph):
                 print("\r\tJointly optimizing likelihood over {}/{} most likely demes in the graph".format(ie+1,len(randedge)), end="")
                     
                 # initializing at baseline values
-                obj._update_graph(usew, uses2)
+                self._update_graph(usew, uses2)
 
                 try:
                     self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=[e], option='onlyc', verbose=False)
                     cest2[ie] = self.c
                     llc2[ie] = -obj.eems_neg_log_lik(self.c, {'edge':self.edge,'mode':'compute'})
                     # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
-                    if llc2[ie] > np.max(llc2[:ie]):
+                    if llc2[ie] > np.nanmax(llc2[:ie]):
                         mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
                 except: 
                     cest2[ie] = np.nan
                     llc2[ie] = np.nan
     
-            print('done!')
+            print('...done!')
 
             df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
             df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = llc2
@@ -1019,7 +1031,7 @@ class SpatialGraph(nx.Graph):
                 usew = deepcopy(self.w); uses2 = deepcopy(self.s2)
                 mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
             else:
-                obj._update_graph(usew, uses2)
+                self._update_graph(usew, uses2)
                 mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
                 baselinell = -obj.eems_neg_log_lik()
             
@@ -1033,7 +1045,7 @@ class SpatialGraph(nx.Graph):
                 
                 # print(row['(source, dest.)'])
                 # initializing at baseline values
-                obj._update_graph(usew, uses2)
+                self._update_graph(usew, uses2)
 
                 try:
                     # TODO: verbose print message here?
@@ -1041,21 +1053,23 @@ class SpatialGraph(nx.Graph):
                     joint_contour_df.at[i, 'admix. prop.'] = self.c
                     joint_contour_df.at[i, 'log-lik'] = -obj.eems_neg_log_lik(self.c, {'edge':self.edge,'mode':'compute'})
                     # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
-                    if joint_contour_df.at[i, 'log-lik'] > np.max(joint_contour_df['log-lik'].loc[:i]):
+                    if joint_contour_df.at[i, 'log-lik'] > np.nanmax(joint_contour_df['log-lik'].loc[:i]):
                         mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
                 except:  
                     joint_contour_df.at[i, 'admix. prop.'] = np.nan
                     joint_contour_df.at[i, 'log-lik'] = np.nan
 
+            print("...done!")
         joint_contour_df['scaled log-lik'] = joint_contour_df['log-lik'] - np.nanmax(joint_contour_df['log-lik']) 
 
         # updating the graph with MLE weights so it does not need to be fit again
         # print(mlew[:10], self.w[:10])
-        obj._update_graph(mlew, mles2)
+        # print(np.corrcoef(mlew,self.w))
+        self._update_graph(mlew, mles2)
         # print(obj.eems_neg_log_lik())
 
         ## checking whether adding an extra admixture parameter improves model fit using a LRT
-        # joint_contour_df['pval'] = chi2.sf(2*(joint_contour_df['log-lik'] - baselinell), df=1)
+        joint_contour_df['pval'] = chi2.sf(2*(joint_contour_df['log-lik'] - baselinell), df=1)
         
         return joint_contour_df
 

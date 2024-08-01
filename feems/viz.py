@@ -1,15 +1,19 @@
 from __future__ import absolute_import, division, print_function
 
 import cartopy.feature as cfeature
+from copy import copy, deepcopy
 import matplotlib.colors as clr
+from matplotlib.font_manager import FontProperties
 import matplotlib.patches as patches
 from matplotlib import ticker
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from matplotlib.gridspec import GridSpec
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+from scipy.linalg import pinvh
 from pyproj import Proj
-import statsmodels.api as sm
+from statsmodels.api import add_constant, OLS
 
 from .spatial_graph import query_node_attributes
 from .objective import Objective
@@ -50,10 +54,10 @@ class Viz(object):
         cbar_height="5%",
         cbar_loc="lower left",
         cbar_bbox_to_anchor=(0.05, 0.2, 1, 1),
-        # ell_scaler=np.sqrt(3.0) / 6.0,
-        # ell_edgecolor="gray",
-        # ell_lw=0.2,
-        # ell_abs_max=0.5,
+        ell_scaler=np.sqrt(3.0) / 6.0,
+        ell_edgecolor="gray",
+        ell_lw=0.2,
+        ell_abs_max=0.5,
         target_dist_pt_size=10,
         target_dist_pt_linewidth=0.5,
         target_dist_pt_alpha=1.0,
@@ -74,7 +78,6 @@ class Viz(object):
         self.seed = seed
         np.random.seed = self.seed
         self.sp_graph.option = 'default'
-        self.obj = Objective(sp_graph); self.obj.inv(); self.obj.grad(reg=False)
 
         # ------------------------- Attributes -------------------------
         self.coastline_m = coastline_m
@@ -167,25 +170,31 @@ class Viz(object):
             self.coord = project_coords(self.coord, self.proj)
             self.grid = project_coords(self.grid, self.proj)
 
-    def draw_map(self, latlong=True):
+    def draw_map(
+        self, 
+        latlong=True
+    ):
         """Draws the underlying map projection
-        latlong: 
-            - True to draw gridlines picked from underlying graph (default) or 
-            - tuple of ([lats], [longs]) coordinates to draw custom gridlines or 
-            - False for no gridlines"""
+
+        Optional:
+            latlong (:obj:): 
+                - True to draw gridlines picked from underlying graph (default) OR
+                - False for no gridlines OR
+                - tuple of ([lats], [longs]) coordinates to draw custom gridlines
+        """
         
-        with np.errstate(invalid='ignore'):
-            self.ax.add_feature(cfeature.LAND, facecolor="#f7f7f7", zorder=0)
+        np.seterr(invalid='ignore')
+        self.ax.add_feature(cfeature.LAND, facecolor="#f7f7f7", zorder=0)
         # self.ax.add_feature(cfeature.LAND, facecolor="#ffffff", zorder=0)
-            self.ax.coastlines(
-                self.coastline_m,
-                color="#636363",
-                linewidth=self.coastline_linewidth,
-                zorder=0,
-            )
+        self.ax.coastlines(
+            self.coastline_m,
+            color="#636363",
+            linewidth=self.coastline_linewidth,
+            zorder=0,
+        )
 
         if latlong is not False:
-            if latlong==True:
+            if latlong:
                 gl = self.ax.gridlines(draw_labels=True, linewidth=0.5, color='grey', alpha=0.5, zorder=0)
                 gl.top_labels=False; gl.right_labels=False
                 gl.xlabel_style = {'rotation': 45}; gl.ylabel_style = {'rotation': 315}
@@ -312,10 +321,9 @@ class Viz(object):
         self.edge_cbar.locator = self.edge_tick_locator
         self.edge_cbar.update_ticks()
         self.edge_cbar.ax.tick_params(which="minor", length=0)
-        # TODO make this nicefrac instead
-        self.edge_cbar.ax.set_title(r"$w/\widebar{w}$", loc="center")
+        self.edge_cbar.ax.set_title(r"${}^w/{}_\widebar{w}$", loc="center")
         self.edge_cbar.ax.set_title(
-            self.edge_cbar.ax.get_title(), fontsize=self.cbar_font_size
+            self.edge_cbar.ax.get_title(), fontsize=self.cbar_font_size*1.5
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
@@ -355,89 +363,175 @@ class Viz(object):
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
-    def draw_arrow(self, lre, c, lw=1, hw=4, hl=6, tw=1.25, fs=10, alpha=0.8):
-        # self.ax.arrow(self.grid[lre[0][0],0],self.grid[lre[0][0],1],dx=self.grid[lre[0][1],0]-self.grid[lre[0][0],0],dy=self.grid[lre[0][1],1]-self.grid[lre[0][0],1],ec=self.c_cmap(c), fc='k', length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
-        ## the code below is for cases when we have unsampled demes so the node IDs are permuted
-        # if mode=='sampled':
-        #     permuted_idx = query_node_attributes(self.sp_graph, "permuted_idx")
-        #     obs_perm_ids = permuted_idx[: self.sp_graph.n_observed_nodes]
-        #     obs_grid = self.grid[obs_perm_ids, :]
-        #     self.ax.arrow(obs_grid[lre[0][0],0],obs_grid[lre[0][0],1],dx=obs_grid[lre[0][1],0]-obs_grid[lre[0][0],0],dy=obs_grid[lre[0][1],1]-obs_grid[lre[0][0],1],ec=self.c_cmap(c), fc=self.c_cmap(c), length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl,alpha=alpha)
-        #     self.ax.annotate(np.round(c,2),(obs_grid[lre[0][1],0],obs_grid[lre[0][1],1]),fontsize=fs)
-        # else:
-        #     self.ax.arrow(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],dx=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],0],dy=self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]-self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][0]],1],ec=self.c_cmap(c), fc=self.c_cmap(c), length_includes_head=True,linewidth=lw,head_width=hw,head_length=hl)
-        #     self.ax.annotate(np.round(c,2),(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[lre[0][1]],1]),fontsize=fs)
+    def draw_arrow(self, lre, c, hw=5, hl=8, tw=2):
+        """Viz function to draw an arrow between two nodes on the graph & colored by an admixture proportion c between 0 and 1 (grey-scale, with 0 being white). Typically, an internal function, but can also be called externally.  
+        Required:
+            lre (:obj:`list of tuple`): [(source, destination)] ID as displayed by baseline FEEMS viz
+            c (:obj:`float`): admixture proportion of long-range edge
 
-        ## drawing curved arrows
-        # style = "Simple, tail_width=3, head_width=8, head_length=15"
-        # kw = dict(arrowstyle=style, edgecolor='k', facecolor='k', zorder=5)
-        # self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
-        style = "Simple, tail_width={}, head_width={}, head_length={}".format(tw,hw,hl)
-        kw = dict(arrowstyle=style, edgecolor='k', facecolor=self.c_cmap(c), zorder=5, linewidth=lw)
+        Optional:
+            hw (:obj:`float`): head width
+            hl (:obj:`float`): head length
+            tw (:obj:`float`): tail width
+        """
+        
+        style = "Simple, tail_width={}, head_width={}, head_length={}".format(tw, hw, hl)
+        kw = dict(arrowstyle=style, 
+                  edgecolor='k', 
+                  facecolor=self.c_cmap(c), 
+                  zorder=5, 
+                  linewidth=0.2*tw)
+        
         self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
 
-    def draw_c_colorbar(self, df=None):
-        "Draws simple colorbar from 0 to 1 scale for admixture proportion"
-        self.c_axins = inset_axes(self.ax, loc='upper right', width = "10%", height = "2%", borderpad=2)
+    def draw_c_colorbar(
+        self,
+        c_cbar_loc = 'upper right',
+        c_cbar_width = 10, 
+        c_cbar_height = 2
+    ):
+        "Viz function to draw a simple colorbar from 0 to 1 scale for admixture proportion"
+        self.c_axins = inset_axes(self.ax, loc=c_cbar_loc, width = str(c_cbar_width)+'%', height = str(c_cbar_height)+'%', borderpad=2)
         self.c_axins.set_title(r"$\hat{c}$", fontsize = self.cbar_font_size, loc='center')
-        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=np.linspace(0,1,3))
-        self.c_cbar.ax.tick_params(labelsize = self.cbar_ticklabelsize)
-        if df is not None:
-            self.c_cbar.ax.axvline(df['admix. prop.'].loc[df['scaled log-lik']==0].values[0], color='r', linewidth=1)
+        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=[0,1])
+        self.c_cbar.ax.tick_params(labelsize = self.cbar_ticklabelsize*0.8)
 
-    def draw_c_contour(self, df, ll_thresh=-10, levels=3, fs=8):
-        """Draws two tricontours of admix. prop. estimates & log-lik
-        cest_levels: int or list"""
-        ## VS: draw stars & crosses for MLE and destination
-        # self.ax.tricontourf([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],df['admix. prop.'],cmap='Greys',vmin=0,vmax=1,alpha=0.7,levels=cest_levels); 
-        # CS = self.ax.tricontour([self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],0] for x in nodes],[self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[x[0]],1] for x in nodes],df['admix. prop.'],cmap='Greys',vmin=0,vmax=1,alpha=0.7,levels=cest_levels); self.ax.clabel(CS, inline=1, fontsize=cest_fs, colors='k')
-        # # drawing a star at the location of the MLE
-        # self.ax.scatter(self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],0],self.grid[nx.get_node_attributes(self.sp_graph,'permuted_idx')[nodes[np.argmin(loglik)][0]],1],marker='*',zorder=2,facecolors='k',edgecolors='k')
+    def draw_c_contour(
+        self, 
+        df, 
+        levels=-5, 
+        c_cbar_loc=None,
+        c_cbar_width=None,
+        c_cbar_height=None
+    ):
+        """Viz function to draw the log-likelihood contour for the source of a particular destination deme. 
+        Required:
+            df (:obj:`pandas.DataFrame`): DataFrame containing the output of sp_graph.calc_contour or sp_graph.calc_joint_contour
+            
+        Optional: 
+            levels (:obj:`int`): value specifying the lower bound on the log-likelihood to include in the contour (with the maximum scaled to be 0)
+            c_cbar_loc (:obj:`str`): location of the colorbar for the admixture proportion (e.g., 'upper right', 'upper center', etc.)
+            c_cbar_height (:obj:`int`): height of the colorbar
+            c_cbar_width (:obj:`int`): width of the colorbar
+            """
 
-        idx = np.where(df['scaled log-lik'] > ll_thresh)
-        self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]],[self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend=None, levels=levels); 
-        CS = self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]],[self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend=None, levels=levels)
-        self.ax.clabel(CS, inline=1, fontsize=fs, colors='k')
-        ## drawing a star at the location of the MLE
-        # self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0],self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='*', zorder=2, facecolors='k', edgecolors='k')
-        self.draw_c_colorbar(df)
-
-    def draw_ll_contour(self, df, levels=-10, fs=8, draw_c_contour=False): 
+        if c_cbar_loc is None:
+            c_cbar_loc = 'upper right'
+        if c_cbar_width is None:
+            c_cbar_width = 10
+        if c_cbar_height is None:
+            c_cbar_height = 2
         
-        ## drawing contours
-        # self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels, zorder=2) 
-        # CS = self.ax.tricontour([self.grid[x[0],0] for x in df['(source, dest.)']],[self.grid[x[0],1] for x in df['(source, dest.)']], df['scaled log-lik'], cmap='Greens', extend='max', alpha=0.7, levels=levels, zorder=2)
-        # self.ax.clabel(CS, inline=1, fontsize=fs, colors='k')
-        # # drawing a star at the location of the MLE
-        # self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0],self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='*', zorder=2, facecolors='k', edgecolors='k')
-        # self.draw_c_colorbar(df)
+        idx = np.where(df['scaled log-lik'] >= levels)
+        
+        if len(idx[0]) < 3:
+            print("Not enough demes fall within the specified levels threshold to draw a contour, consider decreasing levels.")
+            return 
+            
+        self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]],[self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend='both', levels=np.linspace(0,1,21)); 
+        CS = self.ax.tricontourf([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]], [self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend='both', levels=np.linspace(0,1,21))
+        self.ax.clabel(CS, inline=False, levels=np.linspace(0,1,21)[((np.linspace(0,1,21) >= np.min(df['admix. prop.'].iloc[idx])) & (np.linspace(0,1,21) <= np.max(df['admix. prop.'].iloc[idx])))], fontsize=self.obs_node_textsize, colors='k')
+        
+        # drawing a X at the location of the MLE
+        self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0], self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='x', zorder=3, facecolors='firebrick', s=2*self.obs_node_size)
+        self.draw_c_colorbar(c_cbar_loc, c_cbar_width, c_cbar_height)
 
-        ## drawing points
-        permuted_idx = query_node_attributes(self.sp_graph, "permuted_idx")
+        # drawing a circle around the destination
+        self.ax.scatter(self.grid[df['(source, dest.)'].iloc[0][1],0],self.grid[df['(source, dest.)'].iloc[0][1],1], marker='o', zorder=3, facecolors='dodgerblue', alpha=0.5, s=3*self.obs_node_size)
+
+    def draw_outliers(self, outliers_df):
+        for i in range(outliers_df.shape[0]): 
+            self.ax.plot([self.grid[outliers_df['source'].iloc[i],0], self.grid[outliers_df['dest.'].iloc[i],0]],
+                         [self.grid[outliers_df['source'].iloc[i],1], self.grid[outliers_df['dest.'].iloc[i],1]], 
+                         linewidth=0.4, color='grey')
+        for dest in np.unique(outliers_df['dest.']):
+            self.ax.plot(self.grid[dest, 0], self.grid[dest, 1], 'o', 
+                         color='dodgerblue', markersize=10*np.log10(np.sum(outliers_df['dest.']==dest)+1), alpha=0.5)      
+    
+    def draw_loglik_contour(
+        self, 
+        df, 
+        levels=-10, 
+        magnifier=100, 
+        draw_arrow=True, 
+        loglik_node_size=None,
+        cbar_font_size=None, 
+        cbar_ticklabelsize=None, 
+        profile_bbox_to_anchor=None,
+        profile_c_loc=None, profile_c_height=None, profile_c_width=None,
+        lbar_loc=None, lbar_height=None, lbar_width=None
+    ): 
+        """Viz function to draw the log-likelihood contour for the source of a particular destination deme. 
+        Required:
+            df (:obj:`pandas.DataFrame`): DataFrame containing the output of sp_graph.calc_contour or sp_graph.calc_joint_contour
+            
+        Optional: 
+            levels (:obj:`int`): value specifying the lower bound on the log-likelihood to include in the contour (with the maximum scaled to be 0)
+            magnifier (:obj:`int`): percentage scaler on the size of the arrow with 100 being a magnification of 1
+            draw_arrow (:obj:`Bool`): flag on whether to draw an arrow from the MLE source or not 
+            loglik_node_size (:obj:`float`): (=2.5*obs_node_size, inherits from baseline FEEMS viz)
+            cbar_font_size (:obj:`float`): (inherits from baseline FEEMS viz)
+            cbar_ticklabelsize (:obj:float): (inherits from baseline FEEMS viz)
+            profile_c_loc (:obj:`str`): location of the plot for the profile likelihood at MLE (e.g., 'lower left', 'center left', etc.)
+            lbar_loc (:obj:`str`): location of the colorbar for log-likelihood contour (e.g., 'center right', 'lower right', etc.)
+            profile_c_width (:obj:`int`): width of plot of profile likelihood
+            profile_c_height (:obj:`int`): height of plot of profile likelihood
+            lbar_c_width (:obj:`int`): width of colorbar for log-likelihood
+            lbar_c_height (:obj:`int`): height of colorbar for log-likelihood
+        """
+
+        self.obj = Objective(self.sp_graph); self.obj.inv(); 
+        self.obj.Lpinv = pinvh(self.sp_graph.L.todense()); self.obj.grad(reg=False)
+        
+        # code to set default values 
+        if loglik_node_size is None:
+            loglik_node_size = self.obs_node_size*2.5
+        if cbar_font_size is None:
+            cbar_font_size = self.cbar_font_size
+        if cbar_ticklabelsize is None:
+            cbar_ticklabelsize = self.cbar_ticklabelsize
+        if profile_c_loc is None:
+            profile_c_loc = 'lower left'
+        if profile_c_width is None:
+            profile_c_width = 15
+        if profile_c_height is None:
+            profile_c_height = 10
+        if lbar_loc is None:
+            lbar_loc = 'lower right'
+        if lbar_width is None:
+            lbar_width = 10
+        if lbar_height is None:
+            lbar_height = 2
+
+        # convert to fraction for easy scaling
+        mag = magnifier/100
+
+        # creating colormap
         ll = plt.get_cmap('Greens_r').resampled(np.abs(levels)+2)
         
-        # only display points that have scaled log-lik > -20
+        # only display points that have scaled log-lik > levels
         for idx, row in df.loc[df['scaled log-lik']>=levels].iterrows():
-            self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], marker='o', zorder=2, edgecolors='white', facecolors=ll(int(-row['scaled log-lik'])), linewidth=0.5, s=50)
-        # for ix, x in enumerate(df['(source, dest.)']):
-        #     self.ax.scatter(self.grid[x[0],0], self.grid[x[0],1], marker='o', zorder=2, edgecolors='white', facecolors=ll(int(-df['scaled log-lik'].iloc[ix])), linewidth=0.1, s=20)
-            # self.ax.scatter(self.grid[permuted_idx[x[0]],0], self.grid[permuted_idx[x[0]],1], marker='o', zorder=2, edgecolors='white', facecolors=ll(int(-df['scaled log-lik'].iloc[ix])), linewidth=0.1, s=6)
-        # self.ax.scatter(self.grid[df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0],0],self.grid[df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0],1], marker='*', s=100, zorder=2, alpha=0.8, facecolors='grey', edgecolors='k')
+            self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], 
+                            marker='o', zorder=2, edgecolors='white', 
+                            facecolors=ll(int(-row['scaled log-lik'])), 
+                            linewidth=self.obs_node_linewidth, s=loglik_node_size)
 
-        ## histogram of c values across the landscape
-        # inset_axes(self.ax, loc = 'upper center', width = '15%', height = '10%')
-        # plt.hist(df['admix. prop.'], weights=1/np.sqrt(-2*df['scaled log-lik']+1), color='grey', bins=np.linspace(0,1,20), alpha=0.6); plt.xticks(np.around(np.linspace(0,1,4),1)) 
-        # plt.axvline(df['admix. prop.'].iloc[df['scaled log-lik'].argmax()],color='k',linewidth=0.7)
-        # plt.axvline(np.min(df['admix. prop.'].iloc[np.where(df['scaled log-lik']>-20)]),color='red',ls='--',linewidth=0.7)
-        # plt.axvline(np.max(df['admix. prop.'].iloc[np.where(df['scaled log-lik']>-20)]),color='red',ls='--',linewidth=0.7)
+        # drawing an arrow from MLE source to destination
+        if draw_arrow:
+            self.draw_arrow([df['(source, dest.)'].iloc[df['log-lik'].argmax()]], df['admix. prop.'].iloc[df['log-lik'].argmax()],
+                            tw=mag*0.2*self.obs_node_size, 
+                            hw=mag*0.4*self.obs_node_size, 
+                            hl=mag*0.5*self.obs_node_size)
+            
+        # cgrid = np.linspace(0,1,30)
+        if df['admix. prop.'].iloc[df['log-lik'].argmax()]>=0.25:
+            if df['admix. prop.'].iloc[df['log-lik'].argmax()]<=0.75:
+                cgrid = np.linspace(df['admix. prop.'].iloc[df['log-lik'].argmax()]-0.25, df['admix. prop.'].iloc[df['log-lik'].argmax()]+0.25, 20)
+            else:
+                cgrid = np.linspace(0.6, 1, 20)
+        else:
+            cgrid = np.linspace(0, 0.4, 20)
 
-        ## drawing an arrow from MLE source to destination
-        self.draw_arrow([df['(source, dest.)'].iloc[df['log-lik'].argmax()]], df['admix. prop.'].iloc[df['log-lik'].argmax()])
-        
-        ## profile likelihood for c at MLE
-        # lre = [(np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0][0],np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][1])[0][0])] #if np.where(permuted_idx==df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()][0])[0]<self.sp_graph.n_observed_nodes else [df['(source, dest.)'].iloc[df['scaled log-lik'].argmax()]]
-        cgrid = np.linspace(0,1,30)
-        # source = 'sampled' if lre[0][0]<self.sp_graph.n_observed_nodes else 'unsampled'
         cprofll = np.zeros(len(cgrid))
         for ic, c in enumerate(cgrid):
             try:
@@ -453,64 +547,231 @@ class Viz(object):
                 except:
                     cprofll2[idx,ic] = np.nan
 
-        # inset_axes(self.ax, loc = "lower left", bbox_to_anchor=(0.15, 0.1, 1, 1), bbox_transform=self.ax.transAxes, width = '15%', height = '10%')
-        inset_axes(self.ax, loc = "lower left", width = '15%', height = '10%')            
-        # #TODO: take care of discretization here
-        # #TODO: change font size here (maybe it's ok but labels seem a bit big)
-        plt.plot(cgrid, cprofll, color='grey'); 
-        plt.ylim((np.nanmax(cprofll)+levels, np.nanmax(cprofll)-levels/20)); #plt.axvline(df['admix. prop.'].iloc[df['scaled log-lik'].argmax()],color='k',linewidth=0.4); 
-        plt.plot(cgrid, cprofll2.T, color='grey', alpha=0.5, linewidth=0.3)
-        #TODO: change font size of MLE value to be 70% of 0 & 1 (may need two commands for this)
-        plt.xticks(ticks=[0, cgrid[np.nanargmax(cprofll)], 1],labels=[0, round(cgrid[np.nanargmax(cprofll)], 2), 1]); 
-        lb = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][-1]
-        plt.axvline(cgrid[lb], color='red', ls='--', linewidth=0.5) 
-        plt.axvline(cgrid[ub], color='red', ls='--', linewidth=0.5)
-        
-        ## drawing the colorbar for the log-lik surface
-        self.c_axins = inset_axes(self.ax, loc = 'center right', width = "10%", height = "2%",)
-        self.c_axins.set_title(r"scaled $\ell$", fontsize = self.cbar_font_size)
-        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
-        self.c_cbar.set_ticks([levels,0])
+        inset_axes(self.ax, 
+                   loc = profile_c_loc, 
+                   width = str(profile_c_width)+'%', 
+                   height = str(profile_c_height)+'%')            
 
-def plot_seq_results(seq_results, dpi=200, figsize=(5,3)):
-    # TODO include option to savefig in a path?
-    fig, axs = plt.subplots(1, len(seq_results), dpi=dpi, figsize=figsize, sharey=True, constrained_layout=True)
-    # plt.ylabel('genetic distance'); plt.xlabel('fitted distance')
-    X = sm.add_constant(seq_results[0]['fit_dist'])
-    mod = sm.OLS(seq_results[0]['emp_dist'], X)
+        plt.plot(cgrid, cprofll, color='grey')
+        plt.ylim((np.nanmax(cprofll)+levels, np.nanmax(cprofll)-levels/20))
+        plt.plot(cgrid, cprofll2.T, color='grey', alpha=0.5, linewidth=0.3)
+        plt.xticks(ticks=[0, 1], labels=[0, 1])
+        plt.text(cgrid[np.nanargmax(cprofll)], -0.2, round(cgrid[np.nanargmax(cprofll)], 2), fontsize=int(0.7*self.cbar_ticklabelsize), ha='center', va='top', transform=plt.gca().transAxes)
+
+        lb = np.where(cprofll >= np.nanmax(cprofll) - 3)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 3)[0][-1]
+        plt.axvline(cgrid[lb], color='red', ls='--', linewidth=self.obs_node_linewidth) 
+        plt.axvline(cgrid[ub], color='red', ls='--', linewidth=self.obs_node_linewidth)
+        
+        # drawing the colorbar for the log-lik surface
+        self.c_axins = inset_axes(self.ax, 
+                                  loc = lbar_loc, 
+                                  width = str(lbar_width)+'%', 
+                                  height = str(lbar_height)+'%')
+        self.c_axins.set_title(r"scaled $\ell$", fontsize = int(0.7*self.cbar_font_size))
+        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
+        self.c_cbar.set_ticks([levels,0], fontsize=self.cbar_ticklabelsize)
+
+def draw_FEEMSmix_fit(
+    v,
+    ind_results,
+    levels=-10,
+    demes=None,
+    draw_c_contour=False,
+    draw_edges_mle=False,
+    magnifier=100,
+    dpi=200,
+    figsize=(4,10)
+):
+    """Wrapper function to plot the entire suite of fits from separately fitting each edge
+    Required:
+        v (:obj:`feems.Viz`): Viz object created previously 
+        ind_results (:obj:`dict`): output from sp_graph.independent_fit(...)
+        
+    Optional:
+        levels (:obj:`int`): value specifying the lower bound on the log-likelihood to include in the contour (with the maximum scaled to be 0)
+        demes (:obj:`int` or `list`): number or list of edge indices to plot (for any single index, use e.g., [980])
+        draw_c_contour (:obj:`Bool`): whether to include a contour of the admixture proportions
+        draw_edges_mle (:obj:`Bool`): whether to draw edge weights at MLE
+        magnifier (:obj:`int`): percentage scaler on the size of the arrow with 100 being a magnification of 1
+        dpi (:obj:`int`): resolution of figure
+        figsize (:obj:`tuple`): (width, height) of matplotlib plot 
+    """
+    
+    v.obj = Objective(v.sp_graph)
+
+    mag = magnifier / 100
+    
+    fig = plt.figure(dpi=dpi, figsize=figsize)
+
+    alldemes = [ind_results[i]['deme'] for i in range(1,len(ind_results))]
+
+    gs = GridSpec(2, 1)
+    # plot all the edges in a single figure 
+    vall = copy(v)
+    axs = fig.add_subplot(gs[0, 0], projection=vall.projection)
+    vall.ax = axs; vall.draw_map()
+    vall.draw_edges(use_weights=True)
+    vall.draw_obs_nodes()
+    for i in range(1, len(ind_results)):
+        vall.draw_arrow([ind_results[i]['joint_contour_df']['(source, dest.)'].iloc[ind_results[i]['joint_contour_df']['log-lik'].argmax()]], ind_results[i]['joint_contour_df']['admix. prop.'].iloc[ind_results[i]['joint_contour_df']['log-lik'].argmax()],
+                            tw=mag*0.2*v.obs_node_size, 
+                            hw=mag*0.4*v.obs_node_size, 
+                            hl=mag*0.5*v.obs_node_size)            
+    
+    if hasattr(demes, '__len__'):
+        matches = [alldemes.index(i)+1 for i in demes]
+    else:
+        if demes is None:
+            demes = len(ind_results)
+            matches = np.arange(1, demes+1)
+        else: 
+            matches = np.arange(1, demes+1)
+
+    ax_list = [axs]; cnt = 1
+    for i, idx in enumerate(matches):
+        df = ind_results[idx]['joint_contour_df'].combine_first(ind_results[idx]['contour_df'])
+        df['scaled log-lik'] = df['log-lik']-np.nanmax(df['log-lik'])
+        vnew = copy(v)
+        if draw_c_contour:
+            if draw_edges_mle:
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches)*3, 1, i*3+1, projection=vnew.projection)
+                ax_list[-1].set_title('log-likelihood contour for deme {:d}'.format(ind_results[idx]['deme']))
+                vnew.ax = ax_list[-1]
+                vnew.draw_map() 
+                vnew.edge_alpha=0.; vnew.draw_edges(use_weights=False)
+                vnew.draw_loglik_contour(df, levels=levels)
+                vnew.draw_obs_nodes(use_ids=False)
+                
+                vnewnew = copy(v)
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches)*3, 1, i*3+2, projection=vnew.projection)
+                ax_list[-1].set_title('admix. prop. contour for deme {:d}'.format(ind_results[idx]['deme']))
+                vnewnew.ax = ax_list[-1]
+                vnewnew.draw_map()
+                vnewnew.draw_c_contour(df, levels=levels)
+                vnewnew.edge_alpha=0.; vnewnew.draw_edges(use_weights=False)
+                vnewnew.draw_obs_nodes(use_ids=False)
+
+                vnewnewnew = copy(v)
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches)*3, 1, i*3+3, projection=vnew.projection)
+                ax_list[-1].set_title('jointly estimated weights for deme {:d}'.format(ind_results[idx]['deme']))
+                vnewnewnew.ax = ax_list[-1]
+                vnewnewnew.draw_map()
+                vnewnewnew.sp_graph._update_graph(ind_results[idx]['mle_w'], ind_results[idx]['mle_s2'])
+                vnewnewnew.draw_edges(use_weights=True)
+                vnewnewnew.draw_obs_nodes(use_ids=False)
+                vnewnewnew.draw_arrow([ind_results[idx]['joint_contour_df']['(source, dest.)'].iloc[ind_results[idx]['joint_contour_df']['log-lik'].argmax()]], ind_results[idx]['joint_contour_df']['admix. prop.'].iloc[ind_results[idx]['joint_contour_df']['log-lik'].argmax()],
+                            tw=mag*0.2*v.obs_node_size, 
+                            hw=mag*0.4*v.obs_node_size, 
+                            hl=mag*0.5*v.obs_node_size)
+            else:
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches)*2, 1, i*2+1, projection=vnew.projection)
+                ax_list[-1].set_title('log-likelihood contour for deme {:d}'.format(ind_results[idx]['deme']))
+                vnew.ax = ax_list[-1]
+                vnew.draw_map() 
+                vnew.edge_alpha=0.; vnew.draw_edges(use_weights=False)
+                vnew.draw_loglik_contour(df, levels=levels)
+                vnew.draw_obs_nodes(use_ids=False)
+                
+                vnewnew = copy(v)
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches)*2, 1, i*2+2, projection=vnew.projection)
+                ax_list[-1].set_title('admix. prop. contour for deme {:d}'.format(ind_results[idx]['deme']))
+                vnewnew.ax = ax_list[-1]
+                vnewnew.draw_map()
+                vnewnew.edge_alpha=0.; vnewnew.draw_edges(use_weights=False)
+                vnewnew.draw_c_contour(df, levels=levels)
+                vnewnew.draw_obs_nodes(use_ids=False)
+        else:
+            if draw_edges_mle:
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches), 1, i+1, projection=vnew.projection)
+                ax_list[-1].set_title('log-likelihood contour for deme {:d}'.format(ind_results[idx]['deme']))
+                vnew.ax = ax_list[-1]
+                vnew.draw_map() 
+                vnew.edge_alpha=0.; vnew.draw_edges(use_weights=False)
+                vnew.draw_loglik_contour(df, levels=levels)
+                vnew.draw_obs_nodes(use_ids=False)
+                
+                vnewnewnew = copy(v)
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches)*3, 1, i*3+3, projection=vnew.projection)
+                ax_list[-1].set_title('jointly estimated weights for deme {:d}'.format(ind_results[idx]['deme']))
+                vnewnewnew.ax = ax_list[-1]
+                vnewnewnew.draw_map()
+                vnewnewnew.sp_graph._update_graph(ind_results[idx]['mle_w'], ind_results[idx]['mle_s2'])
+                vnewnewnew.draw_edges(use_weights=True)
+                vnewnewnew.draw_obs_nodes(use_ids=False)
+                vnewnewnew.draw_arrow([ind_results[idx]['joint_contour_df']['(source, dest.)'].iloc[ind_results[idx]['joint_contour_df']['log-lik'].argmax()]], ind_results[idx]['joint_contour_df']['admix. prop.'].iloc[ind_results[idx]['joint_contour_df']['log-lik'].argmax()],
+                            tw=mag*0.2*v.obs_node_size, 
+                            hw=mag*0.4*v.obs_node_size, 
+                            hl=mag*0.5*v.obs_node_size)
+            else:
+                ax_list, gs = add_ax_subplot(cnt, ax_list, gs, fig, v.projection); cnt += 1
+                # ax = fig.add_subplot(len(matches), 1, i+1, projection=vnew.projection)
+                ax_list[-1].set_title('log-likelihood contour for deme {:d}'.format(ind_results[idx]['deme']))
+                vnew.ax = ax_list[-1]
+                vnew.draw_map() 
+                # TODO is there a way to get limits without adding edges?
+                vnew.edge_alpha=0.; vnew.draw_edges(use_weights=False)
+                vnew.draw_loglik_contour(df, levels=levels)
+                vnew.draw_obs_nodes(use_ids=False)
+
+def plot_FEEMSmix_result(
+    diag_results, 
+    dpi=200, 
+    figsize=(6,3)
+):
+    """Wrapper function to plot the diagnostic fits from the results of the independent or sequential fits.
+    Required:
+        diag_results (dict): output from sp_graph.independent_fit(...) or sp_graph.sequential_fit(...)
+
+    Optional: 
+        dpi (int): resolution of figure
+        figsize (tuple): (width, height) of matplotlib plot   
+    """
+    # TODO include option to savefig in a path? -> no they can save it outside the function 
+    fig, axs = plt.subplots(1, len(diag_results), dpi=dpi, figsize=figsize, sharey=True, constrained_layout=True)
+    
+    X = add_constant(diag_results[0]['fit_dist'])
+    mod = OLS(diag_results[0]['emp_dist'], X)
     res = mod.fit()
     muhat, betahat = res.params
-    axs[0].scatter(seq_results[0]['fit_dist'], seq_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
-    bh = benjamini_hochberg(seq_results[0]['emp_dist'], seq_results[0]['fit_dist'], fdr=seq_results[0]['fdr'])
-    axs[0].scatter(seq_results[0]['fit_dist'][bh], seq_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
-    x_ = np.linspace(np.min(seq_results[0]['fit_dist']), np.max(seq_results[0]['fit_dist']), 20);
-    axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1.5);
+    axs[0].scatter(diag_results[0]['fit_dist'], diag_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
+    bh = benjamini_hochberg(diag_results[0]['emp_dist'], diag_results[0]['fit_dist'], fdr=diag_results[0]['fdr'])
+    axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
+    x_ = np.linspace(np.min(diag_results[0]['fit_dist']), np.max(diag_results[0]['fit_dist']), 12);
+    axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2);
     axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
     axs[0].set_title('Baseline')
     fig.supxlabel('fitted distance'); fig.supylabel('genetic distance');
-    for i in range(1, len(seq_results)):
-        X = sm.add_constant(seq_results[i]['fit_dist'])
-        mod = sm.OLS(seq_results[0]['emp_dist'], X)
+    
+    for i in range(1, len(diag_results)):
+        X = add_constant(diag_results[i]['fit_dist'])
+        mod = OLS(diag_results[0]['emp_dist'], X)
         res = mod.fit()
         muhat, betahat = res.params
-        axs[i].scatter(seq_results[i]['fit_dist'], seq_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
-        axs[i].scatter(seq_results[i]['fit_dist'][bh], seq_results[0]['emp_dist'][bh], marker='.', color='r', s=20, alpha=0.8)
-        axs[i].scatter(seq_results[i-1]['fit_dist'][bh], seq_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
+        axs[i].scatter(diag_results[i]['fit_dist'], diag_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
+        axs[i].scatter(diag_results[i]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='.', color='r', s=20, alpha=0.8)
+        axs[i].scatter(diag_results[i-1]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
         for il in range(np.sum(bh)):
             axs[i].annotate(
                 '',  # No text
-                xy=(seq_results[i-1]['fit_dist'][bh][il], seq_results[0]['emp_dist'][bh][il]),  # Arrow end (head)
-                xytext=(seq_results[i]['fit_dist'][bh][il], seq_results[0]['emp_dist'][bh][il]),  # Arrow start (tail)
+                xy=(diag_results[i-1]['fit_dist'][bh][il], diag_results[0]['emp_dist'][bh][il]),  # Arrow end (head)
+                xytext=(diag_results[i]['fit_dist'][bh][il], diag_results[0]['emp_dist'][bh][il]),  # Arrow start (tail)
                 arrowprops=dict(
                     arrowstyle="<-",  # Arrow style
                     color='r',  # Color of the arrow
                     linewidth=1  # Width of the arrow line
                 )
             )
-        x_ = np.linspace(np.min(seq_results[i]['fit_dist']), np.max(seq_results[i]['fit_dist']), 20); 
-        axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=1.5); 
+        x_ = np.linspace(np.min(diag_results[i]['fit_dist']), np.max(diag_results[i]['fit_dist']), 12); 
+        axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2); 
         axs[i].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
-        axs[i].set_title('On fitting deme {:d}'.format(seq_results[i]['deme']))
+        axs[i].set_title('On fitting deme {:d}'.format(diag_results[i]['deme']))
 
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""
@@ -542,3 +803,15 @@ def project_coords(X, proj):
         P[i, 0] = x
         P[i, 1] = y
     return P
+
+def add_ax_subplot(n, ax, gs, fig, projection):
+    # Expand the GridSpec layout
+    gs = GridSpec(n + 1, 1)
+    # Adjust the positions of existing subplots
+    for i, axis in enumerate(ax):
+        axis.set_position(gs[i].get_position(fig))
+        axis.set_subplotspec(gs[i])
+    # Add a new subplot
+    new_ax = fig.add_subplot(gs[n, 0], projection=projection)
+    ax.append(new_ax)
+    return ax, gs

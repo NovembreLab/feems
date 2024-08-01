@@ -7,9 +7,9 @@ from __future__ import absolute_import, division, print_function
 import fiona
 import numpy as np
 import scipy as sp
-from allel import pca
 from shapely.affinity import translate
 from shapely.geometry import MultiPoint, Point, Polygon, shape
+from sklearn.decomposition import PCA
 
 import matplotlib.pyplot as plt
 
@@ -36,8 +36,8 @@ def create_tile_dict(tiles, bpoly):
         x, y = poly.exterior.xy
         points = zip(np.round(x, 3), np.round(y, 3))
         # TODO: make wrap_america a flag in the future releases
-        # points = [wrap_america(p) for p in points] 
-        points = [p for p in points]
+        points = [wrap_america(p) for p in points] 
+        # points = [p for p in points]
         for p in points:
             if p not in pts_in:
                 # check if point is in region
@@ -102,6 +102,8 @@ def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None):
     bpoly = Polygon(outer)
     bpoly2 = translate(bpoly, xoff=-360.0)
     tiles2 = load_tiles(ggrid)
+
+    np.seterr(invalid='ignore')
     tiles3 = [t for t in tiles2 if bpoly.intersects(t) or bpoly2.intersects(t)]
     pts, rev_pts, e = create_tile_dict(tiles3, bpoly)
 
@@ -111,6 +113,7 @@ def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None):
         grid.append((v[0], v[1]))
     grid = np.array(grid)
 
+    # TODO add a more informative message on how users can get out of this pickle
     assert grid.shape[0] != 0, "grid is empty changing translation"
 
     # un-translate
@@ -145,16 +148,14 @@ def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
     """
     Apply the Benjamini-Hochberg procedure to a list of p-values to determine significance
     and the largest k such that p_(k) <= k/m * FDR.
-    Args:
-        p_values (list or array): Array of p-values from multiple hypothesis tests.
+    Required:
+        emp_dist, fit_dist (numpy.array)
+    Optional:    
         fdr (float): False discovery rate threshold.
-    Returns:
-    tuple:
-        array: Boolean array where True indicates the hypotheses that are accepted.
-        int: The largest k for which p_(k) <= k/m * FDR.
     """
 
     logratio = np.log(emp_dist/fit_dist)
+
     # logratio = emp_dist/fit_dist - 1
     mean_logratio = np.mean(logratio)
     var_logratio = np.var(logratio,ddof=1)
@@ -193,15 +194,20 @@ def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
 #     mpd = np.where(n_pairs > 0, n_diff / n_pairs, np.nan)
 #     return np.mean(mpd)
 
-def pairwise_PCA_distances(genotypes, numPCs = 10):
+def pairwise_PCA_distances(genotypes, numPC = None):
     """Function to compute pairwise distance between individuals on a PCA plot
     genotypes (matrix) : input used for FEEMSmix
-    PCs (int) : number of PCs to use when computing the distances
+    numPC (int) : number of PCs to use when computing the distances
     """
     n, p = genotypes.shape
-    pcacoord, mod = pca(genotypes.T, n_components=numPCs, scaler='standard')
+    
+    if numPC is None:
+        numPC = n-1
+        
+    pca = PCA(n_components=numPC)
+    pcacoord = pca.fit_transform((genotypes - genotypes.mean(axis=0)) / genotypes.std(axis=0))
 
-    pcdist = sp.spatial.distance.squareform(sp.spatial.distance.pdist(pcacoord[:,:numPCs], metric='euclidean'))
+    pcdist = sp.spatial.distance.squareform(sp.spatial.distance.pdist(pcacoord, metric='euclidean'))
     D_geno = sp.spatial.distance.squareform(sp.spatial.distance.pdist(genotypes, metric="sqeuclidean")) / p
     tril_idx = np.tril_indices(n, k=-1)
     y = D_geno[tril_idx]
@@ -212,9 +218,10 @@ def pairwise_PCA_distances(genotypes, numPCs = 10):
 def pairwise_admixture_distances(pfile, qfile, genotypes):
     """Function to compute pairwise distance between individuals based on the admixture model G = 2QP^\top
     K (number of ancestral populations) will be inferred from the shape of the .P and .Q file
-    pfile (path) : path to .P file
-    qfile (path) : path to .Q file
-    genotypes (matrix) : input used for FEEMSmix
+    Required:
+        pfile (path) : path to .P file
+        qfile (path) : path to .Q file
+        genotypes (matrix) : input used for FEEMSmix
     """
 
     print("Reading in .P file...")
@@ -240,7 +247,6 @@ def pairwise_admixture_distances(pfile, qfile, genotypes):
 
     return x, y
     
-
 def cov_to_dist(S):
     """Convert a covariance matrix to a distance matrix
     """

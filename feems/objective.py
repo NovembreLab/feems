@@ -325,15 +325,6 @@ class Objective(object):
     #     loss = lik + pen 
     #     return loss
 
-    def _update_graph(self, basew, bases2):
-        self.sp_graph.option = 'default'
-        
-        self.sp_graph.w = basew; self.sp_graph.s2 = bases2
-        
-        self.sp_graph.comp_graph_laplacian(basew); self.sp_graph.comp_precision(bases2)
-        self.inv(); self.grad(reg=False)
-        self.Lpinv = pinvh(self.sp_graph.L.todense())
-
     def loss(self):
         """Evaluate the loss function given the current params"""
         lamb = self.lamb
