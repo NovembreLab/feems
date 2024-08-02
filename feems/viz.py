@@ -174,13 +174,16 @@ class Viz(object):
         self, 
         latlong=True
     ):
-        """Draws the underlying map projection
+        """Viz function to draw the underlying map projection.
 
         Optional:
             latlong (:obj:): 
                 - True to draw gridlines picked from underlying graph (default) OR
                 - False for no gridlines OR
                 - tuple of ([lats], [longs]) coordinates to draw custom gridlines
+
+        Returns: 
+            None
         """
         
         np.seterr(invalid='ignore')
@@ -373,6 +376,9 @@ class Viz(object):
             hw (:obj:`float`): head width
             hl (:obj:`float`): head length
             tw (:obj:`float`): tail width
+
+        Returns:
+            None
         """
         
         style = "Simple, tail_width={}, head_width={}, head_length={}".format(tw, hw, hl)
@@ -413,7 +419,10 @@ class Viz(object):
             c_cbar_loc (:obj:`str`): location of the colorbar for the admixture proportion (e.g., 'upper right', 'upper center', etc.)
             c_cbar_height (:obj:`int`): height of the colorbar
             c_cbar_width (:obj:`int`): width of the colorbar
-            """
+
+        Returns:
+            None
+        """
 
         if c_cbar_loc is None:
             c_cbar_loc = 'upper right'
@@ -439,11 +448,29 @@ class Viz(object):
         # drawing a circle around the destination
         self.ax.scatter(self.grid[df['(source, dest.)'].iloc[0][1],0],self.grid[df['(source, dest.)'].iloc[0][1],1], marker='o', zorder=3, facecolors='dodgerblue', alpha=0.5, s=3*self.obs_node_size)
 
-    def draw_outliers(self, outliers_df):
+    def draw_outliers(
+        self, 
+        outliers_df,
+        linewidth=None
+    ):
+        """Viz function to draw lines between outlier pairs of demes and highlight putative destination demes. 
+        Required:
+            outliers_df (:obj:`pandas.DataFrame`): DataFrame containing the output of sp_graph.extract_outliers
+
+        Optional
+            linewidth (:obj:`float`): thickness of line connecting the demes
+
+        Returns:
+            None
+        """
+
+        if linewidth is None:
+            linewidth = 2*self.obs_node_linewidth
+            
         for i in range(outliers_df.shape[0]): 
             self.ax.plot([self.grid[outliers_df['source'].iloc[i],0], self.grid[outliers_df['dest.'].iloc[i],0]],
                          [self.grid[outliers_df['source'].iloc[i],1], self.grid[outliers_df['dest.'].iloc[i],1]], 
-                         linewidth=0.4, color='grey')
+                         linewidth=linewidth, color='grey')
         for dest in np.unique(outliers_df['dest.']):
             self.ax.plot(self.grid[dest, 0], self.grid[dest, 1], 'o', 
                          color='dodgerblue', markersize=10*np.log10(np.sum(outliers_df['dest.']==dest)+1), alpha=0.5)      
@@ -478,6 +505,9 @@ class Viz(object):
             profile_c_height (:obj:`int`): height of plot of profile likelihood
             lbar_c_width (:obj:`int`): width of colorbar for log-likelihood
             lbar_c_height (:obj:`int`): height of colorbar for log-likelihood
+
+        Returns:
+            None
         """
 
         self.obj = Objective(self.sp_graph); self.obj.inv(); 
@@ -567,7 +597,7 @@ class Viz(object):
                                   loc = lbar_loc, 
                                   width = str(lbar_width)+'%', 
                                   height = str(lbar_height)+'%')
-        self.c_axins.set_title(r"scaled $\ell$", fontsize = int(0.7*self.cbar_font_size))
+        self.c_axins.set_title(r"scaled $\ell$", fontsize = int(0.8*self.cbar_font_size))
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
         self.c_cbar.set_ticks([levels,0], fontsize=self.cbar_ticklabelsize)
 
@@ -595,6 +625,9 @@ def draw_FEEMSmix_fit(
         magnifier (:obj:`int`): percentage scaler on the size of the arrow with 100 being a magnification of 1
         dpi (:obj:`int`): resolution of figure
         figsize (:obj:`tuple`): (width, height) of matplotlib plot 
+
+    Returns: 
+        None        
     """
     
     v.obj = Objective(v.sp_graph)
@@ -727,13 +760,13 @@ def plot_FEEMSmix_result(
 ):
     """Wrapper function to plot the diagnostic fits from the results of the independent or sequential fits.
     Required:
-        diag_results (dict): output from sp_graph.independent_fit(...) or sp_graph.sequential_fit(...)
+        diag_results (dict): output from sp_graph.independent_fit or sp_graph.sequential_fit
 
     Optional: 
         dpi (int): resolution of figure
         figsize (tuple): (width, height) of matplotlib plot   
     """
-    # TODO include option to savefig in a path? -> no they can save it outside the function 
+    
     fig, axs = plt.subplots(1, len(diag_results), dpi=dpi, figsize=figsize, sharey=True, constrained_layout=True)
     
     X = add_constant(diag_results[0]['fit_dist'])

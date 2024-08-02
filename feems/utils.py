@@ -26,7 +26,10 @@ def wrap_america(tile):
     return tile.xy[0][0], tile.xy[1][0]
 
 
-def create_tile_dict(tiles, bpoly):
+def create_tile_dict(tiles, bpoly, wrap_america=True):
+    """
+    wrap_america (:obj:`Bool`) is a function to handle the 'date line problem', by ensuring that points in the far west of America (like Alaska) appear on the same side of the map, as a contiguous North American landmass. This can be turned off by setting it to False. 
+    """    
     pts = dict()  # dict saving ids
     rev_pts = dict()
     edges = set()
@@ -35,9 +38,10 @@ def create_tile_dict(tiles, bpoly):
     for c, poly in enumerate(tiles):
         x, y = poly.exterior.xy
         points = zip(np.round(x, 3), np.round(y, 3))
-        # TODO: make wrap_america a flag in the future releases
-        points = [wrap_america(p) for p in points] 
-        # points = [p for p in points]
+        if wrap_america:
+            points = [wrap_america(p) for p in points] 
+        else:
+            points = [p for p in points]
         for p in points:
             if p not in pts_in:
                 # check if point is in region

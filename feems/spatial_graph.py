@@ -296,10 +296,6 @@ class SpatialGraph(nx.Graph):
     def _estimate_allele_frequencies(self):
         """Estimates allele frequencies by maximum likelihood on the observed
         nodes (in permuted order) of the spatial graph
-
-        Args:
-            genotypes (:obj:`numpy.ndarray`): array of diploid genotypes with
-                no missing data
         """
         self.n_snps = self.genotypes.shape[1]
 
@@ -376,6 +372,7 @@ class SpatialGraph(nx.Graph):
         fdr=0.3,
         stop=None,
         top=0.05,
+        exclude_boundary=True,
         maxls=50,
         m=10,
         factr=1e7,
@@ -392,19 +389,22 @@ class SpatialGraph(nx.Graph):
             
         Optional:
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
+            fdr (:obj:`float`): false-discovery rate of outlier edges 
+            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
+            stop (:obj:`int`): number of admixture edges to add sequentially 
+            exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes from fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
-            lamb_q (:obj:`float`): penalty strength on the residual variances
             alpha_q (:obj:`float`): penalty strength on log residual variances
-            factr (:obj:`float`): tolerance for convergence
+            factr (:obj:`float`): tolerance for convergence 
             maxls (:obj:`int`): maximum number of line search steps
             m (:obj:`int`): the maximum number of variable metric corrections
             lb (:obj:`int`): lower bound of log weights
             ub (:obj:`int`): upper bound of log weights
             maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
             verbose (:obj:`Bool`): boolean to print summary of results
-            fdr (:obj:`float`): false-discovery rate of outlier edges 
-            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
-            stop (:obj:`int`): number of admixture edges to add sequentially 
+
+        Returns: 
+            (:obj:`pandas.DataFrame`)
         """
         
         obj = Objective(self)
@@ -449,12 +449,12 @@ class SpatialGraph(nx.Graph):
             # get the log-lik surface across the landscape
             if search_area=='radius':
                 # picking the source deme with the lowest p-value
-                df = self.calc_contour(destid=dest[cnt-1], search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts)
+                df = self.calc_contour(destid=dest[cnt-1], search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, exclude_boundary=exclude_boundary)
             else:
-                df = self.calc_contour(destid=dest[cnt-1], search_area=search_area)
+                df = self.calc_contour(destid=dest[cnt-1], search_area=search_area, exclude_boundary=exclude_boundary)
                 
             
-            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
+            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
 
             print('\n  MLE edge found from source {:d} to destination {:d} with strength {:.2f}'.format(joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])][0], dest[cnt-1], joint_df['admix. prop.'].iloc[np.nanargmax(joint_df['log-lik'])]))
             print('\n  Log-likelihood after adding MLE edge: {:.1f} (p-val = {:.2e})\n'.format(np.nanmax(joint_df['log-lik']),chi2.sf(2*(np.nanmax(joint_df['log-lik'])-nllnull),df=1)))
@@ -488,6 +488,7 @@ class SpatialGraph(nx.Graph):
         stop=5,
         pval=0.05,
         top=0.05,
+        exclude_boundary=True,
         maxls=50,
         m=10,
         factr=1e7,
@@ -504,6 +505,10 @@ class SpatialGraph(nx.Graph):
             
         Optional:
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
+            fdr (:obj:`float`): false-discovery rate of outlier edges 
+            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
+            stop (:obj:`int`): number of admixture edges to add sequentially 
+            exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes in fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
             lamb_q (:obj:`float`): penalty strength on the residual variances
             alpha_q (:obj:`float`): penalty strength on log residual variances
@@ -514,9 +519,10 @@ class SpatialGraph(nx.Graph):
             ub (:obj:`int`): upper bound of log weights
             maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
             verbose (:obj:`Bool`): boolean to print summary of results
-            fdr (:obj:`float`): false-discovery rate of outlier edges 
-            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
-            stop (:obj:`int`): number of admixture edges to add sequentially 
+            
+
+        Returns: 
+            (:obj:`pandas.DataFrame`)
         """
 
         # check inputs
@@ -578,12 +584,12 @@ class SpatialGraph(nx.Graph):
             # fit the contour on the deme to get the log-lik surface across the landscape
             if search_area=='radius':
                 # picking the source deme with the lowest p-value
-                df = self.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, delta=args['delta'])
+                df = self.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, delta=args['delta'], exclude_boundary=exclude_boundary)
             else:
-                df = self.calc_contour(destid=int(destid[-1]), search_area=search_area, delta=args['delta'])
+                df = self.calc_contour(destid=int(destid[-1]), search_area=search_area, delta=args['delta'], exclude_boundary=exclude_boundary)
                 
             usew = deepcopy(obj.sp_graph.w); uses2 = deepcopy(obj.sp_graph.s2)
-            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2)
+            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
             # print(obj.eems_neg_log_lik())
 
             nll.append(-np.nanmax(joint_df['log-lik']))
@@ -638,7 +644,7 @@ class SpatialGraph(nx.Graph):
         alpha=None,
         lamb_q=None, 
         alpha_q=None,
-        optimize_q='n-dim',
+        optimize_q='n-dim',        
         factr=1e7,
         maxls=50,
         m=10,
@@ -666,6 +672,9 @@ class SpatialGraph(nx.Graph):
             ub (:obj:`int`): upper bound of log weights
             maxiter (:obj:`int`): maximum number of iterations to run L-BFGS
             verbose (:obj:`Bool`): boolean to print summary of results
+
+        Returns:
+            None
         """
         # check inputs
         assert lamb >= 0.0, "lambda must be non-negative"
@@ -755,7 +764,7 @@ class SpatialGraph(nx.Graph):
             if obj.sp_graph.optimize_q is not None:
                 obj.lamb_q = lamb_q
                 obj.alpha_q = alpha_q
-                
+
             obj.inv(); obj.Lpinv = pinvh(self.L.todense()); 
             obj.grad(reg=False)
             res = coordinate_descent(
@@ -785,8 +794,21 @@ class SpatialGraph(nx.Graph):
                 ).format(lamb, alpha, res[2]["nit"], self.train_loss)
             ) 
 
-    def extract_outliers(self, fdr=0.25, res_dist=None, verbose=False):
-        """Function to extract outlier deme pairs based on a FDR threshold specified by the user (default: 0.25)"""
+    def extract_outliers(
+        self, 
+        fdr=0.25, 
+        res_dist=None, 
+        verbose=False
+    ):
+        """Function to extract outlier deme pairs based on a FDR threshold specified by the user. 
+        
+        Required: 
+            fdr (:obj:`float`): FDR control rate, a number between 0 & 1
+            
+        Returns:
+            (:obj:`pandas.DataFrame`)
+        """
+        
         assert fdr>0 and fdr<1, "fdr should be a positive number between 0 and 1"
 
         obj = Objective(self)
@@ -837,13 +859,12 @@ class SpatialGraph(nx.Graph):
             # checking the log-lik of fits with deme1 - deme2 to find the source & dest. deme
             resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
             rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
-            # resc = minimize(self.neg_log_lik_c, x0=6*np.random.random()-3, args={'lre':[(x[k],y[k])],'mode':'sampled'}, method='L-BFGS-B', bounds=[(-3,3)])
-            # rescopp = minimize(self.neg_log_lik_c, x0=6*np.random.random()-3, args={'lre':[(y[k],x[k])],'mode':'sampled'}, method='L-BFGS-B', bounds=[(-3,3)])
+            
             if resc.x<1e-3 and rescopp.x<1e-3:
                 rm.append(k)
             else:
                 # approximately similar likelihood of either deme being destination 
-                if np.abs(rescopp.fun - resc.fun) <= 5:
+                if np.abs(rescopp.fun - resc.fun) <= 10:
                     newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k], ls[k][-1]])
                 else:
                     # if the "opposite" direction has a much higher log-likelihood then replace it entirely 
@@ -852,10 +873,6 @@ class SpatialGraph(nx.Graph):
                         ls[k][1] = self.perm_idx[x[k]]
 
         ls += newls
-
-        # removing demes that have estimated admix. prop. \approx 0 
-        for i in sorted(rm, reverse=True):
-            del ls[i]
         
         df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.'])
 
@@ -886,18 +903,24 @@ class SpatialGraph(nx.Graph):
         usew=None, uses2=None
     ):
         """Function to calculate admix. prop. values in a joint manner with weights w & deme-specific variance s2 (as opposed to just admix. prop. values in `calc_contour`).
-        contour_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_contour` 
-        top (:obj:`float`) : how many top entries (based on log-lik) to consider for the joint fitting? (if top >= 1, then it is the number of top entries, but if top < 1 then it is the top percent of total entries to consider)
-        NOTE: if the above two flags are specified, then none of the flags below need to be specified. 
-        destid (:obj:`int`) : 
-        The flag coverage is used to signifiy how large the contour should be:
-            'all'    - include all demes (sampled & unsampled) from the entire graph
-            'radius' - include all demes within a certain radius of a sampled source deme 
-                - 'opts' : integer specifying radius (as an `int`) around the sampled source deme
-            'range'  - include all demes within a certain long. & lat. rectangle 
-                - 'opts' : list of lists specifying long. & lat. limits (e.g., [[-120,-70],[25,50]] for contiguous USA)
-            'custom' - specific array of deme ids
-                - 'opts' : list of specific deme ids as index
+
+        Required:
+            contour_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_contour` 
+            top (:obj:`float`) : how many top entries (based on log-lik) to consider for the joint fitting? (if top >= 1, then it is the number of top entries, but if top < 1 then it is the top percent of total entries to consider)
+            NOTE: if the above two flags are specified, then none of the flags below need to be specified. 
+            destid (:obj:`int`) : ID of the putative destination deme  
+            The flag coverage is used to signifiy how large the contour should be:
+                'all'    - include all demes from the entire graph
+                'radius' - include all demes within a certain radius of a user-specified sampled source deme 
+                    - sourceid : integer ID of a sampled deme as seen on a FEEMS map
+                    - opts : integer specifying radius (as an `int`) around the sampled source deme
+                'range'  - include all demes within a certain long. & lat. rectangle 
+                    - opts : list of lists specifying long. & lat. limits (e.g., [[-120,-70],[25,50]] for contiguous USA)
+                'custom' - specific array of deme ids
+                    - opts : list of specific deme ids as index
+
+        Returns:
+            None
         """
         obj = Objective(self); obj.inv(); obj.grad(reg=False)
         
@@ -974,9 +997,8 @@ class SpatialGraph(nx.Graph):
                 baselinell = -obj.eems_neg_log_lik()
             
             cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
-            
-            checkpoints = {int(np.percentile(range(len(self.perm_idx)),25)): 25, int(np.percentile(range(len(self.perm_idx)),50)): 50, int(np.percentile(range(len(self.perm_idx)),75)): 75}
 
+            print(obj.sp_graph.Delta_q.shape)
             for ie, e in enumerate(randedge):
 
                 # if ie in checkpoints:
@@ -1084,18 +1106,26 @@ class SpatialGraph(nx.Graph):
     ):
         """
         Function to calculate admix. prop. values along with log-lik. values in a contour around the sampled source deme to capture uncertainty in the location of the source. 
-        destid 
-        The flag search_area is used to signifiy how large the contour should be:
-            'all'    - include all demes (sampled & unsampled) from the entire graph
-            'radius' - include all demes within a certain radius of a sampled source deme 
-                - 'opts' : integer specifying radius (as an `int`) around the sampled source deme
-            'range'  - include all demes within a certain long. & lat. rectangle 
-                - 'opts' : list of lists specifying long. & lat. limits (e.g., [[-120,-70],[25,50]] for contiguous USA)
-            'custom' - specific array of deme ids
-                - 'opts' : list of specific deme ids as index
+
+        Required:
+            destid (:obj:`int`) : ID of the putative destination deme             
+
+        Optional:
+            search_area (:obj:`str`): flag signifiy how large the search space should be for the source
+                'all'    - include all demes from the entire graph
+                'radius' - include all demes within a certain radius of a user-specified sampled source deme 
+                    - sourceid : integer ID of a sampled deme as seen on a FEEMS map
+                    - opts : integer specifying radius (as an `int`) around the sampled source deme
+                'range'  - include all demes within a certain long. & lat. rectangle 
+                    - opts : list of lists specifying long. & lat. limits (e.g., [[-120,-70],[25,50]] for contiguous USA)
+                'custom' - specific array of deme ids
+                    - opts : list of specific deme ids as index
+
+        Returns: 
+            (:obj:`pandas.DataFrame`)
         """
         obj = Objective(self); obj.inv(); obj.grad(reg=False)
-        
+
         assert isinstance(destid, (int, np.integer)), "destid must be an integer"
 
         try:
@@ -1196,22 +1226,17 @@ class SpatialGraph(nx.Graph):
             
         return df#.dropna() 
 
-
 def coordinate_descent(
     obj, 
-    factr=1e7, 
+    factr=1e10, 
     m=10, 
     maxls=50, 
     maxiter=100,
-    atol=1e-3,
     verbose=False
 ):
     """
-    Minimize the negative log-likelihood iteratively with an admix. prop. c value & refit the new weights based on that until tolerance is reached. 
+    Minimize the negative log-likelihood iteratively with an admix. prop. c & (weights, s2) in a coordinate-descent manner until tolderance `atol` is reached. 
     """
-    
-    # obj.sp_graph.edge = edge
-    # obj.sp_graph.option = 'onlyc'
 
     # flag to optimize admixture proportion
     optimc = True
@@ -1220,18 +1245,14 @@ def coordinate_descent(
         
         # first fit admix. prop. c given the weights
         resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
-        # print(resc.x)
-        # resc = minimize(obj.neg_log_lik_c, x0=np.log10(self.c/(1-self.c)), bounds=[(-3,3)], method='L-BFGS-B', args={'lre':obj.sp_graph.edge,'mode':'sampled'})
-        # print(resc.x, obj.sp_graph.c)
+        
         if resc.status != 0:
             print('Warning: admix. prop. optimization failed (increase atol or factr slightly)')
             return None
-        if np.allclose(resc.x, obj.sp_graph.c, atol=atol):
+        if np.allclose(resc.x, obj.sp_graph.c, atol=1e-3):
             optimc = False
 
         obj.sp_graph.c = deepcopy(resc.x)
-        # print(resc.x)
-        # obj.sp_graph.c = deepcopy(10**resc.x/(1+10**resc.x))
 
         if obj.sp_graph.optimize_q is not None:
             x0 = np.r_[np.log(obj.sp_graph.w), np.log(obj.sp_graph.s2)]
@@ -1242,7 +1263,6 @@ def coordinate_descent(
         res = fmin_l_bfgs_b(
             func=loss_wrapper,
             x0=x0,
-            # bounds=[(-1e30,1e30) for _ in x0], #-> setting bounds on how far the value can be perturbed (produces Singular matrix errors so leaving it blank)
             args=[obj],
             factr=factr,
             m=m,
@@ -1266,13 +1286,12 @@ def coordinate_descent(
             diffw = np.abs(np.exp(x0) - neww)
             diffs2 = [0]
 
-        if np.allclose(diffw, np.zeros(len(diffw)), atol=1e-8) and np.allclose(diffs2, np.zeros(len(diffs2)), atol=1e-8) and not optimc:
+        if np.allclose(diffw, np.zeros(len(diffw)), atol=100 * factr * np.finfo(float).eps) and np.allclose(diffs2, np.zeros(len(diffs2)), atol=100 * factr * np.finfo(float).eps) and not optimc:
             if verbose:
                 print("joint estimation converged in {:d} iterations!".format(bigiter+1))
             break
 
     return res
-
 
 def query_node_attributes(graph, name):
     """Query the node attributes of a nx graph. This wraps get_node_attributes

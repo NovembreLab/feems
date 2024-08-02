@@ -33,6 +33,12 @@ If you have samples spanning continental scales, then a coarser grid may be of u
 
 **Rule of thumb**: For the density of the grid, it is a balance between finer resolutions and runtime: a good place to start is a resolution in which individuals sampled as part of a sampling population get assigned to a unique deme. 
 
+### Inclusion of a flag to avoid wrapping locations around America
+
+Previously, `FEEMS` employed a trick to place points in Western Alaska on the 'other side' of the International Date Line on the 'same side' of the map as the North American landmass (only an issue with some projections). This threshold longitude was chosen as $-40$. 
+
+Now, we provide an option in `prepare_graph_inputs(..., wrap_america=False)` to turn the flag off for flexibility. 
+
 ### Inclusion of a plotting script using `ggplot2` 
 
 We also now have a script that can plot the `FEEMS` map in R using `ggplot2` (thanks to @LukeAndersonTrocme). First, you will need to export the relevant graph attributes in python (after `FEEMS` has been fit) using these commands:
