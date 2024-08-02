@@ -144,15 +144,19 @@ def run_cv_joint(
         )
 
         # set of initialization for warmstart
-        init_list = [w0]
-        for iq, lq in enumerate(lamb_q_grid):
-            w_init = init_list[-1]
-            s2_init = s2
-            for i, lw in enumerate(lamb_grid):
+        init_w_list = [w0] 
+        init_s2_list = [s2]
+        
+        for i, lw in enumerate(lamb_grid):
+        # for iq, lq in enumerate(lamb_q_grid):
+            w_init = init_w_list[-1]
+            # for i, lw in enumerate(lamb_grid):
+            for iq, lq in enumerate(lamb_q_grid):
+                s2_init = init_s2_list[-1]
                 if outer_verbose:
                     print(
-                        "\riteration lambda_q={}/{} lambda={}/{}".format(
-                            iq + 1, n_lamb_q, i + 1, n_lamb
+                        "\riteration lambda={}/{} lambda_q={}/{}".format(
+                            i + 1, n_lamb, iq + 1, n_lamb_q
                         ),
                         end="",
                     )
@@ -160,9 +164,10 @@ def run_cv_joint(
                 try: 
                     sp_graph_train.fit(
                         lamb=float(lw),
+                        lamb_q=float(lq), 
+                        optimize_q='n-dim', 
                         w_init=w_init,
                         s2_init=s2_init, 
-                        optimize_q='n-dim', lamb_q=float(lq), 
                         alpha_q=float(alpha_q), 
                         alpha=float(alpha_cv),
                         factr=factr,
@@ -176,8 +181,10 @@ def run_cv_joint(
                     cv_err[fold, iq, i] = np.nan 
 
                 w_init = deepcopy(sp_graph_train.w)
+                s2_init = deepcopy(sp_graph_train.s2)
                 if i == 0:
-                    init_list.append(w_init)
+                    init_w_list.append(w_init)
+                    init_s2_list.append(s2_init)
 
     return cv_err
 
