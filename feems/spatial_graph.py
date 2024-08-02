@@ -826,14 +826,9 @@ class SpatialGraph(nx.Graph):
         acs = np.empty((2, self.n_snps, 2))
         # computing p-values (or z-values) for each pairwise comparison after mean centering
         pvals = norm.cdf(np.log(emp_dist)-np.log(fit_dist)-np.mean(np.log(emp_dist)-np.log(fit_dist)), 0, np.std(np.log(emp_dist)-np.log(fit_dist)))
-        # med = np.median(np.log(emp_dist)-np.log(fit_dist))
-        # mad = 1.4826*np.median(np.abs(np.log(emp_dist)-np.log(fit_dist) - med))
-        # mvals = (np.log(emp_dist)-np.log(fit_dist) - med)/mad
-
+        
         bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
         
-        # for k in np.where(pvals < pthresh)[0]:
-        # for k in np.where(mvals < -mthresh)[0]:
         for k in np.where(bh)[0]:
             # code to convert single index to matrix indices
             x.append(np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1); y.append(int(k - 0.5*x[-1]*(x[-1]-1)))
@@ -856,7 +851,7 @@ class SpatialGraph(nx.Graph):
         rm = []
         newls = []
         for k in range(len(ls)):
-            # checking the log-lik of fits with deme1 - deme2 to find the source & dest. deme
+            # checking the log-lik of fits with deme1 - deme2 to find the source & dest.
             resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
             rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
             
@@ -865,7 +860,7 @@ class SpatialGraph(nx.Graph):
             else:
                 # approximately similar likelihood of either deme being destination 
                 if np.abs(rescopp.fun - resc.fun) <= 10:
-                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k], ls[k][-1]])
+                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k]])
                 else:
                     # if the "opposite" direction has a much higher log-likelihood then replace it entirely 
                     if rescopp.fun < resc.fun:
@@ -873,7 +868,7 @@ class SpatialGraph(nx.Graph):
                         ls[k][1] = self.perm_idx[x[k]]
 
         ls += newls
-        
+
         df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.'])
 
         if len(df)==0:

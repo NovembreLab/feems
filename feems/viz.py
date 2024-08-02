@@ -656,7 +656,7 @@ def draw_FEEMSmix_fit(
     else:
         if demes is None:
             demes = len(ind_results)
-            matches = np.arange(1, demes+1)
+            matches = np.arange(1, demes)
         else: 
             matches = np.arange(1, demes+1)
 
