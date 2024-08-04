@@ -55,6 +55,10 @@ and then you can use this script [ggplot_feems.R](https://github.com/VivaswatS/f
 
 With `FEEMSmix`, we also provide the functionality of predicting the location of samples on a migration surface estimated with `FEEMS`. We observe comparable performance to another state-of-the-art deep learning method called `Locator` ([Battey _et al_ 2020](https://doi.org/10.7554/eLife.54507)) and believe it could be a useful tool for the spatial population genetics community. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/miscellaneous-functions.ipynb).
 
+### Visualization of admixture pies on `FEEMS` map
+
+We provide a basic function to overlay admixture proportions from an `admixture`/`STRUCTURE`-like model as pie charts on an underlying `FEEMS` map. This has proven useful as a visualization tool when interpreting both `FEEMS` and `FEEMSmix` results (especially, the latter). See example code in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/miscellaneous-functions.ipynb).
+
 ### Visualization of model fits with PCA and `admixture` ([Alexander _et al_ 2009](https://genome.cshlp.org/content/19/9/1655.long))
 
 We provide functions to visualize fits of two widely-used models (Principal Components Analysis and `admixture`) to the observed genetic data and plot the outliers on a geographic map (akin to a `FEEMSmix` analysis). For PCA, we compute the principal components in-house, whereas for `admixture`, we ask you provide the .P & .Q matrices for different $K$ values. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/miscellaneous-functions.ipynb).

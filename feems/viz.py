@@ -390,6 +390,79 @@ class Viz(object):
         
         self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
 
+    def draw_admixture_pies(
+        self,
+        qfile, 
+        mode='demes',
+        colors=["#e6ab02", "#a6761d", "#66a61e", "#7570b3", "#e7298a", "#1b9e77", "#d95f02", "#666666"],
+        radius=0.2,
+        edgecolor='black'
+    ):
+        """Reads in .Q matrix and plots the admixture pies across all sampled demes.
+        """
+        
+        print("Reading in .Q file...")
+        Q = np.loadtxt(qfile)
+        if np.sum(self.sp_graph.n_samples_per_obs_node_permuted) != Q.shape[0]:
+            print("The number of samples in FEEMS genotype matrix do not match the number of samples in .Q file")
+            return 
+        print("Number of individuals: {:d}, K = {:d}".format(Q.shape[0], Q.shape[1]))
+
+        if Q.shape[1] > 8:
+            print("Please provide a custom list of colors for K = {:d} (default color scheme only goes up to K = 8)".format(Q.shape[1]))
+            return
+
+        if mode == 'samples':
+            for i in range(Q.shape[0]):
+                self._draw_admix_pie(Q[i, :], 
+                                     self.coord[i, 0], 
+                                     self.coord[i, 1], 
+                                     colors[:Q.shape[1]], 
+                                     radius=radius,
+                                     linewidth=radius*1.1,
+                                     edgecolor=edgecolor,
+                                     ax=self.ax)
+        else:
+            for i in self.sp_graph.perm_idx[:self.sp_graph.n_observed_nodes]:
+                self._draw_admix_pie(np.mean(Q[self.sp_graph.nodes[i]['sample_idx'], :],axis=0).tolist(), 
+                                     self.grid[i, 0], 
+                                     self.grid[i, 1], 
+                                     colors[:Q.shape[1]], 
+                                     radius=radius, 
+                                     linewidth=radius*1.1,
+                                     edgecolor=edgecolor,
+                                     ax=self.ax)
+
+    def _draw_admix_pie(
+        self,
+        admix_fracs, 
+        x, y, 
+        colors,
+        radius=.18, 
+        inset_width=.5,
+        inset_height=.5,
+        loc=10,
+        linewidth=.2,
+        edgecolor="black",
+        ax=None
+    ):
+        """Draws a single admixture pie on a axis
+        """
+        xy = (x, y)
+        ax_i = inset_axes(ax, 
+                          width=inset_width, 
+                          height=inset_height, 
+                          loc=loc, 
+                          bbox_to_anchor=(x, y),
+                          bbox_transform=ax.transData, 
+                          borderpad=0)
+        wedges, t = ax_i.pie(admix_fracs, 
+                             colors=colors, 
+                             center=xy, 
+                             radius=radius, 
+                             wedgeprops={"linewidth": linewidth, 
+                                         "edgecolor": edgecolor})
+
     def draw_c_colorbar(
         self,
         c_cbar_loc = 'upper right',
