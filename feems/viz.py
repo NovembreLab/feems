@@ -617,7 +617,7 @@ class Viz(object):
             self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], 
                             marker='o', zorder=2, edgecolors='white', 
                             facecolors=ll(int(-row['scaled log-lik'])), 
-                            linewidth=self.obs_node_linewidth, s=loglik_node_size)
+                            linewidth=0.5*self.obs_node_linewidth, s=loglik_node_size)
 
         # drawing an arrow from MLE source to destination
         if draw_arrow:
@@ -659,7 +659,7 @@ class Viz(object):
         plt.ylim((np.nanmax(cprofll)+levels, np.nanmax(cprofll)-levels/20))
         plt.plot(cgrid, cprofll2.T, color='grey', alpha=0.5, linewidth=0.3)
         plt.xticks(ticks=[0, 1], labels=[0, 1])
-        plt.text(cgrid[np.nanargmax(cprofll)], -0.2, round(cgrid[np.nanargmax(cprofll)], 2), fontsize=int(0.7*self.cbar_ticklabelsize), ha='center', va='top', transform=plt.gca().transAxes)
+        plt.text(cgrid[np.nanargmax(cprofll)], -0.2, round(cgrid[np.nanargmax(cprofll)], 2), fontsize=0.8*self.cbar_ticklabelsize, ha='center', va='top', transform=plt.gca().transAxes)
 
         lb = np.where(cprofll >= np.nanmax(cprofll) - 3)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 3)[0][-1]
         plt.axvline(cgrid[lb], color='red', ls='--', linewidth=self.obs_node_linewidth) 
@@ -670,7 +670,7 @@ class Viz(object):
                                   loc = lbar_loc, 
                                   width = str(lbar_width)+'%', 
                                   height = str(lbar_height)+'%')
-        self.c_axins.set_title(r"scaled $\ell$", fontsize = int(0.8*self.cbar_font_size))
+        self.c_axins.set_title(r"scaled $\ell$", fontsize = self.cbar_font_size)
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
         self.c_cbar.set_ticks([levels,0], fontsize=self.cbar_ticklabelsize)
 

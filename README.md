@@ -29,7 +29,13 @@ See [cross-validation.ipynb](https://github.com/NovembreLab/feems/blob/main/docs
 
 ### Inclusion of a shape file with coarser resolution (`grid_500.sh*`)
 
-If you have samples spanning continental scales, then a coarser grid may be of use to you, so we provide three resolutions (spanning from fine to coarse): `grid_100`, `grid_250` and `grid_500`. You can also create your own shapefile using this [R script](https://github.com/karolisr/pitcairnia-dr-nrv/blob/36430941db8762b703ef58d94764b77a33763798/data/dggs/generate-dgg-files.R) (thanks to @karolisr)
+If you have samples spanning continental scales, then a coarser grid may be of use to you, so we provide three resolutions (spanning from fine to coarse): 
+
+1. `grid_100` (corresponds to `res = 6` in `dgconstruct` from package `dggridR` with cell area of approx. $6{,}200$ sq km and a cell spacing of $110$ km)
+2. `grid_250` (corresponds to `res = 5` in `dgconstruct` with a cell area of approx. $25{,}000$ sq km and a cell spacing of $220$ km)
+3. `grid_500` (corresponds to `res = 4` in `dgconstruct` and a cell area of $100{,}000$ sq km with a cell spacing of $440$ km)
+
+You can also create your own shapefile using this [R script](https://github.com/karolisr/pitcairnia-dr-nrv/blob/36430941db8762b703ef58d94764b77a33763798/data/dggs/generate-dgg-files.R) (thanks to @karolisr)
 
 **Rule of thumb**: For the density of the grid, it is a balance between finer resolutions and runtime: a good place to start is a resolution in which individuals sampled as part of a sampling population get assigned to a unique deme. 
 

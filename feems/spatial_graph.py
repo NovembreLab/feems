@@ -869,6 +869,7 @@ class SpatialGraph(nx.Graph):
 
         ls += newls
 
+        print(np.array(ls), np.array(ls).shape)
         df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.'])
 
         if len(df)==0:
@@ -1021,7 +1022,7 @@ class SpatialGraph(nx.Graph):
             # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
             if search_area == 'radius' or search_area == 'range':
                 mles = df['(source, dest.)'].iloc[np.argmax(df['log-lik'])][0]
-                if len(list(self.neighbors(mles))) == 6:
+                if len(list(self.neighbors(mles))) < 6:
                     print("(Warning: MLE location of source found to be at the edge of the specified {:g}, consider increasing the `opts` to include a larger area.)".format(search_area))
     
             if np.sum(df['log-lik'].isna()) > 0.25*len(df):
@@ -1213,7 +1214,7 @@ class SpatialGraph(nx.Graph):
         # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
         if search_area == 'radius' or search_area == 'range':
                 mles = df['(source, dest.)'].iloc[np.argmax(df['log-lik'])][0]
-                if len(list(self.neighbors(mles))) == 6:
+                if len(list(self.neighbors(mles))) < 6:
                     print("  (Warning: MLE location of source found to be at the edge of the specified {}, consider increasing the `opts` to include a larger area.)".format(search_area))
 
         if np.sum(df['log-lik'].isna()) > 0.3*len(df):
