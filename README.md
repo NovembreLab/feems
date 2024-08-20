@@ -19,7 +19,7 @@ representing long-range gene flow on a background migration surface estimated by
 
 The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. 
 
-Jump to [RUNNING `FEEMS`](https://github.com/VivaswatS/feems/blob/admixture_edge/README.md#running-feems) to get started right away!  
+#### Jump to [RUNNING `FEEMS`](https://github.com/VivaswatS/feems/blob/main/README.md#running-feems) to get started right away!  
 
 # IMPORTANT UPDATES (since v1.0)
 
@@ -72,19 +72,19 @@ np.savetxt('edgew.csv', np.vstack((np.array(sp_graph.edges).T, sp_graph.w)).T, d
 # write the deme coordinates + sample size (node attributes) out into a csv file
 np.savetxt('nodepos.csv', np.vstack((sp_graph.node_pos.T, [sp_graph.nodes[n]['n_samples'] for n in range(len(sp_graph.nodes))])).T, delimiter=',')
 ```
-and then you can use this script [ggplot_feems.R](https://github.com/VivaswatS/feems/blob/admixture_edge/feems/data/ggplot_feems.R) to plot the baseline `FEEMS` figure in R. With the figure in `ggplot2` format, you will also be able to add any extra features as you see fit (e.g., sample locations, ecological gradients, etc.)
+and then you can use this script [ggplot_feems.R](https://github.com/VivaswatS/feems/blob/main/feems/data/ggplot_feems.R) to plot the baseline `FEEMS` figure in R. With the figure in `ggplot2` format, you will also be able to add any extra features as you see fit (e.g., sample locations, ecological gradients, etc.)
 
 ### Inclusion of spatial prediction as a feature
 
-With `FEEMSmix`, we also provide the functionality of predicting the location of samples on a migration surface estimated with `FEEMS`. We observe comparable performance to another state-of-the-art deep learning method called `Locator` ([Battey _et al_ 2020](https://doi.org/10.7554/eLife.54507)) and believe it could be a useful tool for the spatial population genetics community. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/miscellaneous-functions.ipynb).
+With `FEEMSmix`, we also provide the functionality of predicting the location of samples on a migration surface estimated with `FEEMS`. We observe comparable performance to another state-of-the-art deep learning method called `Locator` ([Battey _et al_ 2020](https://doi.org/10.7554/eLife.54507)) and believe it could be a useful tool for the spatial population genetics community. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
 
 ### Visualization of admixture pies on `FEEMS` map
 
-We provide a basic function to overlay admixture proportions from an `admixture`/`STRUCTURE`-like model as pie charts on an underlying `FEEMS` map. This has proven useful as a visualization tool when interpreting both `FEEMS` and `FEEMSmix` results (especially, the latter). See example code in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/miscellaneous-functions.ipynb).
+We provide a basic function to overlay admixture proportions from an `admixture`/`STRUCTURE`-like model as pie charts on an underlying `FEEMS` map. This has proven useful as a visualization tool when interpreting both `FEEMS` and `FEEMSmix` results (especially, the latter). See example code in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
 
 ### Visualization of model fits with PCA and `admixture` ([Alexander _et al_ 2009](https://genome.cshlp.org/content/19/9/1655.long))
 
-We provide functions to visualize fits of two widely-used models (Principal Components Analysis and `admixture`) to the observed genetic data and plot the outliers on a geographic map (akin to a `FEEMSmix` analysis). For PCA, we compute the principal components in-house, whereas for `admixture`, we ask you provide the .P & .Q matrices for different $K$ values. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/miscellaneous-functions.ipynb).
+We provide functions to visualize fits of two widely-used models (Principal Components Analysis and `admixture`) to the observed genetic data and plot the outliers on a geographic map (akin to a `FEEMSmix` analysis). For PCA, we compute the principal components in-house, whereas for `admixture`, we ask you provide the .P & .Q matrices for different $K$ values. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
 
 # INSTALLATION
 
@@ -155,13 +155,13 @@ NOTE: Some users have reported a compatibility error arising at this step with t
 
 # RUNNING `FEEMS`
 
-To help get your analysis started, we provide an example workflow in the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
+To help get your analysis started, we provide an example workflow in the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
 
-An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
+An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
 
 # RUNNING `FEEMSmix`
 
-Since `FEEMSmix` is built on top of `FEEMS`, this analysis will start where the previous section left off (i.e., after the initial `FEEMS` fit). We will also use the data from North American gray wolves to illustrate the working of this method, scroll down the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/getting-started.ipynb) to see example analyses. 
+Since `FEEMSmix` is built on top of `FEEMS`, this analysis will start where the previous section left off (i.e., after the initial `FEEMS` fit). We will also use the data from North American gray wolves to illustrate the working of this method, scroll down the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) to see example analyses. 
 
 [anaconda]: https://www.anaconda.com/products/distribution
 [miniconda]: https://docs.conda.io
