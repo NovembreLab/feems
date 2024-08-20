@@ -731,7 +731,7 @@ class SpatialGraph(nx.Graph):
             if obj.sp_graph.optimize_q is not None:
                 obj.lamb_q = lamb_q
                 obj.alpha_q = alpha_q
-            s2_init = self.s2 if obj.sp_graph.optimize_q=="1-dim" else self.s2*np.ones(len(self))
+            s2_init = np.array([self.s2]) if obj.sp_graph.optimize_q=="1-dim" else self.s2*np.ones(len(self))
             if obj.sp_graph.optimize_q is not None:
                 x0 = np.r_[np.log(w_init), np.log(s2_init)]
             else:
@@ -869,7 +869,7 @@ class SpatialGraph(nx.Graph):
 
         ls += newls
 
-        print(np.array(ls), np.array(ls).shape)
+        # print(np.array(ls), np.array(ls).shape)
         df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.'])
 
         if len(df)==0:

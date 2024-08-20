@@ -260,13 +260,14 @@ class Objective(object):
         self.grad_pen = self.sp_graph.Delta.T @ self.sp_graph.Delta @ (lamb * term)
         self.grad_pen = self.grad_pen * (alpha / (1 - np.exp(-alpha * self.sp_graph.w))) 
 
-        if self.sp_graph.optimize_q is not None:
+        if self.sp_graph.optimize_q == 'n-dim':
             lamb_q = self.lamb_q
             alpha_q = self.alpha_q
             
             term = alpha_q * self.sp_graph.s2 + np.log(
                 1 - np.exp(-alpha_q * self.sp_graph.s2)
             )
+
             self.grad_pen_q = self.sp_graph.Delta_q.T @ self.sp_graph.Delta_q @ (lamb_q * term)
             self.grad_pen_q = self.grad_pen_q * (alpha_q / (1 - np.exp(-alpha_q * self.sp_graph.s2)))
 

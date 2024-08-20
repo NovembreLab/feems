@@ -158,10 +158,9 @@ def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
         fdr (float): False discovery rate threshold.
     """
 
-    # logratio = np.log(emp_dist/fit_dist)
-    logratio = emp_dist-fit_dist
+    logratio = np.log(emp_dist/fit_dist)
+    # logratio = emp_dist-fit_dist
 
-    # logratio = emp_dist/fit_dist - 1
     mean_logratio = np.mean(logratio)
     var_logratio = np.var(logratio,ddof=1)
     logratio_norm = (logratio-mean_logratio)/np.sqrt(var_logratio)

@@ -642,8 +642,8 @@ class Viz(object):
             except:
                 cprofll[ic] = np.nan
 
-        cprofll2 = np.zeros((np.sum(df['scaled log-lik']>-2),len(cgrid)))
-        for idx, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-2]):
+        cprofll2 = np.zeros((np.sum(df['scaled log-lik']>-3),len(cgrid)))
+        for idx, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-3]):
             for ic, c in enumerate(cgrid):
                 try:
                     cprofll2[idx,ic] = -self.obj.eems_neg_log_lik(c, {'edge':[ed], 'mode':'compute'})
