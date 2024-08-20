@@ -12,11 +12,11 @@ import itertools as it
 import pandas as pd
 
 from .cross_validation import comp_mats, run_cv
-from .objective import Objective
-from .spatial_graph import SpatialGraph, query_node_attributes
+# from .objective import Objective
+from .spatial_graph import query_node_attributes
 from .utils import prepare_graph_inputs
-from .viz import Viz
-from .helper_funcs import comp_genetic_vs_fitted_distance, plot_default_vs_long_range
+# from .viz import Viz
+# from .helper_funcs import *
 
 
 class FeemsMix:

@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from .cross_validation import run_cv
-from .feems_mix import FeemsMix
+#from .feems_mix import FeemsMix
 from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2
 from .spatial_graph import SpatialGraph, query_node_attributes
 from .sim import setup_graph, simulate_genotypes
