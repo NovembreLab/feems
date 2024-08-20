@@ -19,6 +19,8 @@ representing long-range gene flow on a background migration surface estimated by
 
 The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. 
 
+Jump to [RUNNING `FEEMS`](https://github.com/VivaswatS/feems/blob/admixture_edge/README.md#running-feems) to get started right away!  
+
 # IMPORTANT UPDATES (since v1.0)
 
 ### Change in the default mode of `FEEMS`
@@ -35,9 +37,24 @@ If you have samples spanning continental scales, then a coarser grid may be of u
 2. `grid_250` (corresponds to `res = 5` in `dgconstruct` with a cell area of approx. $25{,}000$ sq km and a cell spacing of $220$ km)
 3. `grid_500` (corresponds to `res = 4` in `dgconstruct` and a cell area of $100{,}000$ sq km with a cell spacing of $440$ km)
 
-You can also create your own shapefile using this [R script](https://github.com/karolisr/pitcairnia-dr-nrv/blob/36430941db8762b703ef58d94764b77a33763798/data/dggs/generate-dgg-files.R) (thanks to @karolisr)
+You can also create your own shapefile using this command in R:
+```r
+dggs <- dgconstruct(
+    res = 4,
+    precision = 30,
+    projection = "ISEA",
+    aperture = 4,
+    topology = "TRIANGLE"
+)
+
+dgearthgrid(dggs, savegrid="PATH/world_triangle_res4.shp")
+```
+
+_Note: For finer resolutions (`res > 8`), this command will take a really long time to save the grid for the entire earth. In these cases, you can subset a region of the world and intersect this region with the triangular grid, see an example [R script](https://github.com/karolisr/pitcairnia-dr-nrv/blob/36430941db8762b703ef58d94764b77a33763798/data/dggs/generate-dgg-files.R) (thanks to @karolisr)_
 
 **Rule of thumb**: For the density of the grid, it is a balance between finer resolutions and runtime: a good place to start is a resolution in which individuals sampled as part of a sampling population get assigned to a unique deme. 
+
+The `outer` extent/boundary of the grid can be constructed using this tool: [https://www.keene.edu/campus/maps/tool/](https://www.keene.edu/campus/maps/tool/). 
 
 ### Inclusion of a flag to avoid wrapping locations around America
 
@@ -138,13 +155,13 @@ NOTE: Some users have reported a compatibility error arising at this step with t
 
 # RUNNING `FEEMS`
 
-To help get your analysis started, we provide an example workflow in the [getting-started.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
+To help get your analysis started, we provide an example workflow in the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
 
-An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
+An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
 
 # RUNNING `FEEMSmix`
 
-Since `FEEMSmix` is built on top of `FEEMS`, this analysis will start where the previous section left off (i.e., after the initial `FEEMS` fit). We will also use the data from North American gray wolves to illustrate the working of this method, scroll down the [getting-started.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/getting-started.ipynb) to see example analyses. 
+Since `FEEMSmix` is built on top of `FEEMS`, this analysis will start where the previous section left off (i.e., after the initial `FEEMS` fit). We will also use the data from North American gray wolves to illustrate the working of this method, scroll down the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/admixture_edge/docsrc/notebooks/getting-started.ipynb) to see example analyses. 
 
 [anaconda]: https://www.anaconda.com/products/distribution
 [miniconda]: https://docs.conda.io
