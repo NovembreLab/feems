@@ -238,15 +238,29 @@ class Viz(object):
         obs_grid = self.grid[obs_perm_ids, :]
         if use_ids:
             for i, perm_id in enumerate(obs_perm_ids):
-                self.ax.text(
-                    obs_grid[i, 0],
-                    obs_grid[i, 1],
-                    str(perm_id),
-                    horizontalalignment="center",
-                    verticalalignment="center",
-                    size=self.obs_node_textsize,
-                    zorder=self.obs_node_zorder,
-                )
+                # using an alternating grey and black color to prevent overplotting
+                if perm_id%2:
+                    self.ax.text(
+                        obs_grid[i, 0],
+                        obs_grid[i, 1],
+                        str(perm_id),
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        size=self.obs_node_textsize*1.05,
+                        zorder=self.obs_node_zorder,
+                        color='grey'
+                    )
+                else:    
+                    self.ax.text(
+                        obs_grid[i, 0],
+                        obs_grid[i, 1],
+                        str(perm_id),
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        size=self.obs_node_textsize,
+                        zorder=self.obs_node_zorder,
+                        color='k'
+                    )
         else:
             self.ax.scatter(
                 obs_grid[:, 0],

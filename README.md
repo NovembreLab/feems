@@ -14,7 +14,7 @@ For details on the method see our [publication](https://doi.org/10.7554/eLife.61
 
 # FEEMSmix
 
-**F**ast **E**stimation of **E**ffective **M**igration **S**urfaces + ad**mix**ture (`FEEMSmix`) is a python package built on top of `FEEMS` for 
+**F**ast **E**stimation of **E**ffective **M**igration **S**urfaces + ad**mix**ture (`FEEMSmix`) is built on top of `FEEMS`, and is a method for 
 representing long-range gene flow on a background migration surface estimated by `FEEMS`. 
 
 The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. 
@@ -133,20 +133,20 @@ conda install -c conda-forge statsmodels scikit-sparse
 conda install -c conda-forge click setuptools suitesparse
 ```
 
-Jupyter and jupyterlab are also needed to explore some example notebooks but these 
-are not required for the functioning of the `FEEMS` package. 
+Jupyter and jupyterlab are also needed to explore the example notebooks but 
+are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package. 
 
 Once the `conda` environment has 
 been setup with these tricky dependencies we can install `FEEMS`:
 
 ```bash
-pip install git+https://github.com/NovembreLab/feems
+pip install git+https://github.com/VivaswatS/feems
 ```
 
 You can also install `FEEMS` locally by:
 
 ```bash
-git clone https://github.com/NovembreLab/feems
+git clone https://github.com/VivaswatS/feems
 cd feems/
 pip install .
 ```
