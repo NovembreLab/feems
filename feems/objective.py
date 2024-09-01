@@ -7,10 +7,8 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from scipy.linalg import det, pinvh
-from scipy.optimize import fmin_l_bfgs_b, minimize
 import scipy.sparse as sp
 from scipy.stats import wishart, norm, chi2
-import statsmodels.api as sm
 
 from .utils import cov_to_dist, benjamini_hochberg, get_outlier_idx
 
@@ -165,7 +163,7 @@ class Objective(object):
 
         if not hasattr(self, 'Lpinv'):
             self.Lpinv = pinvh(self.sp_graph.L.todense())
-
+        
         # getting index of source and destination deme using internal indexing (0, 1, 2, ..., o) 
         sid = np.where(self.sp_graph.perm_idx == self.sp_graph.edge[0][0])[0][0]
         did = np.where(self.sp_graph.perm_idx == self.sp_graph.edge[0][1])[0][0]
@@ -357,20 +355,32 @@ class Objective(object):
         if c is not None:
             if opts['mode'] != 'update':
                 dd = self._compute_delta_matrix(c, opts)
-                nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
+                try:
+                    nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
+                except: 
+                    nll = np.inf
             else:
                 opts['delta'] = self._compute_delta_matrix(c, opts)
-                nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ opts['delta'] @ self.C.T)
+                try:
+                    nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ opts['delta'] @ self.C.T)
+                except:
+                    nll = np.inf
         else:
             dd = self._compute_delta_matrix(0, opts)
-            nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
+            try:
+                nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
+            except:
+                nll = np.inf
                    
         return nll
     
     def _compute_delta_matrix(self, c, opts):
-        """Compute a new delta matrix given a previous delta matrix as a perturbation from a single long range gene flow event OR create a new delta matrix from resmat (internal function only)
+        """(internal function) Compute a new delta matrix given a previous delta matrix as a perturbation from a single long range gene flow event OR create a new delta matrix from resmat 
         """
 
+        # restrict c to be b/w 0 & 1 (otherwise not posdef errors)
+        # c = 0 if c < 0 else 1 if c > 1 else c
+        
         # do not recompute inverses if already exists
         if not hasattr(self, 'Linv'):
             self.inv(); self.grad(reg=False)
@@ -396,7 +406,6 @@ class Objective(object):
                 resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
         else:
             # gets the 6 neighboring demes
-            # neighs = []
             neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[opts['lre'][0][0]]))
             # finds the neighboring deme that has samples
             neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]

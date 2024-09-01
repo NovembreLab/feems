@@ -604,7 +604,7 @@ class Viz(object):
         if loglik_node_size is None:
             loglik_node_size = self.obs_node_size*2.5
         if cbar_font_size is None:
-            cbar_font_size = self.cbar_font_size
+            cbar_font_size = self.cbar_font_size*0.8
         if cbar_ticklabelsize is None:
             cbar_ticklabelsize = self.cbar_ticklabelsize
         if profile_c_loc is None:
@@ -684,7 +684,7 @@ class Viz(object):
                                   loc = lbar_loc, 
                                   width = str(lbar_width)+'%', 
                                   height = str(lbar_height)+'%')
-        self.c_axins.set_title(r"scaled $\ell$", fontsize = self.cbar_font_size)
+        self.c_axins.set_title(r"scaled $\ell$", fontsize = cbar_font_size)
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
         self.c_cbar.set_ticks([levels,0], fontsize=self.cbar_ticklabelsize)
 
@@ -865,7 +865,7 @@ def plot_FEEMSmix_result(
     axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
     x_ = np.linspace(np.min(diag_results[0]['fit_dist']), np.max(diag_results[0]['fit_dist']), 12);
     axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2);
-    axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
+    axs[0].text(0.65, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
     axs[0].set_title('Baseline')
     fig.supxlabel('fitted distance'); fig.supylabel('genetic distance');
     
@@ -890,7 +890,7 @@ def plot_FEEMSmix_result(
             )
         x_ = np.linspace(np.min(diag_results[i]['fit_dist']), np.max(diag_results[i]['fit_dist']), 12); 
         axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2); 
-        axs[i].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
+        axs[i].text(0.65, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
         axs[i].set_title('On fitting deme {:d}'.format(diag_results[i]['deme']))
 
 def recover_nnz_entries(sp_graph):

@@ -40,12 +40,8 @@ class SpatialGraph(nx.Graph):
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
 
-<<<<<<< HEAD
-        # inherits from networkx Graph object
-=======
         # inherits from networkx Graph object -- changed this to new signature for python3
         print("Initializing graph...")
->>>>>>> admixture_edge
         super().__init__()
         self._init_graph(node_pos, edges)  # init graph
 
@@ -380,8 +376,8 @@ class SpatialGraph(nx.Graph):
         maxls=50,
         m=10,
         factr=1e7,
-        lb=-1e20,
-        ub=1e20,
+        lb=-np.inf,
+        ub=np.inf,
         maxiter=15000,
         search_area='all',
         opts=None
@@ -460,6 +456,9 @@ class SpatialGraph(nx.Graph):
             
             joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
 
+            # replacing inf with nan
+            joint_df = joint_df.replace([np.inf, -np.inf], np.nan)
+
             print('\n  MLE edge found from source {:d} to destination {:d} with strength {:.2f}'.format(joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])][0], dest[cnt-1], joint_df['admix. prop.'].iloc[np.nanargmax(joint_df['log-lik'])]))
             print('\n  Log-likelihood after adding MLE edge: {:.1f} (p-val = {:.2e})\n'.format(np.nanmax(joint_df['log-lik']),chi2.sf(2*(np.nanmax(joint_df['log-lik'])-nllnull),df=1)))
 
@@ -496,8 +495,8 @@ class SpatialGraph(nx.Graph):
         maxls=50,
         m=10,
         factr=1e7,
-        lb=-1e20,
-        ub=1e20,
+        lb=-np.inf,
+        ub=np.inf,
         maxiter=15000,
         search_area='all',
         opts=None
@@ -761,7 +760,7 @@ class SpatialGraph(nx.Graph):
             if lamb_q is None:
                 lamb_q = lamb
             if alpha_q is None:
-                alpha_q = 1. / self.s2.mean()
+                alpha_q = 1.0 / self.s2.mean()
 
             obj = Objective(self)
             obj.sp_graph.optimize_q = optimize_q; obj.lamb = lamb; obj.alpha = alpha
@@ -856,8 +855,8 @@ class SpatialGraph(nx.Graph):
         newls = []
         for k in range(len(ls)):
             # checking the log-lik of fits with deme1 - deme2 to find the source & dest.
-            resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
-            rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)], tol=1e-3)
+            resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='Nelder-Mead', bounds=[(0,1)], tol=1e-3)
+            rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='Nelder-Mead', bounds=[(0,1)], tol=1e-3)
             
             if resc.x<1e-3 and rescopp.x<1e-3:
                 rm.append(k)
@@ -937,7 +936,7 @@ class SpatialGraph(nx.Graph):
             # creating a list of (source, dest.) pairings based on user-picked criteria
             if search_area == 'all':
                 # including every possible node in graph as a putative source
-                randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]))]
+                randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]+list(self.neighbors(destid))))]
             elif search_area == 'radius':
                 assert isinstance(sourceid, (int, np.integer)), "sourceid must be an integer"
                 assert isinstance(opts, (int, np.integer)) and opts > 0, "radius must be an integer >=1"
@@ -951,7 +950,7 @@ class SpatialGraph(nx.Graph):
                     # dropping repeated nodes 
                     neighs = np.unique(list(it.chain(*tempn)))
     
-                randedge = [(x,destid) for x in list(set(neighs)-set([destid]))]
+                randedge = [(x,destid) for x in list(set(neighs)-set([destid]+list(self.neighbors(destid))))]
             elif search_area == 'range':
                 assert len(opts) == 2, "limits must be list of length 2"
                 # reverse coordinates if in Western and Southern hemispheres
@@ -973,7 +972,7 @@ class SpatialGraph(nx.Graph):
                 if (destid,destid) in randedge:
                     randedge.remove((destid,destid))
             elif search_area == 'custom':
-                randedge = [(x,destid) for x in list(set(opts)-set([destid]))]
+                randedge = [(x,destid) for x in list(set(opts)-set([destid]+list(self.neighbors(destid))))]
     
             if exclude_boundary:
                 randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.neighbors(e[0]))==6]
@@ -984,25 +983,22 @@ class SpatialGraph(nx.Graph):
             # fit the baseline graph if no w or s2 is passed in 
             # baseline w and s2 to be stored in an object
             if usew is None:
-                self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, option='default', verbose=False);
-                obj.inv(); obj.grad(reg=False)
-                baselinell = -obj.eems_neg_log_lik()
+                # self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, option='default', verbose=False);
+                # obj.inv(); obj.grad(reg=False)
                 usew = deepcopy(self.w); uses2 = deepcopy(self.s2) 
+                baselinell = -obj.eems_neg_log_lik()
                 # container for storing the MLE weights & s2
                 mlew = deepcopy(usew); mles2 = deepcopy(uses2)
             else:
                 self._update_graph(usew, uses2)
+                baselinell = -obj.eems_neg_log_lik()
                 # container for storing the MLE weights & s2
                 mlew = deepcopy(usew); mles2 = deepcopy(uses2)            
-                baselinell = -obj.eems_neg_log_lik()
             
             cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
 
-            print(obj.sp_graph.Delta_q.shape)
             for ie, e in enumerate(randedge):
 
-                # if ie in checkpoints:
-                #     print('{:d}%'.format(checkpoints[ie]), end='...')
                 print("\r\tJointly optimizing likelihood over {}/{} most likely demes in the graph".format(ie+1,len(randedge)), end="")
                     
                 # initializing at baseline values
@@ -1012,12 +1008,27 @@ class SpatialGraph(nx.Graph):
                     self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=[e], option='onlyc', verbose=False)
                     cest2[ie] = self.c
                     llc2[ie] = -obj.eems_neg_log_lik(self.c, {'edge':self.edge,'mode':'compute'})
+                    # print(llc2[ie],randedge[ie])
                     # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
-                    if llc2[ie] > np.nanmax(llc2[:ie]):
-                        mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
+                    if llc2[ie] != -np.inf:
+                        if llc2[ie] > np.nanmax(np.append(llc2[:ie],[baselinell])):
+                            mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
                 except: 
-                    cest2[ie] = np.nan
-                    llc2[ie] = np.nan
+                    try:
+                        # initializing at baseline values
+                        self._update_graph(mlew, mles2)
+
+                        self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=[e], option='onlyc', verbose=False)
+                        cest2[ie] = self.c
+                        llc2[ie] = -obj.eems_neg_log_lik(self.c, {'edge':self.edge,'mode':'compute'})
+                    
+                        # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
+                        if llc2[ie] != -np.inf:
+                            if llc2[ie] > np.nanmax(np.append(llc2[:ie],[baselinell])):
+                                mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
+                    except:
+                        cest2[ie] = np.nan
+                        llc2[ie] = np.nan
     
             print('...done!')
 
@@ -1092,7 +1103,8 @@ class SpatialGraph(nx.Graph):
 
         ## checking whether adding an extra admixture parameter improves model fit using a LRT
         joint_contour_df['pval'] = chi2.sf(2*(joint_contour_df['log-lik'] - baselinell), df=1)
-        
+
+        joint_contour_df['admix. prop.'] = joint_contour_df['admix. prop.'].apply(lambda x: 0 if x < 0 else 1 if x > 1 else x)
         return joint_contour_df
 
     def calc_contour(
@@ -1137,7 +1149,7 @@ class SpatialGraph(nx.Graph):
         # creating a list of (source, dest.) pairings based on user-picked criteria
         if search_area == 'all':
             # including every possible node in graph as a putative source
-            randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]))]
+            randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]+list(self.neighbors(destid))))]
         elif search_area == 'radius':
             assert isinstance(sourceid, (int, np.integer)), "sourceid must be an integer"
             assert isinstance(opts, (int, np.integer)) and opts > 0, "radius must be an integer >=1"
@@ -1151,7 +1163,7 @@ class SpatialGraph(nx.Graph):
                 # dropping repeated nodes 
                 neighs = np.unique(list(it.chain(*tempn)))
 
-            randedge = [(x,destid) for x in list(set(neighs)-set([destid]))]
+            randedge = [(x,destid) for x in list(set(neighs)-set([destid]+list(self.neighbors(destid))))]
         elif search_area == 'range':
             assert len(opts) == 2, "limits must be list of length 2 (e.g., [[-120,-70],[25,50]])"
             # reverse coordinates if in Western and Southern hemispheres
@@ -1173,7 +1185,7 @@ class SpatialGraph(nx.Graph):
             if (destid,destid) in randedge:
                 randedge.remove((destid,destid))
         elif search_area == 'custom':
-            randedge = [(x,destid) for x in list(set(opts)-set([destid]))]
+            randedge = [(x,destid) for x in list(set(opts)-set([destid]+list(self.neighbors(destid))))]
 
         # only include central demes (==6 neighbors), since demes on edge of range exhibit some boundary effects during estimation
         # randedge = list(it.compress(randedge,np.array([sum(1 for _ in self.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[i])) for i in list(set(range(self.number_of_nodes()))-set([destid]))])==6))
@@ -1206,7 +1218,7 @@ class SpatialGraph(nx.Graph):
             # randpedge.append((e[0],destid)) # -> contains the *un*permuted ids (useful for external viz)
             args['edge'] = [e]
             try:
-                res = minimize(obj.eems_neg_log_lik, x0 = 0.1, bounds=[(0,1)], tol=1e-2, method='L-BFGS-B', args=args)
+                res = minimize(obj.eems_neg_log_lik, x0=np.random.random(), tol=1e-2, method='L-BFGS-B', args=args)
                 cest2[ie] = res.x; llc2[ie] = res.fun
             except:
                 cest2[ie] = np.nan; llc2[ie] = np.nan
@@ -1221,9 +1233,11 @@ class SpatialGraph(nx.Graph):
                 if len(list(self.neighbors(mles))) < 6:
                     print("  (Warning: MLE location of source found to be at the edge of the specified {}, consider increasing the `opts` to include a larger area.)".format(search_area))
 
+        df = df.replace([np.inf, -np.inf], np.nan)
         if np.sum(df['log-lik'].isna()) > 0.3*len(df):
             print("(Warning: log-likelihood could not be computed for ~{:.2f}% of demes)".format(np.sum(df['log-lik'].isna())*100/len(df)))
-            
+
+        df['admix. prop.'] = df['admix. prop.'].apply(lambda x: 0 if x < 0 else 1 if x > 1 else x)
         return df#.dropna() 
 
 def coordinate_descent(
@@ -1244,10 +1258,10 @@ def coordinate_descent(
     for bigiter in range(maxiter):
         
         # first fit admix. prop. c given the weights
-        resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
+        resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', )
         
         if resc.status != 0:
-            print('Warning: admix. prop. optimization failed (increase atol or factr slightly)')
+            print('(Warning: admix. prop. optimization failed for deme {:d}, increase atol or factr slightly)'.format(obj.sp_graph.edge[0][0]))
             return None
         if np.allclose(resc.x, obj.sp_graph.c, atol=1e-3):
             optimc = False
@@ -1270,6 +1284,7 @@ def coordinate_descent(
             maxiter=maxiter,
             approx_grad=False,
         )
+        # print(res[2]['task'], res[2]['nit'], res[2]['warnflag'])
         if maxiter >= 100:
             assert res[2]["warnflag"] == 0, "did not converge (increase maxiter or factr slightly)"
         if obj.sp_graph.optimize_q is not None:
