@@ -2,7 +2,7 @@
 
 from setuptools import setup
 
-version = "1.0.1"
+version = "2.0"
 
 required = open("requirements.txt").read().split("\n")
 with open("README.md", "r") as fh:
@@ -11,17 +11,17 @@ with open("README.md", "r") as fh:
 setup(
     name="feems",
     version=version,
-    description="Fast Estimation of Effective Migration Surfaces (feems)",
+    description="Fast Estimation of Effective Migration Surfaces (FEEMS) + admixture (FEEMSmix)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="[jhmarcus, haywse]",
-    author_email="[jhmarcus@uchicago.edu, haywse@gmail.com]",
+    author="[jhmarcus, haywse, vivaswat]",
+    author_email="[jhmarcus@uchicago.edu, haywse@gmail.com, vivaswat@uchicago.edu]",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    url="https://github.com/jhmarcus/feems",
+    url="https://github.com/VivaswatS/feems",
     packages=["feems"],
     install_requires=required,
     include_package_data=True,

@@ -123,7 +123,7 @@ dependency which can be installed on a Mac with brew as follows:
 brew install geos
 ```
 
-If you are on a *nix machine, you can install dependencies using: 
+If you are on a *nix or Mac machine, you can install dependencies using: 
 
 ```bash
 conda install -c conda-forge scikit-sparse suitesparse 
