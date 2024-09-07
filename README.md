@@ -112,7 +112,7 @@ As an alternative way to get started, setup a `conda`
 environment:
 
 ```bash
-conda create -n=feems_e 
+conda create -n=feems_e python=3.12
 conda activate feems_e
 ```
 
@@ -123,21 +123,15 @@ dependency which can be installed on a Mac with brew as follows:
 brew install geos
 ```
 
-If you are on a *nix machine, we recommend using `conda` to install other dependencies:
+Jupyter and jupyterlab are also needed to explore the example notebooks but 
+are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package (you could also use `brew` if you want it available outside the environment):
 
 ```bash
-conda install -c conda-forge numpy scipy scikit-learn
-conda install -c conda-forge matplotlib click pandas pandas-plink
-conda install -c conda-forge shapely fiona cartopy
-conda install -c conda-forge statsmodels scikit-sparse
-conda install -c conda-forge setuptools suitesparse
+pip install notebook
 ```
 
-Jupyter and jupyterlab are also needed to explore the example notebooks but 
-are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package. 
-
 Once the `conda` environment has 
-been setup with these tricky dependencies we can install `FEEMS`:
+been setup we can install `FEEMS`:
 
 ```bash
 pip install git+https://github.com/VivaswatS/feems
