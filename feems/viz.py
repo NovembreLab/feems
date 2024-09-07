@@ -629,10 +629,10 @@ class Viz(object):
         # only display points that have scaled log-lik > levels
         for idx, row in df.loc[df['scaled log-lik']>=levels].iterrows():
             self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], 
-                            marker='o', zorder=2, edgecolors='white', 
+                            marker='h', zorder=2, edgecolors='white', 
                             facecolors=ll(int(-row['scaled log-lik'])), 
-                            linewidth=0.5*self.obs_node_linewidth, s=loglik_node_size)
-
+                            linewidth=0.5*self.obs_node_linewidth, s=2*loglik_node_size)
+            
         # drawing an arrow from MLE source to destination
         if draw_arrow:
             self.draw_arrow([df['(source, dest.)'].iloc[df['log-lik'].argmax()]], df['admix. prop.'].iloc[df['log-lik'].argmax()],

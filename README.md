@@ -52,13 +52,13 @@ dgearthgrid(dggs, savegrid="PATH/world_triangle_res4.shp")
 
 _Note: For finer resolutions (`res > 8`), this command will take a really long time to save the grid for the entire earth. In these cases, you can subset a region of the world and intersect this region with the triangular grid, see an example [R script](https://github.com/karolisr/pitcairnia-dr-nrv/blob/36430941db8762b703ef58d94764b77a33763798/data/dggs/generate-dgg-files.R) (thanks to @karolisr)_
 
-**Rule of thumb**: For the density of the grid, it is a balance between finer resolutions and runtime: a good place to start is a resolution in which individuals sampled as part of a sampling population get assigned to a unique deme. 
+**Rule of thumb**: For the density of the grid, it is a balance between finer resolutions and runtime: a good place to start is a resolution in which most individuals sampled as part of a single sampling population/unit get assigned to a unique deme. 
 
 The `outer` extent/boundary of the grid can be constructed using this tool: [https://www.keene.edu/campus/maps/tool/](https://www.keene.edu/campus/maps/tool/). 
 
 ### Inclusion of a flag to avoid wrapping locations around America
 
-Previously, `FEEMS` employed a trick to place points in Western Alaska on the 'other side' of the International Date Line on the 'same side' of the map as the North American landmass (only an issue with some projections). This threshold longitude was chosen as $-40$. 
+Previously, `FEEMS` employed a trick to place points in Western Alaska on the 'other side' of the International Date Line, i.e., on the 'same side' of the map as the North American landmass (only an issue with some projections). This threshold longitude was chosen as $-40$. 
 
 Now, we provide an option in `prepare_graph_inputs(..., wrap_america=False)` to turn the flag off for flexibility. 
 
@@ -130,7 +130,7 @@ conda install -c conda-forge numpy scipy scikit-learn
 conda install -c conda-forge matplotlib click pandas pandas-plink
 conda install -c conda-forge shapely fiona cartopy
 conda install -c conda-forge statsmodels scikit-sparse
-conda install -c conda-forge click setuptools suitesparse
+conda install -c conda-forge setuptools suitesparse
 ```
 
 Jupyter and jupyterlab are also needed to explore the example notebooks but 

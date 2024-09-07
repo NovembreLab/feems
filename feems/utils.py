@@ -26,10 +26,7 @@ def wrap_america_tiles(tile):
     return tile.xy[0][0], tile.xy[1][0]
 
 
-def create_tile_dict(tiles, bpoly, wrap_america=True):
-    """
-    wrap_america (:obj:`Bool`) is a flag to handle the 'date line problem', by ensuring that points in the far west of America (like Alaska) appear on the same side of the map, as a contiguous North American landmass. This can be turned off by setting it to False. 
-    """    
+def create_tile_dict(tiles, bpoly, wrap_america=True): 
     pts = dict()  # dict saving ids
     rev_pts = dict()
     edges = set()
@@ -81,7 +78,7 @@ def get_closest_point_to_sample(points, samples):
     return np.array(res)
 
 
-def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None):
+def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None, wrap_america=True):
     """Prepares the graph input files for feems adapted from Ben Peters
     eems-around-the-world repo
 
@@ -92,6 +89,7 @@ def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None):
         buffer (:obj:`float`) buffer on the convex hull of sample pts
         outer (:obj:`numpy.ndarray`): q x 2 matrix of coordinates of outer
             polygon
+        wrap_america (:obj:`Bool`) is a flag to handle the 'date line problem', by ensuring that points in the far west of America (like Alaska) appear on the same side of the map, as a contiguous North American landmass. This can be turned off by setting it to False.   
     """
     # no outer so construct with buffer
     if outer is None:
@@ -109,7 +107,7 @@ def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None):
 
     np.seterr(invalid='ignore')
     tiles3 = [t for t in tiles2 if bpoly.intersects(t) or bpoly2.intersects(t)]
-    pts, rev_pts, e = create_tile_dict(tiles3, bpoly)
+    pts, rev_pts, e = create_tile_dict(tiles3, bpoly, wrap_america)
 
     # construct grid array
     grid = []

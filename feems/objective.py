@@ -196,7 +196,7 @@ class Objective(object):
             for n in neighs:
                 # convert back to appropriate indexing excluding the unsampled demes
                 s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==n][0]
-                resmat[s,did] = Rmat[s,did] + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + (1-self.sp_graph.c)/self.sp_graph.q[s] + (1+self.sp_graph.c)/self.sp_graph.q[did]
+                resmat[s,did] = (1-self.sp_graph.c)*Rmat[s,did] + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + (1-self.sp_graph.c)/self.sp_graph.q[s] + (1+self.sp_graph.c)/self.sp_graph.q[did]
                 resmat[did,s] = resmat[s,did]
 
             # calibrating the decay in the exponential distribution based on estimated weights on the surface
@@ -206,7 +206,7 @@ class Objective(object):
 
             for i in set(range(self.sp_graph.n_observed_nodes))-set([sid,did]+neighs):
                 Ri1 = -2*self.Lpinv[i,sid] + self.Lpinv[i,i] + self.Lpinv[sid,sid]
-                resmat[i,did] = (1-self.sp_graph.c)*(Rmat[i,did]) + self.sp_graph.c*Ri1 + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[did] + self.sp_graph.c*qprox
+                resmat[i,did] = (1-self.sp_graph.c)*Rmat[i,did] + self.sp_graph.c*Ri1 + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[did] + self.sp_graph.c*qprox
                 resmat[did,i] = resmat[i,did]
         
         # convert distance matrix to covariance matrix (using code from rwc package in Hanks & Hooten 2013)
@@ -417,7 +417,7 @@ class Objective(object):
             for n in neighs:
                 # convert back to appropriate indexing excluding the unsampled demes
                 s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==n][0]
-                resmat[s,opts['lre'][0][1]] = Rmat[s,opts['lre'][0][1]] + 0.5*(c**2-c)*R1d + (1-c)/self.sp_graph.q[s] + (1+c)/self.sp_graph.q[opts['lre'][0][1]]
+                resmat[s,opts['lre'][0][1]] = (1-c)*Rmat[s,opts['lre'][0][1]] + 0.5*(c**2-c)*R1d + (1-c)/self.sp_graph.q[s] + (1+c)/self.sp_graph.q[opts['lre'][0][1]]
                 resmat[opts['lre'][0][1],s] = resmat[s,opts['lre'][0][1]]
 
             rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
