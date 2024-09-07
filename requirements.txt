@@ -5,8 +5,8 @@ matplotlib
 pyproj
 networkx
 shapely
-scikit-sparse
 suitesparse
+scikit-sparse
 cartopy
 fiona
 pytest
