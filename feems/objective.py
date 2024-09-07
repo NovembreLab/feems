@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-import allel
+# import allel
 from copy import deepcopy
 import itertools as it
 import networkx as nx
