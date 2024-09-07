@@ -123,6 +123,13 @@ dependency which can be installed on a Mac with brew as follows:
 brew install geos
 ```
 
+If you are on a *nix machine, you can install dependencies using: 
+
+```bash
+conda install -c conda-forge scikit-sparse suitesparse 
+conda install -c conda-forge cartopy
+```
+
 Jupyter and jupyterlab are also needed to explore the example notebooks but 
 are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package (you could also use `brew` if you want it available outside the environment):
 
@@ -131,7 +138,7 @@ pip install notebook
 ```
 
 Once the `conda` environment has 
-been setup we can install `FEEMS`:
+been setup with these dependencies, we can install `FEEMS`:
 
 ```bash
 pip install git+https://github.com/VivaswatS/feems
