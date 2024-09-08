@@ -108,7 +108,6 @@ dependencies:
       - demes==0.2.3
       - deprecated==1.2.14
       - et-xmlfile==1.1.0
-      - feems
       - fiona==1.10.0
       - flake8==7.1.1
       - fsspec==2024.9.0
@@ -163,3 +162,4 @@ dependencies:
       - xarray==2024.7.0
       - xlrd==2.0.1
       - zstandard==0.22.0
+      - "--editable=git+https://github.com/VivaswatS/feems#egg=feems"

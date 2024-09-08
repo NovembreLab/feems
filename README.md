@@ -154,9 +154,22 @@ pip install .
 
 NOTE: Some users have reported a compatibility error arising at this step with the installation of shapely v1.7.1 (specificed in requirements.txt).  If this arises, recreate the `feems_e` conda environment, and run `pip install shapely --no-binary shapely` before the `pip install feems` command above. 
 
+## Another alternative using the `.yml` file
+
+Another easy option is also to use the `feems.yml` file from this repo as a blueprint for the installation and setup of the appropriate conda environment. 
+
+You can download the file onto your computer and simply run:
+
+```bash
+conda env create -f feems.yaml
+conda activate feems_e
+```
+
+This will create an environment called `feems_e` which will contain all the dependencies and `FEEMS`/`FEEMSmix`. 
+
 # RUNNING `FEEMS`
 
-To help get your analysis started, we provide an example workflow in the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
+To help get your analysis started (and to verify appropriate installation), we provide an example workflow in the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
 
 An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
 
