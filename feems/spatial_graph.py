@@ -530,9 +530,9 @@ class SpatialGraph(nx.Graph):
 
         # check inputs
         assert lamb >= 0.0, "lambda must be non-negative"
-        assert type(lamb) == float or type(lamb) == np.float64, "lambda must be float"
+        assert type(lamb) == float, "lambda must be float"
         assert lamb_q >= 0.0, "lambda must be non-negative"
-        assert type(lamb_q) == float or type(lamb_q) == np.float64, "lambda must be float"
+        assert type(lamb_q) == float, "lambda must be float"
         assert type(factr) == float, "factr must be float"
         assert maxls > 0, "maxls must be at least 1"
         assert type(maxls) == int, "maxls must be int"
@@ -681,7 +681,7 @@ class SpatialGraph(nx.Graph):
         """
         # check inputs
         assert lamb >= 0.0, "lambda must be non-negative"
-        assert type(lamb) == float or type(lamb) == np.float64, "lambda must be float"
+        assert type(lamb) == float, "lambda must be float"
         assert type(factr) == float, "factr must be float"
         assert maxls > 0, "maxls must be at least 1"
         assert type(maxls) == int, "maxls must be int"
@@ -924,10 +924,10 @@ class SpatialGraph(nx.Graph):
         obj = Objective(self); obj.inv(); obj.grad(reg=False)
         
         if contour_df is None:
-            assert isinstance(lamb, (float, np.float)) and lamb >= 0, "lamb must be a float >=0"
-            assert isinstance(lamb_q, (float, np.float)) and lamb_q >= 0, "lamb_q must be a float >= 0"
+            assert isinstance(lamb, (float,)) and lamb >= 0, "lamb must be a float >=0"
+            assert isinstance(lamb_q, (float,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
 
-            assert isinstance(destid, (int, np.integer)), "destid must be an integer"
+            assert isinstance(destid, (int,)), "destid must be an integer"
             try:
                 destpid = np.where(self.perm_idx[:self.n_observed_nodes]==destid)[0][0]
             except:
@@ -938,8 +938,8 @@ class SpatialGraph(nx.Graph):
                 # including every possible node in graph as a putative source
                 randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]+list(self.neighbors(destid))))]
             elif search_area == 'radius':
-                assert isinstance(sourceid, (int, np.integer)), "sourceid must be an integer"
-                assert isinstance(opts, (int, np.integer)) and opts > 0, "radius must be an integer >=1"
+                assert isinstance(sourceid, (int,)), "sourceid must be an integer"
+                assert isinstance(opts, (int,)) and opts > 0, "radius must be an integer >=1"
                 
                 neighs = [] 
                 neighs = list(self.neighbors(sourceid)) + [sourceid]
@@ -1045,8 +1045,8 @@ class SpatialGraph(nx.Graph):
 
             joint_contour_df = df
         else:
-            assert isinstance(lamb, (float, np.float)) and lamb >= 0, "lamb must be a float >=0"
-            assert isinstance(lamb_q, (float, np.float)) and lamb_q >= 0, "lamb_q must be a float >= 0"
+            assert isinstance(lamb, (float,)) and lamb >= 0, "lamb must be a float >=0"
+            assert isinstance(lamb_q, (float,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
             # get indices of the top hits
             if top<1:
                 # treat as a percentage
@@ -1138,7 +1138,7 @@ class SpatialGraph(nx.Graph):
         """
         obj = Objective(self); obj.inv(); obj.grad(reg=False)
 
-        assert isinstance(destid, (int, np.integer)), "destid must be an integer"
+        assert isinstance(destid, (int,)), "destid must be an integer"
 
         try:
             destpid = np.where(self.perm_idx[:self.n_observed_nodes]==destid)[0][0] #-> 0:(o-1)
@@ -1151,8 +1151,8 @@ class SpatialGraph(nx.Graph):
             # including every possible node in graph as a putative source
             randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]+list(self.neighbors(destid))))]
         elif search_area == 'radius':
-            assert isinstance(sourceid, (int, np.integer)), "sourceid must be an integer"
-            assert isinstance(opts, (int, np.integer)) and opts > 0, "radius must be an integer >=1"
+            assert isinstance(sourceid, (int,)), "sourceid must be an integer"
+            assert isinstance(opts, (int,)) and opts > 0, "radius must be an integer >=1"
             
             neighs = [] 
             neighs = list(self.neighbors(sourceid)) + [sourceid]

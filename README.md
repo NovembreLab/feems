@@ -161,7 +161,7 @@ Another easy option is also to use the `feems.yml` file from this repo as a blue
 You can download the file onto your computer and simply run:
 
 ```bash
-conda env create -f feems.yaml
+conda env create -f feems.yml
 conda activate feems_e
 ```
 

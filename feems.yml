@@ -16,17 +16,18 @@ dependencies:
   - shapely
   - fiona
   - pyproj
+  - msprime
   - networkx
   - tqdm
   - openpyxl
   - xlrd
+  - scikit-sparse
+  - suitesparse
   - pytest
   - flake8
   - jupyter
-  - jupyterlab
   - pip
   - pip:
-    - msprime
     - tskit
     - demes
     - pandas-plink
