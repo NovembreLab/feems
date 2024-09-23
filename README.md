@@ -27,7 +27,7 @@ The `FEEMSmix` method and software was developed by Vivaswat Shastry and John No
 
 In the original publication above, `FEEMS` only fit the edge weights on the graph and kept the node-specific parameters (proportional to heterozygosities) fixed at a constant value. However, in the latest version, we change the default functionality to be one in which we fit node-specific parameters under the model. This will increase both model fit and runtime, however, we've found this to be a worthy trade-off, especially when looking for long-range gene flow events on a baseline `FEEMS` grid. The old functionality can still be used by setting `sp_graph.fit(..., optimize_q=None)`. 
 
-See [cross-validation.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/cross-validation.ipynb) for more details on this mode. 
+This new map of heterozygosity values (roughly proportional to effective population size) can also be visualized across the grid. See [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) and [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/cross-validation.ipynb) for more details on this mode. 
 
 ### Inclusion of a shape file with coarser resolution (`grid_500.sh*`)
 
@@ -119,11 +119,17 @@ conda activate feems_e
 Some of the plotting utilities in the `FEEMS` package require `geos` as a 
 dependency which can be installed on a Mac with brew as follows:
 
-```
+```bash
 brew install geos
 ```
 
-If you are on a *nix or Mac machine, you can install dependencies using: 
+If you are on a Windows machine, you can install `geos` using: 
+
+```bash
+conda install -c conda-forge geos
+```
+
+Then, you can install further dependencies using:
 
 ```bash
 conda install -c conda-forge scikit-sparse suitesparse 
@@ -131,7 +137,7 @@ conda install -c conda-forge cartopy
 ```
 
 Jupyter and jupyterlab are also needed to explore the example notebooks but 
-are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package (you could also use `brew` if you want it available outside the environment):
+are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package (you could also use `brew`, if you want it to be available outside the environment):
 
 ```bash
 pip install notebook

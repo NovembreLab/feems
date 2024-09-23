@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 from scipy.linalg import det, pinvh
 import scipy.sparse as sp
+from scipy.optimize import minimize
 from scipy.stats import wishart, norm, chi2
 
 from .utils import cov_to_dist, benjamini_hochberg, get_outlier_idx
@@ -95,6 +96,21 @@ class Objective(object):
         ## Eqn 16 (pg. 23)
         self.L_double_inv = self.sp_graph.L_block["oo"].toarray() + 1.0 / d - A - B
 
+    def _comp_diag_pinv(self):
+        """Compute the diagonal of the pseudo-inverse using LU decomposition."""
+        n = len(self.sp_graph)
+        L_mod = self.sp_graph.L + np.eye(n) / n  # Make L invertible
+        LU = sp.linalg.splu(sp.csc_matrix(L_mod))
+        
+        diag = np.zeros(n); ei = np.zeros(n)
+        for i in range(n):
+            ei[i] = 1
+            xi = LU.solve(ei)
+            diag[i] = xi[i]
+            ei[i] = 0
+        
+        return diag - 1  # Correct for the added identity matrix
+        
     def _comp_inv_lap(self, B=None):
         """Computes submatrices of inverse of lap"""
         if B is None:
@@ -106,6 +122,10 @@ class Objective(object):
         self.Linv_block["oo"] = np.linalg.solve(self.L_double_inv, B)
         # compute (d-o)-by-o submatrix of inverse of lap
         self.Linv_block["do"] = -self.lap_sol @ self.Linv_block["oo"]
+
+        # store the diagonal elements of the (d-o) elements
+        if self.sp_graph.option == 'onlyc':
+            self.Linv_diag = self._comp_diag_pinv()
 
         # stack the submatrices
         self.Linv = np.vstack((self.Linv_block["oo"], self.Linv_block["do"]))
@@ -160,9 +180,6 @@ class Objective(object):
 
         # compute inverses
         self._comp_inv_lap()
-
-        if not hasattr(self, 'Lpinv'):
-            self.Lpinv = pinvh(self.sp_graph.L.todense())
         
         # getting index of source and destination deme using internal indexing (0, 1, 2, ..., o) 
         sid = np.where(self.sp_graph.perm_idx == self.sp_graph.edge[0][0])[0][0]
@@ -189,8 +206,8 @@ class Objective(object):
             # finds the neighboring deme that has samples
             neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
 
-            R1d = -2*self.Lpinv[sid,did] + self.Lpinv[sid,sid] + self.Lpinv[did,did]
-            R1 = np.array(-2*self.Lpinv[:self.sp_graph.n_observed_nodes,sid].T + np.diag(self.Linv) + self.Lpinv[sid,sid])
+            R1d = -2*self.Linv[sid,did] + self.Linv_diag[sid] + self.Linv[did,did]
+            R1 = np.array(-2*self.Linv[sid,:self.sp_graph.n_observed_nodes].T + np.diag(self.Linv) + self.Linv_diag[sid])
 
             # apply this formula only to neighboring sampled demes
             for n in neighs:
@@ -200,13 +217,13 @@ class Objective(object):
                 resmat[did,s] = resmat[s,did]
 
             # calibrating the decay in the exponential distribution based on estimated weights on the surface
-            rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-            rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-            qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
+            # rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
+            # rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
+            # qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
 
             for i in set(range(self.sp_graph.n_observed_nodes))-set([sid,did]+neighs):
-                Ri1 = -2*self.Lpinv[i,sid] + self.Lpinv[i,i] + self.Lpinv[sid,sid]
-                resmat[i,did] = (1-self.sp_graph.c)*Rmat[i,did] + self.sp_graph.c*Ri1 + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[did] + self.sp_graph.c*qprox
+                Ri1 = -2*self.Linv[sid,i] + self.Linv_diag[i] + self.Linv_diag[sid]
+                resmat[i,did] = (1-self.sp_graph.c)*Rmat[i,did] + self.sp_graph.c*Ri1 + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[did] + self.sp_graph.c*self.sp_graph.q_prox[sid-self.sp_graph.n_observed_nodes]
                 resmat[did,i] = resmat[i,did]
         
         # convert distance matrix to covariance matrix (using code from rwc package in Hanks & Hooten 2013)
@@ -338,7 +355,7 @@ class Objective(object):
         return loss 
 
     def eems_neg_log_lik(self, c=None, opts=None):
-        """Function to compute the negative log-likelihood of the model using the EEMS framework (will differ from the value output by neg_log_lik() which uses the FEEMS framework and also does not incorporate admix. prop. c)"""
+        """Function to compute the negative log-likelihood of the model using the EEMS framework (will differ from the value output by neg_log_lik() which uses the FEEMS framework *and* also does not incorporate admix. prop. c)"""
         
         # lre passed in as permuted_idx
         if opts is not None:
@@ -378,15 +395,9 @@ class Objective(object):
         """(internal function) Compute a new delta matrix given a previous delta matrix as a perturbation from a single long range gene flow event OR create a new delta matrix from resmat 
         """
 
-        # restrict c to be b/w 0 & 1 (otherwise not posdef errors)
-        # c = 0 if c < 0 else 1 if c > 1 else c
-        
         # do not recompute inverses if already exists
         if not hasattr(self, 'Linv'):
             self.inv(); self.grad(reg=False)
-        
-        if not hasattr(self, 'Lpinv'):
-            self.Lpinv = pinvh(self.sp_graph.L.todense())
 
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes, :self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv), (self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes)) 
         Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(), (self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes))
@@ -410,8 +421,8 @@ class Objective(object):
             # finds the neighboring deme that has samples
             neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
 
-            R1d = -2*self.Lpinv[opts['lre'][0][0],opts['lre'][0][1]] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]] + self.Lpinv[opts['lre'][0][1],opts['lre'][0][1]]
-            R1 = np.array(-2*self.Lpinv[:self.sp_graph.n_observed_nodes,opts['lre'][0][0]].T + np.diag(self.Linv) + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]])
+            R1d = -2*self.Linv[opts['lre'][0][0],opts['lre'][0][1]] + self.Linv_diag[opts['lre'][0][0]] + self.Linv[opts['lre'][0][1],opts['lre'][0][1]]
+            R1 = np.array(-2*self.Linv[opts['lre'][0][0],:self.sp_graph.n_observed_nodes].T + np.diag(self.Linv) + self.Linv_diag[opts['lre'][0][0]])
 
             # apply this formula only to neighboring sampled demes
             for n in neighs:
@@ -420,15 +431,15 @@ class Objective(object):
                 resmat[s,opts['lre'][0][1]] = (1-c)*Rmat[s,opts['lre'][0][1]] + 0.5*(c**2-c)*R1d + (1-c)/self.sp_graph.q[s] + (1+c)/self.sp_graph.q[opts['lre'][0][1]]
                 resmat[opts['lre'][0][1],s] = resmat[s,opts['lre'][0][1]]
 
-            rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-            rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
+            # rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
+            # rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
 
-            qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
+            # qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
 
             # id
             for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
-                Ri1 = -2*self.Lpinv[i,opts['lre'][0][0]] + self.Lpinv[i,i] + self.Lpinv[opts['lre'][0][0],opts['lre'][0][0]]
-                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*qprox
+                Ri1 = -2*self.Linv[opts['lre'][0][0],i] + self.Linv[i,i] + self.Linv_diag[opts['lre'][0][0]]
+                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*self.sp_graph.q_prox[opts['lre'][0][0]-self.sp_graph.n_observed_nodes]
                 resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
 
         return np.array(resmat)
@@ -463,7 +474,7 @@ def loss_wrapper(z, obj):
         theta = np.exp(z)
         obj.sp_graph.comp_graph_laplacian(theta)
     obj.inv()
-    obj.grad()     
+    obj.grad() 
 
     # loss / grad
     loss = obj.loss()
@@ -508,4 +519,45 @@ def comp_mats(obj):
     emp_cov = frequencies_centered @ frequencies_centered.T / n_snps
     
     return fit_cov, inv_cov, emp_cov
+
+def exponential_variogram(h, nugget, sill, rangep):
+    return nugget + (sill - nugget) * (1 - np.exp(-h / rangep))
+
+def fit_variogram(distances, values):
+    def objective(params):
+        nugget, sill, rangep = params
+        h = distances.flatten()
+        gamma = 0.5 * np.power(values[:, None] - values[None, :], 2).flatten()
+        var_model = exponential_variogram(h, nugget, sill, rangep)
+        return np.sum((gamma - var_model)**2)
+    
+    result = minimize(objective, [0, np.var(values), np.mean(distances)], method='L-BFGS-B', bounds=((0, None), (0, None), (0, None)))
+    return result.x
+
+def interpolate_q(observed_values, distances_to_observed, distances_between_observed):
+    n_observed = len(observed_values)
+    n_target = distances_to_observed.shape[0]
+    
+    # Fit variogram
+    nugget, sill, rangep = fit_variogram(distances_between_observed, observed_values)
+    # print(nugget, sill, rangep)
+    
+    # Construct kriging matrices
+    K = exponential_variogram(distances_between_observed, nugget, sill, rangep)
+    K = K + 1e-8 * np.eye(n_observed)  # Add small value to diagonal for numerical stability
+    k = exponential_variogram(distances_to_observed, nugget, sill, rangep)
+
+    # Add a column of ones to K and k for the lagrange multiplier
+    K = np.column_stack((K, np.ones(n_observed)))
+    K = np.row_stack((K, np.ones(n_observed + 1)))
+    K[-1, -1] = 0
+    k = np.column_stack((k, np.ones((n_target, 1))))
+    
+    # Solve kriging equation
+    weights = np.linalg.solve(K, k.T)
+    
+    # Perform interpolation
+    interpolated_values = np.dot(weights[:-1, :].T, observed_values)
+    
+    return interpolated_values
     

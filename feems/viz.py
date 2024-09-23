@@ -318,6 +318,22 @@ class Viz(object):
                     edge_vmax=self.halfrange,
             )
 
+    def draw_het(self):
+        """Draws heterozygosity values across the map"""
+        norm = plt.Normalize(np.min(1/self.sp_graph.q),np.max(1/self.sp_graph.q))
+        for i in range(len(self.sp_graph)):
+            if i < self.sp_graph.n_observed_nodes:
+                self.ax.scatter(self.grid[self.sp_graph.perm_idx[i],0], self.grid[self.sp_graph.perm_idx[i],1], marker='o', zorder=2, edgecolors='#444444', facecolors=plt.get_cmap('Purples')(norm(1/self.sp_graph.q[i])), linewidth=2*self.obs_node_linewidth, s=2*self.obs_node_size)
+            else:
+                self.ax.scatter(self.grid[self.sp_graph.perm_idx[i],0], self.grid[self.sp_graph.perm_idx[i],1], marker='h', zorder=2, edgecolors='white', facecolors=plt.get_cmap('Purples')(norm(self.sp_graph.q_prox[i-self.sp_graph.n_observed_nodes])), linewidth=0.5*self.obs_node_linewidth, s=3*self.obs_node_size)
+
+        self.c_axins = inset_axes(self.ax, 
+                                  loc = 'upper right',
+                                  width='15%',
+                                  height='3%')
+        self.c_axins.set_title(r"het. ($\propto N$)")
+        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=plt.get_cmap('Purples')), cax=self.c_axins, orientation='horizontal')
+        
     def draw_edge_colorbar(self):
         """Draws colorbar"""
         self.edge_sm = plt.cm.ScalarMappable(cmap=self.edge_cmap, norm=self.edge_norm)
@@ -597,8 +613,8 @@ class Viz(object):
             None
         """
 
-        self.obj = Objective(self.sp_graph); self.obj.inv(); 
-        self.obj.Lpinv = pinvh(self.sp_graph.L.todense()); self.obj.grad(reg=False)
+        self.obj = Objective(self.sp_graph); self.obj.inv(); self.obj.grad(reg=False)
+        self.obj.Linv_diag = self.obj._comp_diag_pinv()
         
         # code to set default values 
         if loglik_node_size is None:
@@ -655,7 +671,7 @@ class Viz(object):
                 cprofll[ic] = -self.obj.eems_neg_log_lik(c, {'edge':[df['(source, dest.)'].iloc[np.argmax(df['log-lik'])]], 'mode':'compute'})
             except:
                 cprofll[ic] = np.nan
-
+        
         cprofll2 = np.zeros((np.sum(df['scaled log-lik']>-3),len(cgrid)))
         for idx, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-3]):
             for ic, c in enumerate(cgrid):

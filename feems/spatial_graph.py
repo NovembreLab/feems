@@ -13,7 +13,7 @@ from scipy.stats import chi2, norm
 import sksparse.cholmod as cholmod
 import pandas as pd
 
-from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2, comp_mats
+from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2, comp_mats, interpolate_q
 from .utils import cov_to_dist, benjamini_hochberg
 
 class SpatialGraph(nx.Graph):
@@ -39,6 +39,13 @@ class SpatialGraph(nx.Graph):
         assert (
             genotypes.shape[0] == sample_pos.shape[0]
         ), "genotypes and sample positions must be the same size"
+
+        # remove invariant SNPs
+        if np.sum(np.where(genotypes.sum(axis=0)==0)[0]) > 0 or np.sum(np.where(genotypes.sum(axis=0)==2*genotypes.shape[0])[0]) > 0:
+            print('FEEMS requires polymorphic SNPs, but ID(s) {:g} were found to be invariant. '.format(list(np.where(genotypes.sum(axis=0)==0)[0]) + list(np.where(genotypes.sum(axis=0)==2*genotypes.shape[0])[0])))
+            print('Running analyses by removing these SNPs from the genotype matrix...')
+            genotypes = np.delete(genotypes,np.where(genotypes.sum(axis=0)==0)[0],1)
+            genotypes = np.delete(genotypes,np.where(genotypes.sum(axis=0)==2*genotypes.shape[0])[0],1)
 
         # inherits from networkx Graph object -- changed this to new signature for python3
         print("Initializing graph...")
@@ -94,6 +101,9 @@ class SpatialGraph(nx.Graph):
 
         # compute precision
         self.comp_precision(s2=1)
+
+        # vector to store the kriging-interpolated q values
+        self.q_prox = np.ones(len(self) - self.n_observed_nodes)
 
         # estimate sample covariance matrix
         self.S = self.frequencies @ self.frequencies.T / self.n_snps
@@ -214,14 +224,20 @@ class SpatialGraph(nx.Graph):
         self.P = self.diag_oper[:, vect_idx_r] + self.diag_oper[:, vect_idx_c]
 
     def _update_graph(self, basew, bases2):
-        self.option = 'default'
+        # self.option = 'default'
         
         self.w = basew; self.s2 = bases2
 
         self.comp_graph_laplacian(basew); self.comp_precision(bases2)
-        # obj = Objective(self)
-        # obj.inv(); obj.grad(reg=False)
-        # obj.Lpinv = pinvh(self.L.todense())
+        
+        obj = Objective(self)
+        obj.inv(); obj.grad(reg=False)
+        obj.Linv_diag = obj._comp_diag_pinv()
+
+        Rmatdo = -2 * obj.Linv[self.n_observed_nodes:, :self.n_observed_nodes] + obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes].diagonal() + obj.Linv_diag[self.n_observed_nodes:, np.newaxis]
+        Rmatoo = -2*obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes] + np.broadcast_to(np.diag(obj.Linv),(self.n_observed_nodes, self.n_observed_nodes)).T + np.broadcast_to(np.diag(obj.Linv), (self.n_observed_nodes, self.n_observed_nodes))
+        
+        self.q_prox = interpolate_q(1/self.q, Rmatdo, Rmatoo)
     
     def inv_triu(self, w, perm=True):
         """Take upper triangular vector as input and return symmetric weight
@@ -236,8 +252,8 @@ class SpatialGraph(nx.Graph):
         return W.tocsc()
 
     def comp_graph_laplacian(self, weight, perm=True):
-        """Computes the graph laplacian note this is computed each step of the
-        optimization so needs to be fast
+        """Computes the graph laplacian (note: this is computed each step of the
+        optimization so needs to be fast)
         """
         if "array" in str(type(weight)) and weight.shape[0] == len(self):
             self.m = weight
@@ -328,6 +344,7 @@ class SpatialGraph(nx.Graph):
             self.q = self.n_samples_per_obs_node_permuted / self.s2
         else:
             self.q = self.n_samples_per_obs_node_permuted / self.s2
+        
         self.q_diag = sp.diags(self.q).tocsc()
         self.q_inv_diag = sp.diags(1.0 / self.q).tocsc()
         self.q_inv_grad = -1.0 / self.n_samples_per_obs_node_permuted
@@ -409,8 +426,6 @@ class SpatialGraph(nx.Graph):
         
         obj = Objective(self)
         obj.inv()
-        if not hasattr(obj, 'Lpinv'):
-            obj.Lpinv = pinvh(obj.sp_graph.L.todense()) 
         obj.grad(reg=False)
 
         # storing the baseline weigths & s2
@@ -544,10 +559,7 @@ class SpatialGraph(nx.Graph):
         assert maxiter > 0, "maxiter be at least 1"
         
         obj = Objective(self)
-        obj.inv()
-        if not hasattr(obj, 'Lpinv'):
-            obj.Lpinv = pinvh(obj.sp_graph.L.todense()) 
-        obj.grad(reg=False)
+        obj.inv(); obj.grad(reg=False)
 
         # dict storing all the results for plotting
         results = {}
@@ -730,6 +742,7 @@ class SpatialGraph(nx.Graph):
             # run l-bfgs
             obj = Objective(self)
             obj.sp_graph.optimize_q = optimize_q; obj.lamb = lamb; obj.alpha = alpha
+            
             x0 = np.log(w_init)
             if obj.sp_graph.optimize_q is not None:
                 obj.lamb_q = lamb_q
@@ -768,8 +781,7 @@ class SpatialGraph(nx.Graph):
                 obj.lamb_q = lamb_q
                 obj.alpha_q = alpha_q
 
-            obj.inv(); obj.Lpinv = pinvh(self.L.todense()); 
-            obj.grad(reg=False)
+            obj.inv(); obj.grad(reg=False)
             res = coordinate_descent(
                 obj=obj,
                 factr=factr,
@@ -782,6 +794,17 @@ class SpatialGraph(nx.Graph):
         if obj.sp_graph.optimize_q is not None:
             self.w = np.exp(res[0][:self.size()])
             self.s2 = np.exp(res[0][self.size():])
+            self.comp_graph_laplacian(self.w)
+            self.comp_precision(s2=self.s2)
+            
+            obj.inv(); obj.grad(reg=False)
+            obj.Linv_diag = obj._comp_diag_pinv()
+
+            # interpolation scheme using Kriging
+            Rmatdo = -2 * obj.Linv[self.n_observed_nodes:, :self.n_observed_nodes] + obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes].diagonal() + obj.Linv_diag[self.n_observed_nodes:, np.newaxis]
+            Rmatoo = -2*obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes] + np.broadcast_to(np.diag(obj.Linv),(self.n_observed_nodes, self.n_observed_nodes)).T + np.broadcast_to(np.diag(obj.Linv), (self.n_observed_nodes, self.n_observed_nodes))
+        
+            self.q_prox = interpolate_q(1/self.q, Rmatdo, Rmatoo)
         else:    
             self.w = np.exp(res[0])
             
@@ -977,9 +1000,6 @@ class SpatialGraph(nx.Graph):
             if exclude_boundary:
                 randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.neighbors(e[0]))==6]
 
-            if not hasattr(obj, 'Lpinv'):
-                obj.Lpinv = pinvh(self.L.todense())
-
             # fit the baseline graph if no w or s2 is passed in 
             # baseline w and s2 to be stored in an object
             if usew is None:
@@ -1136,7 +1156,7 @@ class SpatialGraph(nx.Graph):
         Returns: 
             (:obj:`pandas.DataFrame`)
         """
-        obj = Objective(self); obj.inv(); obj.grad(reg=False)
+        obj = Objective(self); obj.inv(); obj.grad(reg=False, diag=False)
 
         assert isinstance(destid, (int,)), "destid must be an integer"
 
@@ -1191,9 +1211,6 @@ class SpatialGraph(nx.Graph):
         # randedge = list(it.compress(randedge,np.array([sum(1 for _ in self.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[i])) for i in list(set(range(self.number_of_nodes()))-set([destid]))])==6))
         if exclude_boundary:
             randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.neighbors(e[0]))==6]
-
-        if not hasattr(obj, 'Lpinv'):
-            obj.Lpinv = pinvh(self.L.todense())
 
         # just want to perturb it a bit instead of updating the entire matrix
         args = {}
@@ -1290,6 +1307,7 @@ def coordinate_descent(
         if obj.sp_graph.optimize_q is not None:
             neww = np.exp(res[0][:obj.sp_graph.size()])
             news2 = np.exp(res[0][obj.sp_graph.size():])
+            
             # difference in parameters for this step
             diffw = np.abs(np.exp(x0[:obj.sp_graph.size()]) - neww)
             diffs2 = np.abs(np.exp(x0[obj.sp_graph.size():]) - news2)
@@ -1303,7 +1321,7 @@ def coordinate_descent(
 
         if np.allclose(diffw, np.zeros(len(diffw)), atol=100 * factr * np.finfo(float).eps) and np.allclose(diffs2, np.zeros(len(diffs2)), atol=100 * factr * np.finfo(float).eps) and not optimc:
             if verbose:
-                print("joint estimation converged in {:d} iterations!".format(bigiter+1))
+                print("Joint estimation converged in {:d} iterations!".format(bigiter+1))
             break
 
     return res
