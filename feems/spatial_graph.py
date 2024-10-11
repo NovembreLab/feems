@@ -231,8 +231,7 @@ class SpatialGraph(nx.Graph):
         self.comp_graph_laplacian(basew); self.comp_precision(bases2)
         
         obj = Objective(self)
-        obj.inv(); obj.grad(reg=False)
-        obj.Linv_diag = obj._comp_diag_pinv()
+        obj.inv(); obj.grad(reg=False); obj.Linv_diag = obj._comp_diag_pinv()
 
         Rmatdo = -2 * obj.Linv[self.n_observed_nodes:, :self.n_observed_nodes] + obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes].diagonal() + obj.Linv_diag[self.n_observed_nodes:, np.newaxis]
         Rmatoo = -2*obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes] + np.broadcast_to(np.diag(obj.Linv),(self.n_observed_nodes, self.n_observed_nodes)).T + np.broadcast_to(np.diag(obj.Linv), (self.n_observed_nodes, self.n_observed_nodes))
@@ -425,8 +424,7 @@ class SpatialGraph(nx.Graph):
         """
         
         obj = Objective(self)
-        obj.inv()
-        obj.grad(reg=False)
+        obj.inv(); obj.grad(reg=False); obj.Linv_diag = obj._comp_diag_pinv()
 
         # storing the baseline weigths & s2
         usew = deepcopy(obj.sp_graph.w); uses2 = deepcopy(obj.sp_graph.s2)
@@ -518,6 +516,7 @@ class SpatialGraph(nx.Graph):
     ):
         """Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (`alternate method`).
         Required:
+            outliers_df (:obj:`pandas.DataFrame`): outlier DataFrame as output by the sp_graph.extract_outliers() function
             lamb (:obj:`float`): penalty strength on weights
             lamb_q (:obj:`float`): penalty strength on the residual variances
             
@@ -559,7 +558,7 @@ class SpatialGraph(nx.Graph):
         assert maxiter > 0, "maxiter be at least 1"
         
         obj = Objective(self)
-        obj.inv(); obj.grad(reg=False)
+        obj.inv(); obj.grad(reg=False); obj.Linv_diag = obj._comp_diag_pinv()
 
         # dict storing all the results for plotting
         results = {}
@@ -945,6 +944,7 @@ class SpatialGraph(nx.Graph):
             None
         """
         obj = Objective(self); obj.inv(); obj.grad(reg=False)
+        obj.Linv_diag = obj._comp_diag_pinv()
         
         if contour_df is None:
             assert isinstance(lamb, (float,)) and lamb >= 0, "lamb must be a float >=0"
@@ -1080,6 +1080,8 @@ class SpatialGraph(nx.Graph):
                 # baseline w and s2 to be stored in an object
                 self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, option='default', verbose=False);
                 obj.inv(); obj.grad(reg=False)
+                obj.Linv_diag = obj._comp_diag_pinv()
+                
                 baselinell = -obj.eems_neg_log_lik()
                 usew = deepcopy(self.w); uses2 = deepcopy(self.s2)
                 mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
@@ -1156,7 +1158,8 @@ class SpatialGraph(nx.Graph):
         Returns: 
             (:obj:`pandas.DataFrame`)
         """
-        obj = Objective(self); obj.inv(); obj.grad(reg=False, diag=False)
+        obj = Objective(self)
+        obj.inv(); obj.grad(reg=False); obj.Linv_diag = obj._comp_diag_pinv()
 
         assert isinstance(destid, (int,)), "destid must be an integer"
 
@@ -1235,7 +1238,7 @@ class SpatialGraph(nx.Graph):
             # randpedge.append((e[0],destid)) # -> contains the *un*permuted ids (useful for external viz)
             args['edge'] = [e]
             try:
-                res = minimize(obj.eems_neg_log_lik, x0=np.random.random(), tol=1e-2, method='L-BFGS-B', args=args)
+                res = minimize(obj.eems_neg_log_lik, x0=np.random.random(), tol=1e-3, method='L-BFGS-B', args=args)
                 cest2[ie] = res.x; llc2[ie] = res.fun
             except:
                 cest2[ie] = np.nan; llc2[ie] = np.nan

@@ -355,8 +355,8 @@ class Objective(object):
         return loss 
 
     def eems_neg_log_lik(self, c=None, opts=None):
-        """Function to compute the negative log-likelihood of the model using the EEMS framework (will differ from the value output by neg_log_lik() which uses the FEEMS framework *and* also does not incorporate admix. prop. c)"""
-        
+        """Function to compute the negative log-likelihood of the model using the EEMS framework (*will* differ from the value output by neg_log_lik() which uses the FEEMS framework *and* does not incorporate admix. prop. c)"""
+
         # lre passed in as permuted_idx
         if opts is not None:
             sid = np.where(self.sp_graph.perm_idx == opts['edge'][0][0])[0][0]
@@ -368,7 +368,7 @@ class Objective(object):
             opts = {}
             # if no edge is passed in, just use a dummy index with c=0
             opts['lre'] = [(0,1)]
-            
+
         if c is not None:
             if opts['mode'] != 'update':
                 dd = self._compute_delta_matrix(c, opts)
@@ -407,6 +407,7 @@ class Objective(object):
         else:
             resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag 
 
+        
         # check to see if source is a sampled deme based on permuted index
         if opts['lre'][0][0] < self.sp_graph.n_observed_nodes:
             resmat[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+c)*Q1mat[opts['lre'][0][0],opts['lre'][0][0]] + (1-c)*Q1mat[opts['lre'][0][1],opts['lre'][0][1]]
@@ -422,8 +423,7 @@ class Objective(object):
             neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
 
             R1d = -2*self.Linv[opts['lre'][0][0],opts['lre'][0][1]] + self.Linv_diag[opts['lre'][0][0]] + self.Linv[opts['lre'][0][1],opts['lre'][0][1]]
-            R1 = np.array(-2*self.Linv[opts['lre'][0][0],:self.sp_graph.n_observed_nodes].T + np.diag(self.Linv) + self.Linv_diag[opts['lre'][0][0]])
-
+            
             # apply this formula only to neighboring sampled demes
             for n in neighs:
                 # convert back to appropriate indexing excluding the unsampled demes
@@ -521,7 +521,7 @@ def comp_mats(obj):
     return fit_cov, inv_cov, emp_cov
 
 def exponential_variogram(h, nugget, sill, rangep):
-    return nugget + (sill - nugget) * (1 - np.exp(-h / rangep))
+    return nugget + sill * (1 - np.exp(-h / rangep))
 
 def fit_variogram(distances, values):
     def objective(params):

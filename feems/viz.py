@@ -497,12 +497,12 @@ class Viz(object):
         self,
         c_cbar_loc = 'upper right',
         c_cbar_width = 10, 
-        c_cbar_height = 2
+        c_cbar_height = 3
     ):
         "Viz function to draw a simple colorbar from 0 to 1 scale for admixture proportion"
         self.c_axins = inset_axes(self.ax, loc=c_cbar_loc, width = str(c_cbar_width)+'%', height = str(c_cbar_height)+'%', borderpad=2)
-        self.c_axins.set_title(r"$\hat{c}$", fontsize = self.cbar_font_size, loc='center')
-        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=[0,1])
+        self.c_axins.set_title(r"$\hat{c}$", fontsize = self.cbar_font_size*1.2, loc='center')
+        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(cmap=self.c_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=[0,0.5,1])
         self.c_cbar.ax.tick_params(labelsize = self.cbar_ticklabelsize*0.8)
 
     def draw_c_contour(
@@ -640,7 +640,7 @@ class Viz(object):
         mag = magnifier/100
 
         # creating colormap
-        ll = plt.get_cmap('Greens_r').resampled(np.abs(levels)+2)
+        ll = plt.get_cmap('Greens_r', np.abs(levels)+2)
         
         # only display points that have scaled log-lik > levels
         for idx, row in df.loc[df['scaled log-lik']>=levels].iterrows():
@@ -688,21 +688,26 @@ class Viz(object):
         plt.plot(cgrid, cprofll, color='grey')
         plt.ylim((np.nanmax(cprofll)+levels, np.nanmax(cprofll)-levels/20))
         plt.plot(cgrid, cprofll2.T, color='grey', alpha=0.5, linewidth=0.3)
-        plt.xticks(ticks=[0, 1], labels=[0, 1])
+        plt.xticks(ticks=[0, 1], labels=[0, 1]); plt.xlabel(r'$c$', labelpad=-6)
+        plt.yticks(fontsize=self.cbar_ticklabelsize)
+        plt.title(r'profile $\ell$ at MLE', fontsize=1.2*cbar_font_size)
         plt.text(cgrid[np.nanargmax(cprofll)], -0.2, round(cgrid[np.nanargmax(cprofll)], 2), fontsize=0.8*self.cbar_ticklabelsize, ha='center', va='top', transform=plt.gca().transAxes)
 
-        lb = np.where(cprofll >= np.nanmax(cprofll) - 3)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 3)[0][-1]
+        lb = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][-1]
         plt.axvline(cgrid[lb], color='red', ls='--', linewidth=self.obs_node_linewidth) 
         plt.axvline(cgrid[ub], color='red', ls='--', linewidth=self.obs_node_linewidth)
+        lb = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][-1]
+        plt.axvline(cgrid[lb], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6) 
+        plt.axvline(cgrid[ub], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6)
         
         # drawing the colorbar for the log-lik surface
         self.c_axins = inset_axes(self.ax, 
                                   loc = lbar_loc, 
                                   width = str(lbar_width)+'%', 
                                   height = str(lbar_height)+'%')
-        self.c_axins.set_title(r"scaled $\ell$", fontsize = cbar_font_size)
+        self.c_axins.set_title(r"scaled $\ell$", fontsize = 1.2*cbar_font_size)
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
-        self.c_cbar.set_ticks([levels,0], fontsize=self.cbar_ticklabelsize)
+        self.c_cbar.set_ticks([levels,0], fontsize=0.8*self.cbar_ticklabelsize)
 
 def draw_FEEMSmix_fit(
     v,

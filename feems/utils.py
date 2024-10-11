@@ -19,14 +19,14 @@ def load_tiles(s):
     return [shape(t["geometry"]) for t in tiles]
 
 
-def wrap_america_tiles(tile):
+def wrap_longitude_tiles(tile, long):
     tile = Point(tile)
-    if np.max(tile.xy[0]) < -40 or np.min(tile.xy[0]) < -40:
+    if np.max(tile.xy[0]) < long or np.min(tile.xy[0]) < long:
         tile = translate(tile, xoff=360.0)
     return tile.xy[0][0], tile.xy[1][0]
 
 
-def create_tile_dict(tiles, bpoly, wrap_america=True): 
+def create_tile_dict(tiles, bpoly, translated, long): 
     pts = dict()  # dict saving ids
     rev_pts = dict()
     edges = set()
@@ -35,8 +35,8 @@ def create_tile_dict(tiles, bpoly, wrap_america=True):
     for c, poly in enumerate(tiles):
         x, y = poly.exterior.xy
         points = zip(np.round(x, 3), np.round(y, 3))
-        if wrap_america:
-            points = [wrap_america_tiles(p) for p in points] 
+        if translated:
+            points = [wrap_longitude_tiles(p, long) for p in points] 
         else:
             points = [p for p in points]
         for p in points:
@@ -78,18 +78,19 @@ def get_closest_point_to_sample(points, samples):
     return np.array(res)
 
 
-def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None, wrap_america=True):
+def prepare_graph_inputs(coord, ggrid, translated=False, buffer=0, outer=None, wrap_longitude=-40):
     """Prepares the graph input files for feems adapted from Ben Peters
     eems-around-the-world repo
 
     Args:
         sample_pos (:obj:`numpy.ndarray`): spatial positions for samples
         ggrid (:obj:`str`): path to global grid shape file
+        translated (:obj:`bool`): to handle the 'date line problem'
         transform (:obj:`bool`): to translate x coordinates
         buffer (:obj:`float`) buffer on the convex hull of sample pts
         outer (:obj:`numpy.ndarray`): q x 2 matrix of coordinates of outer
             polygon
-        wrap_america (:obj:`Bool`) is a flag to handle the 'date line problem', by ensuring that points in the far west of America (like Alaska) appear on the same side of the map, as a contiguous North American landmass. This can be turned off by setting it to False.   
+        wrap_longitude (:obj:`int`): flag to pass in a specific value of the longitude from which to start wrapping (i.e., more fine-tuned control of the translated flag). For example, with North America (and mainly Alaska), we recommend a longitude of -40.
     """
     # no outer so construct with buffer
     if outer is None:
@@ -107,7 +108,7 @@ def prepare_graph_inputs(coord, ggrid, translated, buffer=0, outer=None, wrap_am
 
     np.seterr(invalid='ignore')
     tiles3 = [t for t in tiles2 if bpoly.intersects(t) or bpoly2.intersects(t)]
-    pts, rev_pts, e = create_tile_dict(tiles3, bpoly, wrap_america)
+    pts, rev_pts, e = create_tile_dict(tiles3, bpoly, translated, wrap_longitude)
 
     # construct grid array
     grid = []

@@ -58,9 +58,9 @@ The `outer` extent/boundary of the grid can be constructed using this tool: [htt
 
 ### Inclusion of a flag to avoid wrapping locations around America
 
-Previously, `FEEMS` employed a trick to place points in Western Alaska on the 'other side' of the International Date Line, i.e., on the 'same side' of the map as the North American landmass (only an issue with some projections). This threshold longitude was chosen as $-40$. 
+Previously, `FEEMS` employed a trick to place points in Western Alaska on the 'other side' of the International Date Line, i.e., on the 'same side' of the map as the North American landmass (only an issue with some projections) using a `translated` flag. This threshold longitude was set to a default of $-40$ (to represent the North Ameirican landmass contiguously). 
 
-Now, we provide an option in `prepare_graph_inputs(..., wrap_america=False)` to turn the flag off for flexibility. 
+Now, we provide an option in `prepare_graph_inputs(..., translated=True, wrap_longitude=-40)` to turn the flag off AND choose a threshold longitude for flexibility. 
 
 ### Inclusion of a plotting script using `ggplot2` 
 
@@ -178,6 +178,8 @@ This will create an environment called `feems_e` which will contain all the depe
 To help get your analysis started (and to verify appropriate installation), we provide an example workflow in the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). 
 
 An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
+
+*NOTE:* please use the `<v2.0` format for input files if using the `plink` format. 
 
 # RUNNING `FEEMSmix`
 
