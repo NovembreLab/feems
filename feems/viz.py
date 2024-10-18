@@ -582,7 +582,7 @@ class Viz(object):
         self, 
         df, 
         levels=-10, 
-        magnifier=100, 
+        magnifier=200, 
         draw_arrow=True, 
         loglik_node_size=None,
         cbar_font_size=None, 
@@ -597,7 +597,7 @@ class Viz(object):
             
         Optional: 
             levels (:obj:`int`): value specifying the lower bound on the log-likelihood to include in the contour (with the maximum scaled to be 0)
-            magnifier (:obj:`int`): percentage scaler on the size of the arrow with 100 being a magnification of 1
+            magnifier (:obj:`int`): percentage scaler on the size of the arrow with 100 being a magnification of 1 (default: 200% or 2x)
             draw_arrow (:obj:`Bool`): flag on whether to draw an arrow from the MLE source or not 
             loglik_node_size (:obj:`float`): (=2.5*obs_node_size, inherits from baseline FEEMS viz)
             cbar_font_size (:obj:`float`): (inherits from baseline FEEMS viz)
@@ -688,10 +688,10 @@ class Viz(object):
         plt.plot(cgrid, cprofll, color='grey')
         plt.ylim((np.nanmax(cprofll)+levels, np.nanmax(cprofll)-levels/20))
         plt.plot(cgrid, cprofll2.T, color='grey', alpha=0.5, linewidth=0.3)
-        plt.xticks(ticks=[0, 1], labels=[0, 1]); plt.xlabel(r'$c$', labelpad=-6)
-        plt.yticks(fontsize=self.cbar_ticklabelsize)
+        plt.xticks(ticks=[0, 1], labels=[0, 1], fontsize=cbar_ticklabelsize); plt.xlabel(r'$c$', labelpad=-6, fontsize=cbar_ticklabelsize)
+        plt.yticks(fontsize=cbar_ticklabelsize)
         plt.title(r'profile $\ell$ at MLE', fontsize=1.2*cbar_font_size)
-        plt.text(cgrid[np.nanargmax(cprofll)], -0.2, round(cgrid[np.nanargmax(cprofll)], 2), fontsize=0.8*self.cbar_ticklabelsize, ha='center', va='top', transform=plt.gca().transAxes)
+        plt.text(cgrid[np.nanargmax(cprofll)], -0.2, round(cgrid[np.nanargmax(cprofll)], 2), fontsize=0.8*cbar_ticklabelsize, ha='center', va='top', transform=plt.gca().transAxes)
 
         lb = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][-1]
         plt.axvline(cgrid[lb], color='red', ls='--', linewidth=self.obs_node_linewidth) 
@@ -707,7 +707,7 @@ class Viz(object):
                                   height = str(lbar_height)+'%')
         self.c_axins.set_title(r"scaled $\ell$", fontsize = 1.2*cbar_font_size)
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
-        self.c_cbar.set_ticks([levels,0], fontsize=0.8*self.cbar_ticklabelsize)
+        self.c_cbar.set_ticks([levels,0]); self.c_cbar.ax.tick_params(labelsize=cbar_ticklabelsize)
 
 def draw_FEEMSmix_fit(
     v,
