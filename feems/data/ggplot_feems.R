@@ -44,7 +44,7 @@ prepare_data <- function(edge_file, node_file, custom_crs){
 }
 
 # Function to plot baseline FEEMS result
-plot_feems <- function(edges_sf, nodes_sf, output_file, arrows_list = NULL){
+plot_feems <- function(edges_sf, nodes_sf, arrows_list = NULL){
     
     eems_colors <- c("#994000", "#CC5800", "#FF8F33", "#FFAD66", "#FFCA99", 
                      "#FFE6CC", "#FBFBFB", "#CCFDFF", "#99F8FF", "#66F0FF", 
@@ -145,11 +145,9 @@ add_long_range_arrow <- function(nodes_sf, from_id, to_id, strength) {
 }
 
 # Main function
-main <- function(edge_file, node_file, shape_file, output_file, arrows_list){
-    # * include a custom CRS here as a string *
-    # (using Azimuthal Equidistant here for parity with python script)
-    data <- prepare_data(edge_file, node_file, "+proj=aeqd lat_0=60 lon_0=-100")
-    plot_feems(data$edges_sf, data$nodes_sf, output_file, arrows_list)
+main <- function(edge_file, node_file, projection, arrows_list){
+    data <- prepare_data(edge_file, node_file, projection)
+    plot_feems(data$edges_sf, data$nodes_sf, arrows_list)
 }
 
 # * create a list of source & destinations from FEEMSmix here *
@@ -167,8 +165,10 @@ arrows_list <- list(
 # Call main function
 # * change working directory here *
 setwd("~/src/feems/feems/data/")
-main("wolvesadmix_lambcv_edgew.csv", 
-     "wolvesadmix_nodepos.csv", 
-     "grid_100.shp", 
-     "wolves_admix_lambcv_ggplot.jpg", 
-     arrows_list)
+main(edge_file = "wolvesadmix_lambcv_edgew.csv", 
+     node_file = "wolvesadmix_nodepos.csv", 
+     # include an appropriate projection as a custom CRS string
+     # (using Azimuthal Equidistant here for parity with python script)
+     projection = "+proj=aeqd lat_0=60 lon_0=-100",
+     # leave NULL if no long-range edges
+     arrows_list = arrows_list) 
