@@ -1019,7 +1019,7 @@ class SpatialGraph(nx.Graph):
 
             for ie, e in enumerate(randedge):
 
-                print("\r\tJointly optimizing likelihood over {}/{} most likely demes in the graph".format(ie+1,len(randedge)), end="")
+                print("\r\tOptimizing joint likelihood over {}/{} most likely demes in the graph".format(ie+1,len(randedge)), end="")
                     
                 # initializing at baseline values
                 self._update_graph(usew, uses2)
@@ -1093,7 +1093,7 @@ class SpatialGraph(nx.Graph):
             # run the joint fitting scheme for each top hit
             joint_contour_df = contour_df.loc[topidx]; cnt = 1
             for i, row in joint_contour_df.iterrows():
-                print("\r\tJointly optimizing likelihood over {}/{} most likely demes in the graph".format(cnt,len(topidx)), end="")
+                print("\r\tOptimizing joint likelihood over {}/{} most likely demes in the graph".format(cnt,len(topidx)), end="")
 
                 # update counter (cos apparently iterrows() passes index back)
                 cnt += 1

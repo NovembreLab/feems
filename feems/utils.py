@@ -165,9 +165,8 @@ def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
     logratio_norm = (logratio-mean_logratio)/np.sqrt(var_logratio)
     p_value_neg = sp.stats.norm.cdf(logratio_norm)
     p_values = p_value_neg
-    ## if you want to look for outliers in both directions
-    # p_value_pos=1-p_value_neg
-    # p_values=np.minimum(p_value_pos,p_value_neg)
+    ## if you want to look for outliers in the other directions
+    # p_values=1-p_value_neg
 
     m = len(p_values)  # total number of hypotheses
     sorted_p_values = np.sort(p_values)

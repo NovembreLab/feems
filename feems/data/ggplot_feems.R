@@ -44,7 +44,7 @@ prepare_data <- function(edge_file, node_file, custom_crs){
 }
 
 # Function to plot baseline FEEMS result
-plot_feems <- function(edges_sf, nodes_sf, output_file){
+plot_feems <- function(edges_sf, nodes_sf, output_file, arrows_list = NULL){
     
     eems_colors <- c("#994000", "#CC5800", "#FF8F33", "#FFAD66", "#FFCA99", 
                      "#FFE6CC", "#FBFBFB", "#CCFDFF", "#99F8FF", "#66F0FF", 
@@ -57,6 +57,13 @@ plot_feems <- function(edges_sf, nodes_sf, output_file){
 
     land_borders <- st_make_valid(st_as_sf(map("world", plot = FALSE, fill = TRUE)))
     
+    # Create dummy data for admix. prop. c legend
+    strength_scale_data <- data.frame(
+        x = 1,
+        y = 1,
+        strength = 0.5
+    )
+    
     p <- ggplot() +  
         # some gymnastics to get the cropping right
         geom_sf(data = st_transform(
@@ -65,39 +72,103 @@ plot_feems <- function(edges_sf, nodes_sf, output_file){
                 color='grey30', fill = 'grey90', size = 0.05) + 
         geom_sf(data = edges_sf, color = "black", linewidth = 0.95) + 
         geom_sf(data = edges_sf, aes(color = weight), linewidth = 0.9) + # Edges
-        geom_sf(data = nodes_sf, color = "white", size = 0.5) + # Nodes
+        geom_sf(data = nodes_sf, color = "white", size = 0.15) + # Nodes
         geom_sf(data = nodes_sf %>% filter(N>0), aes(size = N), color = "grey60") + # Nodes
         scale_size_area(max_size = 3) + # Define custom size scale
         scale_color_gradientn(colors = eems_colors, #values = scales::rescale(color_positions),
                               limits = c(-2, 2)) +
-        guides(fill = "none", size = "none") +
         theme_minimal() +
-        labs(x = "Longitude", y = "Latitude", color=expression(log[10](w)))
+        labs(x = "Longitude", y = "Latitude", color=expression(log[10](w/bar(w))))
+    
+    # Add arrows if provided
+    if (!is.null(arrows_list)) {
+        for (arrow in arrows_list) {
+            arrow_layers <- add_long_range_arrow(nodes_sf, 
+                                                 arrow$from, arrow$to, arrow$strength)
+            p <- p + arrow_layers[[1]] + arrow_layers[[2]] 
+        }
+        p <- p + # add dummy point
+            geom_point(data = strength_scale_data, aes(x = x, y = y, fill = strength), alpha = 0) +
+            scale_fill_gradient(expression(hat(c)), low = "white", high = "black", limits = c(0, 1), breaks = c(0, 0.5, 1)) + 
+            guides(fill = guide_colorbar(title.position = "top", barwidth = 1, barheight = 3),
+                   size = "none") + 
+            geom_sf(data = nodes_sf %>% filter(N>0), aes(size = N), color = "grey60") 
+    }
 
     p
 }
 
+# Function to create curved arrows for long-range connections
+add_long_range_arrow <- function(nodes_sf, from_id, to_id, strength) {
+    # Get coordinates for source and destination
+    source_point <- nodes_sf[from_id + 1,] # +1 because R is 1-indexed
+    dest_point <- nodes_sf[to_id + 1,]
+    
+    # Extract coordinates
+    start_coords <- st_coordinates(source_point)[1,]
+    end_coords <- st_coordinates(dest_point)[1,]
+    
+    # Create curve data
+    curve_data <- data.frame(
+        x = start_coords[1],
+        y = start_coords[2],
+        xend = end_coords[1],
+        yend = end_coords[2]
+    )
+    
+    # Create background (larger black) arrow
+    background_arrow <- geom_curve(
+        data = curve_data,
+        aes(x = x, y = y, xend = xend, yend = yend),
+        arrow = arrow(length = unit(0.25, "cm"), type = "closed", ends = "last"),
+        size = 2.5,
+        color = "black",
+        curvature = 0.2,
+        alpha = 0.9,
+        lineend = "round"
+    )
+    
+    # Create foreground (colored) arrow
+    foreground_arrow <- geom_curve(
+        data = curve_data,
+        aes(x = x, y = y, xend = xend, yend = yend),
+        arrow = arrow(length = unit(0.25, "cm"), type = "closed", ends = "last"),
+        size = 1.5,
+        color = seq_gradient_pal("white", "black")(strength), 
+        curvature = 0.2,
+        alpha = 1,
+        lineend = "round"
+    ) 
+    
+    # Return both layers
+    list(background_arrow, foreground_arrow)
+}
+
 # Main function
-main <- function(edge_file, node_file, shape_file, output_file){
+main <- function(edge_file, node_file, shape_file, output_file, arrows_list){
     # * include a custom CRS here as a string *
     # (using Azimuthal Equidistant here for parity with python script)
     data <- prepare_data(edge_file, node_file, "+proj=aeqd lat_0=60 lon_0=-100")
-    plot_feems(data$edges_sf, data$nodes_sf, output_file)
+    plot_feems(data$edges_sf, data$nodes_sf, output_file, arrows_list)
 }
 
-# Command line arguments 
-# args <- commandArgs(trailingOnly = TRUE)
-# edge_file <- args[1]
-# node_file <- args[2]
-# shape_file <- args[3]
-# output_file <- args[4]
-#
-# main(edge_file, node_file, shape_file, output_file)
+# * create a list of source & destinations from FEEMSmix here *
+# can be computed by running the following code in python:
+# contour_df.iloc[np.argmax(contour_df['scaled log-lik'])]
+arrows_list <- list(
+    # from = ID of MLE source deme inferred in FEEMSmix
+    # to = ID of dest. deme 
+    # strength = MLE inferred admix. prop. 
+    list(from = 553, to = 980, strength = 0.4),
+    list(from = 896, to = 1206, strength = 0.4),
+    list(from = 250, to = 402, strength = 0.1)
+)
 
 # Call main function
 # * change working directory here *
 setwd("~/src/feems/feems/data/")
 main("wolvesadmix_lambcv_edgew.csv", 
      "wolvesadmix_nodepos.csv", 
-     "grid_50.shp", 
-     "wolves_admix_lambcv_ggplot.jpg")
+     "grid_100.shp", 
+     "wolves_admix_lambcv_ggplot.jpg", 
+     arrows_list)

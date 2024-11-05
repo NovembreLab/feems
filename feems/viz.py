@@ -2,13 +2,13 @@ from __future__ import absolute_import, division, print_function
 
 import cartopy.feature as cfeature
 from copy import copy, deepcopy
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.colors as clr
 from matplotlib.font_manager import FontProperties
-import matplotlib.patches as patches
-from matplotlib import ticker
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from matplotlib.gridspec import GridSpec
+import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 import networkx as nx
 import numpy as np
 from scipy.linalg import pinvh
@@ -417,8 +417,9 @@ class Viz(object):
                   facecolor=self.c_cmap(c), 
                   zorder=5, 
                   linewidth=0.2*tw)
-        
-        self.ax.add_patch(patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw))
+
+        arrow = patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw, mutation_scale=1)
+        self.ax.add_patch(arrow)
 
     def draw_admixture_pies(
         self,
