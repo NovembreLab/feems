@@ -12,6 +12,7 @@ import scipy.sparse as sp
 from scipy.stats import chi2, norm
 import sksparse.cholmod as cholmod
 import pandas as pd
+from statsmodels.distributions.empirical_distribution import ECDF
 
 from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2, comp_mats, interpolate_q
 from .utils import cov_to_dist, benjamini_hochberg
@@ -850,10 +851,10 @@ class SpatialGraph(nx.Graph):
         ls = []; x, y = [], []
         acs = np.empty((2, self.n_snps, 2))
         # computing p-values (or z-values) for each pairwise comparison after mean centering
-        pvals = norm.cdf(np.log(emp_dist)-np.log(fit_dist)-np.mean(np.log(emp_dist)-np.log(fit_dist)), 0, np.std(np.log(emp_dist)-np.log(fit_dist)))
+        pvals = norm.cdf(np.log(emp_dist)-np.log(fit_dist)-np.mean(np.log(emp_dist)-np.log(fit_dist)), 0, np.std(np.log(emp_dist)-np.log(fit_dist),ddof=1))
         
         bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
-        
+                
         for k in np.where(bh)[0]:
             # code to convert single index to matrix indices
             x.append(np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1); y.append(int(k - 0.5*x[-1]*(x[-1]-1)))

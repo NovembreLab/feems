@@ -697,9 +697,9 @@ class Viz(object):
         lb = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][-1]
         plt.axvline(cgrid[lb], color='red', ls='--', linewidth=self.obs_node_linewidth) 
         plt.axvline(cgrid[ub], color='red', ls='--', linewidth=self.obs_node_linewidth)
-        lb = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][-1]
-        plt.axvline(cgrid[lb], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6) 
-        plt.axvline(cgrid[ub], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6)
+        # lb = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][-1]
+        # plt.axvline(cgrid[lb], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6) 
+        # plt.axvline(cgrid[ub], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6)
         
         # drawing the colorbar for the log-lik surface
         self.c_axins = inset_axes(self.ax, 

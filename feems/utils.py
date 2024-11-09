@@ -10,6 +10,7 @@ import scipy as sp
 from shapely.affinity import translate
 from shapely.geometry import MultiPoint, Point, Polygon, shape
 from sklearn.decomposition import PCA
+from statsmodels.distributions.empirical_distribution import ECDF
 
 import matplotlib.pyplot as plt
 
@@ -134,8 +135,6 @@ def prepare_graph_inputs(coord, ggrid, translated=False, buffer=0, outer=None, w
     return res
 
 def get_outlier_idx(emp_dist, fit_dist, fdr=0.25):
-    pvals = sp.stats.norm.cdf(np.log(emp_dist)-np.log(fit_dist)-np.mean(np.log(emp_dist)-np.log(fit_dist)), 0, np.std(np.log(emp_dist)-np.log(fit_dist)))
-
     bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
 
     max_res_node = []
@@ -146,6 +145,31 @@ def get_outlier_idx(emp_dist, fit_dist, fdr=0.25):
         max_res_node.append([x, y])
 
     return max_res_node
+
+def get_robust_normal_pvals_lower(data, q=25):
+    """
+    Compute lower-tail p-values using robust normal parameters
+    """
+
+    # Get the percentiles
+    lower_q, upper_q = np.percentile(data, [q, 100-q])
+    
+    z_lower = sp.stats.norm.ppf(q/100)
+    z_upper = sp.stats.norm.ppf((100-q)/100)
+
+    # The distance between percentiles in z-scores
+    z_diff = z_upper - z_lower
+
+    # First find sigma: (upper_q - lower_q) = sigma * (z_upper - z_lower)
+    sigma = (upper_q - lower_q) / z_diff
+    
+    # Then find mu: mu = lower_q - sigma * z_lower
+    mu = lower_q - sigma * z_lower
+    
+    z_scores = (data - mu)/sigma
+    p_values = sp.stats.norm.cdf(z_scores)
+    
+    return p_values, mu, sigma
 
 def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
     """
@@ -163,10 +187,13 @@ def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
     mean_logratio = np.mean(logratio)
     var_logratio = np.var(logratio,ddof=1)
     logratio_norm = (logratio-mean_logratio)/np.sqrt(var_logratio)
+    
     p_value_neg = sp.stats.norm.cdf(logratio_norm)
     p_values = p_value_neg
     ## if you want to look for outliers in the other directions
     # p_values=1-p_value_neg
+
+    p_values, _, _ = get_robust_normal_pvals_lower(logratio, 25)
 
     m = len(p_values)  # total number of hypotheses
     sorted_p_values = np.sort(p_values)
