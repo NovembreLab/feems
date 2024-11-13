@@ -181,51 +181,53 @@ class Objective(object):
         # compute inverses
         self._comp_inv_lap()
         
-        # getting index of source and destination deme using internal indexing (0, 1, 2, ..., o) 
-        sid = np.where(self.sp_graph.perm_idx == self.sp_graph.edge[0][0])[0][0]
-        did = np.where(self.sp_graph.perm_idx == self.sp_graph.edge[0][1])[0][0]
 
         # calculating the R and Q matrices as per Petkova et al 2016
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes,:self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes,self.sp_graph.n_observed_nodes)) 
         Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) 
         resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag
 
-        # if source deme is sampled
-        if sid<self.sp_graph.n_observed_nodes:
-            # straightforward binomial with prob. c of the expected pairwise coalescent times
-            resmat[sid,did] = (0.5*self.sp_graph.c**2-1.5*self.sp_graph.c+1)*Rmat[sid,did] + (1+self.sp_graph.c)/self.sp_graph.q[sid] + (1-self.sp_graph.c)/self.sp_graph.q[did]
-            resmat[did,sid] = resmat[sid,did]
-
-            # for all demes except s & d
-            for i in set(range(self.sp_graph.n_observed_nodes))-set([sid,did]):
-                resmat[i,did] = (1-self.sp_graph.c)*Rmat[i,did] + self.sp_graph.c*Rmat[i,sid] + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*Rmat[sid,did] + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[did] + self.sp_graph.c/self.sp_graph.q[sid]
-                resmat[did,i] = resmat[i,did]
-        # if source deme is unsampled
-        else:
-            neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[sid]))
-            # finds the neighboring deme that has samples
-            neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
-
-            R1d = -2*self.Linv[sid,did] + self.Linv_diag[sid] + self.Linv[did,did]
-            R1 = np.array(-2*self.Linv[sid,:self.sp_graph.n_observed_nodes].T + np.diag(self.Linv) + self.Linv_diag[sid])
-
-            # apply this formula only to neighboring sampled demes
-            for n in neighs:
-                # convert back to appropriate indexing excluding the unsampled demes
-                s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==n][0]
-                resmat[s,did] = (1-self.sp_graph.c)*Rmat[s,did] + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + (1-self.sp_graph.c)/self.sp_graph.q[s] + (1+self.sp_graph.c)/self.sp_graph.q[did]
-                resmat[did,s] = resmat[s,did]
-
-            # calibrating the decay in the exponential distribution based on estimated weights on the surface
-            # rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-            # rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-            # qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
-
-            for i in set(range(self.sp_graph.n_observed_nodes))-set([sid,did]+neighs):
-                Ri1 = -2*self.Linv[sid,i] + self.Linv_diag[i] + self.Linv_diag[sid]
-                resmat[i,did] = (1-self.sp_graph.c)*Rmat[i,did] + self.sp_graph.c*Ri1 + 0.5*(self.sp_graph.c**2-self.sp_graph.c)*R1d + 1/self.sp_graph.q[i] + (1-self.sp_graph.c)/self.sp_graph.q[did] + self.sp_graph.c*self.sp_graph.q_prox[sid-self.sp_graph.n_observed_nodes]
-                resmat[did,i] = resmat[i,did]
+        if self.sp_graph.c is not None:
+            for c, edge in zip(self.sp_graph.c, self.sp_graph.edge):
+                
+                # getting index of source and destination deme using internal indexing (0, 1, 2, ..., o) 
+                sid = np.where(self.sp_graph.perm_idx == edge[0])[0][0]
+                did = np.where(self.sp_graph.perm_idx == edge[1])[0][0]
+                
+                # if source deme is sampled
+                if sid<self.sp_graph.n_observed_nodes:
+                    # resmat[sid, did] += (0.5 * c**2 - 1.5 * c + 1) * Rmat[sid, did] + (1 + c) / self.sp_graph.q[sid] + \
+                    #                     (1 - c) / self.sp_graph.q[did]
+                    resmat[sid, did] += (0.5 * c**2 - 1.5 * c) * Rmat[sid, did] + c * Q1mat[sid, sid] - c * Q1mat[did, did]
+    
+                    resmat[did, sid] = resmat[sid, did]
         
+                    # Update for all other demes except source and destination
+                    for i in set(range(self.sp_graph.n_observed_nodes)) - {sid, did}:
+                        resmat[i, did] += - c * Rmat[i, did] + c * Rmat[i, sid] + 0.5 * (c**2 - c) * Rmat[sid, did] - c * Q1mat[did, did] + c * Q1mat[sid, sid]
+                        resmat[did, i] = resmat[i, did]
+                # if source deme is unsampled
+                else:
+                    neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph, 'permuted_idx')[sid]))
+                    neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph, 'n_samples')[s] > 0]
+        
+                    R1d = -2 * self.Linv[sid, did] + self.Linv_diag[sid] + self.Linv[did, did]
+                    R1 = np.array(-2 * self.Linv[sid, :self.sp_graph.n_observed_nodes].T + np.diag(self.Linv) + self.Linv_diag[sid])
+        
+                    # Update for neighboring sampled demes
+                    for n in neighs:
+                        s = [k for k, v in nx.get_node_attributes(self.sp_graph, 'permuted_idx').items() if v == n][0]
+                        resmat[s, did] += - c * Rmat[s, did] + 0.5 * (c**2 - c) * R1d + \
+                                          - c * Q1mat[s, s] + c * Q1mat[did, did]
+                        resmat[did, s] = resmat[s, did]
+        
+                    # Update for non-neighboring demes
+                    for i in set(range(self.sp_graph.n_observed_nodes)) - {sid, did} - set(neighs):
+                        Ri1 = -2 * self.Linv[sid, i] + self.Linv_diag[i] + self.Linv_diag[sid]
+                        resmat[i, did] += - c * Rmat[i, did] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
+                                          - c * Q1mat[did, did] + c * self.sp_graph.q_prox[sid - self.sp_graph.n_observed_nodes]
+                        resmat[did, i] = resmat[i, did]
+            
         # convert distance matrix to covariance matrix (using code from rwc package in Hanks & Hooten 2013)
         rwsm = np.mean(resmat, 0).reshape(-1,1) @ np.ones(resmat.shape[0]).reshape(1,-1)
         clsm = np.ones(resmat.shape[0]).reshape(-1, 1) @ np.mean(resmat, 1).reshape(1,-1)
@@ -355,21 +357,18 @@ class Objective(object):
         return loss 
 
     def eems_neg_log_lik(self, c=None, opts=None):
-        """Function to compute the negative log-likelihood of the model using the EEMS framework (*will* differ from the value output by neg_log_lik() which uses the FEEMS framework *and* does not incorporate admix. prop. c)"""
-
-        # lre passed in as permuted_idx
-        if opts is not None:
-            sid = np.where(self.sp_graph.perm_idx == opts['edge'][0][0])[0][0]
-            did = np.where(self.sp_graph.perm_idx == opts['edge'][0][1])[0][0]
-            assert did < self.sp_graph.n_observed_nodes, "ensure that the destination is a sampled deme (check ID from the map or from output of extract_outliers"
-            opts['lre'] = [(sid,did)]
-            # print(opts['lre'])
-        else:
-            opts = {}
-            # if no edge is passed in, just use a dummy index with c=0
-            opts['lre'] = [(0,1)]
+        """Function to compute the negative log-likelihood of the model using the EEMS framework (*will* differ from the value output by obj.neg_log_lik() which uses the FEEMS framework *and* does not incorporate source fraction c)"""
 
         if c is not None:
+            # lre passed in as permuted_idx
+            if opts is not None:
+                opts['lre'] = []
+                for edge in opts['edge']:
+                    sid = np.where(self.sp_graph.perm_idx == edge[0])[0][0]
+                    did = np.where(self.sp_graph.perm_idx == edge[1])[0][0]
+                    assert did < self.sp_graph.n_observed_nodes, "ensure that the destination is a sampled deme (check ID from the map or from output of extract_outliers)"
+                    opts['lre'].append((sid,did))
+                    
             if opts['mode'] != 'update':
                 dd = self._compute_delta_matrix(c, opts)
                 try:
@@ -383,7 +382,10 @@ class Objective(object):
                 except:
                     nll = np.inf
         else:
-            dd = self._compute_delta_matrix(0, opts)
+            dd = self._compute_delta_matrix(None, {})
+            if opts['mode'] == 'update':
+                opts['delta'] = dd
+            
             try:
                 nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
             except:
@@ -391,8 +393,8 @@ class Objective(object):
                    
         return nll
     
-    def _compute_delta_matrix(self, c, opts):
-        """(internal function) Compute a new delta matrix given a previous delta matrix as a perturbation from a single long range gene flow event OR create a new delta matrix from resmat 
+    def _compute_delta_matrix(self, cvals, opts):
+        """(internal function) Compute a new delta matrix given a previous delta matrix as a perturbation from multiple long range gene flow events OR create a new delta matrix from resmat 
         """
 
         # do not recompute inverses if already exists
@@ -406,41 +408,42 @@ class Objective(object):
             resmat = np.copy(opts['delta'])
         else:
             resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag 
+            if cvals is None:
+                return np.array(resmat)
 
-        
-        # check to see if source is a sampled deme based on permuted index
-        if opts['lre'][0][0] < self.sp_graph.n_observed_nodes:
-            resmat[opts['lre'][0][0],opts['lre'][0][1]] = (0.5*c**2-1.5*c+1)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + (1+c)*Q1mat[opts['lre'][0][0],opts['lre'][0][0]] + (1-c)*Q1mat[opts['lre'][0][1],opts['lre'][0][1]]
-            resmat[opts['lre'][0][1],opts['lre'][0][0]] = resmat[opts['lre'][0][0],opts['lre'][0][1]]
+        for c, lre in zip(cvals, opts['lre']):
+            source, target = lre
 
-            for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]):
-                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Rmat[i,opts['lre'][0][0]] + 0.5*(c**2-c)*Rmat[opts['lre'][0][0],opts['lre'][0][1]] + 1/self.sp_graph.q[i] + (1-c)*Q1mat[opts['lre'][0][1],opts['lre'][0][1]] + c*Q1mat[opts['lre'][0][0],opts['lre'][0][0]]
-                resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
-        else:
-            # gets the 6 neighboring demes
-            neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[opts['lre'][0][0]]))
-            # finds the neighboring deme that has samples
-            neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph,'n_samples')[s]>0]
-
-            R1d = -2*self.Linv[opts['lre'][0][0],opts['lre'][0][1]] + self.Linv_diag[opts['lre'][0][0]] + self.Linv[opts['lre'][0][1],opts['lre'][0][1]]
-            
-            # apply this formula only to neighboring sampled demes
-            for n in neighs:
-                # convert back to appropriate indexing excluding the unsampled demes
-                s = [k for k, v in nx.get_node_attributes(self.sp_graph,'permuted_idx').items() if v==n][0]
-                resmat[s,opts['lre'][0][1]] = (1-c)*Rmat[s,opts['lre'][0][1]] + 0.5*(c**2-c)*R1d + (1-c)/self.sp_graph.q[s] + (1+c)/self.sp_graph.q[opts['lre'][0][1]]
-                resmat[opts['lre'][0][1],s] = resmat[s,opts['lre'][0][1]]
-
-            # rsm = np.mean(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-            # rsd = np.std(Rmat[np.tril_indices(self.sp_graph.n_observed_nodes, k=-1)])
-
-            # qprox = np.dot(1/self.sp_graph.q, 1/R1*np.exp(-np.abs(rsm-R1)/rsd)/np.sum(1/R1*np.exp(-np.abs(rsm-R1)/rsd)))
-
-            # id
-            for i in set(range(self.sp_graph.n_observed_nodes))-set([opts['lre'][0][0],opts['lre'][0][1]]+neighs):
-                Ri1 = -2*self.Linv[opts['lre'][0][0],i] + self.Linv[i,i] + self.Linv_diag[opts['lre'][0][0]]
-                resmat[i,opts['lre'][0][1]] = (1-c)*(Rmat[i,opts['lre'][0][1]]) + c*Ri1 + 0.5*(c**2-c)*R1d + 1/self.sp_graph.q[i] + (1-c)/self.sp_graph.q[opts['lre'][0][1]] + c*self.sp_graph.q_prox[opts['lre'][0][0]-self.sp_graph.n_observed_nodes]
-                resmat[opts['lre'][0][1],i] = resmat[i,opts['lre'][0][1]]
+            if source < self.sp_graph.n_observed_nodes:
+                # Case where source is a sampled deme
+                resmat[source, target] += (0.5 * c**2 - 1.5 * c) * Rmat[source, target] + \
+                                          c * Q1mat[source, source] - c * Q1mat[target, target]
+                resmat[target, source] = resmat[source, target]
+    
+                for i in set(range(self.sp_graph.n_observed_nodes)) - {source, target}:
+                    resmat[i, target] +=  - c * Rmat[i, target] + c * Rmat[i, source] + 0.5 * (c**2 - c) * Rmat[source, target] + \
+                                          - c * Q1mat[target, target] + c * Q1mat[source, source]
+                    resmat[target, i] = resmat[i, target]
+            else:
+                # Case where source is an unsampled deme
+                # trace these equations down to ensure you have 0 when c = 0
+                neighs = list(self.sp_graph.neighbors(
+                    nx.get_node_attributes(self.sp_graph, 'permuted_idx')[source]))
+                neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph, 'n_samples')[s] > 0]
+                
+                R1d = -2 * self.Linv[source, target] + self.Linv_diag[source] + self.Linv[target, target]
+    
+                for n in neighs:
+                    s = [k for k, v in nx.get_node_attributes(self.sp_graph, 'permuted_idx').items() if v == n][0]
+                    resmat[s, target] += - c * Rmat[s, target] + 0.5 * (c**2 - c) * R1d + \
+                                         - c * Q1mat[s, s] + c * Q1mat[target, target]
+                    resmat[target, s] = resmat[s, target]
+    
+                for i in set(range(self.sp_graph.n_observed_nodes)) - {source, target} - set(neighs):
+                    Ri1 = -2 * self.Linv[source, i] + self.Linv[i, i] + self.Linv_diag[source]
+                    resmat[i, target] += - c * Rmat[i, target] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
+                                         - c * Q1mat[target, target] + c * self.sp_graph.q_prox[source - self.sp_graph.n_observed_nodes]
+                    resmat[target, i] = resmat[i, target]
 
         return np.array(resmat)
 
@@ -531,7 +534,7 @@ def fit_variogram(distances, values):
         var_model = exponential_variogram(h, nugget, sill, rangep)
         return np.sum((gamma - var_model)**2)
     
-    result = minimize(objective, [0, np.var(values), np.mean(distances)], method='L-BFGS-B', bounds=((0, None), (0, None), (0, None)))
+    result = minimize(objective, [0, np.var(values), np.mean(distances)], method='L-BFGS-B', bounds=((0, None), (1e-10, None), (1e-10, None)))
     return result.x
 
 def interpolate_q(observed_values, distances_to_observed, distances_between_observed):

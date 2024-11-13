@@ -577,7 +577,7 @@ class Viz(object):
                          linewidth=linewidth, color='grey')
         for dest in np.unique(outliers_df['dest.']):
             self.ax.plot(self.grid[dest, 0], self.grid[dest, 1], 'o', 
-                         color='dodgerblue', markersize=10*np.log10(np.sum(outliers_df['dest.']==dest)+1), alpha=0.5)      
+                         color='dodgerblue', markersize=10*np.log10(np.sum(outliers_df['dest.']==dest)+self.obs_node_size), alpha=0.5)      
     
     def draw_loglik_contour(
         self, 
@@ -887,8 +887,8 @@ def plot_FEEMSmix_result(
     axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
     x_ = np.linspace(np.min(diag_results[0]['fit_dist']), np.max(diag_results[0]['fit_dist']), 12);
     axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2);
-    axs[0].text(0.65, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
-    axs[0].set_title('Baseline')
+    axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
+    axs[0].set_title('Baseline\nLL = {:.1f}'.format(diag_results[0]['log-lik']))
     fig.supxlabel('fitted distance'); fig.supylabel('genetic distance');
     
     for i in range(1, len(diag_results)):
@@ -912,8 +912,8 @@ def plot_FEEMSmix_result(
             )
         x_ = np.linspace(np.min(diag_results[i]['fit_dist']), np.max(diag_results[i]['fit_dist']), 12); 
         axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2); 
-        axs[i].text(0.65, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
-        axs[i].set_title('On fitting deme {:d}'.format(diag_results[i]['deme']))
+        axs[i].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
+        axs[i].set_title('On fitting deme {:d}\nLL = {:.1f}'.format(diag_results[i]['deme'],diag_results[i]['log-lik']))
 
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""
