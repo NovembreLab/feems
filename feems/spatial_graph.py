@@ -1086,8 +1086,7 @@ class SpatialGraph(nx.Graph):
             
             # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
             if search_area == 'radius' or search_area == 'range':
-                # TODO change all .argmax() to np.nanargmax()
-                mles = df['(source, dest.)'].iloc[np.argmax(df['log-lik'])][0]
+                mles = df['(source, dest.)'].iloc[np.nanargmax(df['log-lik'])][0]
                 if len(list(self.neighbors(mles))) < 6:
                     print("(Warning: MLE location of source found to be at the edge of the specified {:g}, consider increasing the `opts` to include a larger area.)".format(search_area))
     
@@ -1131,17 +1130,8 @@ class SpatialGraph(nx.Graph):
                 # update counter (cos apparently iterrows() passes index back)
                 cnt += 1
                 
-                # print(row['(source, dest.)'])
                 # initializing at baseline values
-                # self._update_graph(usew, uses2)
-                # self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge + [row['(source, dest.)']], option='onlyc', verbose=False)
-                
-                # joint_contour_df.at[i, 'admix. prop.'] = self.c[-1]
-                # # also track the estimates for c for pre-existing long-range edges
-                # joint_contour_df.at[i, 'prev. c'] = list(self.c[:-1])
-                # # TODO keep a rolling (hidden?) variable for the log-likelihood under each fit
-                # joint_contour_df.at[i, 'log-lik'] = -obj.eems_neg_log_lik(self.c, {'edge':curedge + [row['(source, dest.)']],'mode':'compute'})
-                # print(joint_contour_df.loc[:i], joint_contour_df.loc[i])
+                self._update_graph(usew, uses2)
 
                 try:
                     # TODO verbose print message here?
@@ -1309,7 +1299,7 @@ class SpatialGraph(nx.Graph):
 
         # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
         if search_area == 'radius' or search_area == 'range':
-                mles = df['(source, dest.)'].iloc[np.argmax(df['log-lik'])][0]
+                mles = df['(source, dest.)'].iloc[np.nanargmax(df['log-lik'])][0]
                 if len(list(self.neighbors(mles))) < 6:
                     print("  (Warning: MLE location of source found to be at the edge of the specified {}, consider increasing the `opts` to include a larger area and rerunning this command.)".format(search_area))
 
