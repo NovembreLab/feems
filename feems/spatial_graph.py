@@ -439,8 +439,7 @@ class SpatialGraph(nx.Graph):
         results = {}
         
         # passing in dummy variables just to initialize the procedure
-        # TODO is this a valid dummy variable? see if you can compute using just FEEMS weights
-        args = {'edge':[(self.perm_idx[0],self.perm_idx[1])], 'mode':'update'}
+        args = {}
         nllnull = obj.eems_neg_log_lik(None, args)
         print('Log-likelihood of initial fit: {:.1f}\n'.format(nllnull))
 
@@ -508,7 +507,7 @@ class SpatialGraph(nx.Graph):
         lamb_q,
         optimize_q='n-dim',
         fdr=0.3, 
-        stop=5,
+        stop=None,
         pval=0.05,
         top=0.05,
         exclude_boundary=True,
@@ -531,7 +530,7 @@ class SpatialGraph(nx.Graph):
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
             fdr (:obj:`float`): false-discovery rate of outlier edges 
             pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
-            stop (:obj:`int`): number of admixture edges to add sequentially 
+            stop (:obj:`int`): number of admixture edges to add sequentially (default: None)
             exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes in fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
             lamb_q (:obj:`float`): penalty strength on the residual variances
@@ -566,9 +565,6 @@ class SpatialGraph(nx.Graph):
         
         obj = Objective(self)
         obj.inv(); obj.grad(reg=False); obj.Linv_diag = obj._comp_diag_pinv()
-
-        # resetting the long-range edge counter
-        self.edge = []
         
         # dict storing all the results for plotting
         results = {}
@@ -603,6 +599,10 @@ class SpatialGraph(nx.Graph):
                      'outliers_df': outliers_df,
                      'fdr': fdr}
 
+        if stop is None:
+            # set the stop criterion to be the number of observed nodes - 1
+            stop = self.n_observed_nodes - 1
+            
         cnt = 1; keepgoing = True
         while keepgoing and cnt <= stop:
             print('\nFitting admixture edge to deme {:d}:'.format(destid[-1]))
@@ -613,7 +613,7 @@ class SpatialGraph(nx.Graph):
             else:
                 df = self.calc_contour(destid=int(destid[-1]), search_area=search_area, args=args, exclude_boundary=exclude_boundary)
 
-            usew = deepcopy(obj.sp_graph.w); uses2 = deepcopy(obj.sp_graph.s2)
+            usew = deepcopy(self.w); uses2 = deepcopy(self.s2)
             joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
             # print(obj.eems_neg_log_lik())
 
@@ -621,7 +621,7 @@ class SpatialGraph(nx.Graph):
             self.edge[-1] = joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])]
             # save the whole array of c vals
             self.c = joint_df['prev. c'].iloc[np.nanargmax(joint_df['log-lik'])] + [joint_df['admix. prop.'].iloc[np.nanargmax(joint_df['log-lik'])]]
-
+            
             nll.append(-np.nanmax(joint_df['log-lik']))
             print('\n  Log-likelihood after fitting deme {:d}: {:.1f}'.format(destid[-1], -nll[-1]))
 
@@ -871,6 +871,8 @@ class SpatialGraph(nx.Graph):
         pvals = norm.cdf(np.log(emp_dist)-np.log(fit_dist)-np.mean(np.log(emp_dist)-np.log(fit_dist)), 0, np.std(np.log(emp_dist)-np.log(fit_dist),ddof=1))
         
         bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
+
+        print('{:d} outlier pairs found'.format(np.sum(bh)))
                 
         for k in np.where(bh)[0]:
             # code to convert single index to matrix indices
@@ -920,7 +922,7 @@ class SpatialGraph(nx.Graph):
             print('Consider raising the FDR threshold slightly.')
             return None
         else:
-            print('{:d} outlier deme pairs found'.format(len(df)))
+            # print('{:d} outlier deme pairs found'.format(len(df)))
             if verbose:
                 print(df.sort_values(by='pval').to_string(index=False))
                 print('Putative destination demes (and # of times the deme appears as an outlier) experiencing admixture: ')
@@ -966,212 +968,211 @@ class SpatialGraph(nx.Graph):
         obj = Objective(self); obj.inv(); obj.grad(reg=False)
         obj.Linv_diag = obj._comp_diag_pinv()
 
-        # TODO check if this scenario works BUT first check if this scenario is even necessary
-        if contour_df is None:
-            assert isinstance(lamb, (float,)) and lamb >= 0, "lamb must be a float >=0"
-            assert isinstance(lamb_q, (float,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
+        # # TODO check if this scenario works BUT first check if this scenario is even necessary
+        # if contour_df is None:
+        #     assert isinstance(lamb, (float,)) and lamb >= 0, "lamb must be a float >=0"
+        #     assert isinstance(lamb_q, (float,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
 
-            assert isinstance(destid, (int,)), "destid must be an integer"
-            try:
-                destpid = np.where(self.perm_idx[:self.n_observed_nodes]==destid)[0][0]
-            except:
-                print('invalid ID for destination deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
-                return None
-            # creating a list of (source, dest.) pairings based on user-picked criteria
-            if search_area == 'all':
-                # including every possible node in graph as a putative source
-                randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]+list(self.neighbors(destid))))]
-            elif search_area == 'radius':
-                assert isinstance(sourceid, (int,)), "sourceid must be an integer"
-                assert isinstance(opts, (int,)) and opts > 0, "radius must be an integer >=1"
+        #     assert isinstance(destid, (int,)), "destid must be an integer"
+        #     try:
+        #         destpid = np.where(self.perm_idx[:self.n_observed_nodes]==destid)[0][0]
+        #     except:
+        #         print('invalid ID for destination deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
+        #         return None
+        #     # creating a list of (source, dest.) pairings based on user-picked criteria
+        #     if search_area == 'all':
+        #         # including every possible node in graph as a putative source
+        #         randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]+list(self.neighbors(destid))))]
+        #     elif search_area == 'radius':
+        #         assert isinstance(sourceid, (int,)), "sourceid must be an integer"
+        #         assert isinstance(opts, (int,)) and opts > 0, "radius must be an integer >=1"
                 
-                neighs = [] 
-                neighs = list(self.neighbors(sourceid)) + [sourceid]
+        #         neighs = [] 
+        #         neighs = list(self.neighbors(sourceid)) + [sourceid]
     
-                # including all nodes within a certain radius
-                for _ in range(opts-1):
-                    tempn = [list(self.neighbors(n1)) for n1 in neighs]
-                    # dropping repeated nodes 
-                    neighs = np.unique(list(it.chain(*tempn)))
+        #         # including all nodes within a certain radius
+        #         for _ in range(opts-1):
+        #             tempn = [list(self.neighbors(n1)) for n1 in neighs]
+        #             # dropping repeated nodes 
+        #             neighs = np.unique(list(it.chain(*tempn)))
     
-                randedge = [(x,destid) for x in list(set(neighs)-set([destid]+list(self.neighbors(destid))))]
-            elif search_area == 'range':
-                assert len(opts) == 2, "limits must be list of length 2"
-                # reverse coordinates if in Western and Southern hemispheres
-                if opts[0][0] > opts[0][1]:
-                    opts[0] = opts[0][::-1]
-                elif opts[1][0] > opts[1][1]:
-                    opts[1] = opts[1][::-1]
-                elif opts[0][0] > opts[0][1] & opts[1][0] > opts[1][1]:
-                    opts[0] = opts[0][::-1]
-                    opts[1] = opts[1][::-1]          
-                randedge = []
-                for n in range(self.number_of_nodes()):
-                    # checking for lat. & long. of all possible nodes in graph
-                    if self.nodes[n]['pos'][0] > opts[0][0] and self.nodes[n]['pos'][0] < opts[0][1]:
-                        if self.nodes[n]['pos'][1] > opts[1][0] and self.nodes[n]['pos'][1] < opts[1][1]:
-                            randedge.append((n,destid))
+        #         randedge = [(x,destid) for x in list(set(neighs)-set([destid]+list(self.neighbors(destid))))]
+        #     elif search_area == 'range':
+        #         assert len(opts) == 2, "limits must be list of length 2"
+        #         # reverse coordinates if in Western and Southern hemispheres
+        #         if opts[0][0] > opts[0][1]:
+        #             opts[0] = opts[0][::-1]
+        #         elif opts[1][0] > opts[1][1]:
+        #             opts[1] = opts[1][::-1]
+        #         elif opts[0][0] > opts[0][1] & opts[1][0] > opts[1][1]:
+        #             opts[0] = opts[0][::-1]
+        #             opts[1] = opts[1][::-1]          
+        #         randedge = []
+        #         for n in range(self.number_of_nodes()):
+        #             # checking for lat. & long. of all possible nodes in graph
+        #             if self.nodes[n]['pos'][0] > opts[0][0] and self.nodes[n]['pos'][0] < opts[0][1]:
+        #                 if self.nodes[n]['pos'][1] > opts[1][0] and self.nodes[n]['pos'][1] < opts[1][1]:
+        #                     randedge.append((n,destid))
     
-                # remove tuple of dest -> dest ONLY if it is in randedge
-                if (destid,destid) in randedge:
-                    randedge.remove((destid,destid))
-            elif search_area == 'custom':
-                randedge = [(x,destid) for x in list(set(opts)-set([destid]+list(self.neighbors(destid))))]
+        #         # remove tuple of dest -> dest ONLY if it is in randedge
+        #         if (destid,destid) in randedge:
+        #             randedge.remove((destid,destid))
+        #     elif search_area == 'custom':
+        #         randedge = [(x,destid) for x in list(set(opts)-set([destid]+list(self.neighbors(destid))))]
     
-            if exclude_boundary:
-                randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.neighbors(e[0]))==6]
+        #     if exclude_boundary:
+        #         randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.neighbors(e[0]))==6]
 
-            # fit the baseline graph if no w or s2 is passed in 
-            # baseline w and s2 to be stored in an object
-            if usew is None:
-                # self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, option='default', verbose=False);
-                # obj.inv(); obj.grad(reg=False)
-                usew = deepcopy(self.w); uses2 = deepcopy(self.s2) 
-                baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
-                # container for storing the MLE weights & s2
-                mlew = deepcopy(usew); mles2 = deepcopy(uses2)
-            else:
-                self._update_graph(usew, uses2)
-                baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
-                # container for storing the MLE weights & s2
-                mlew = deepcopy(usew); mles2 = deepcopy(uses2)            
+        #     # fit the baseline graph if no w or s2 is passed in 
+        #     # baseline w and s2 to be stored in an object
+        #     if usew is None:
+        #         # self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, option='default', verbose=False);
+        #         # obj.inv(); obj.grad(reg=False)
+        #         usew = deepcopy(self.w); uses2 = deepcopy(self.s2) 
+        #         baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
+        #         # container for storing the MLE weights & s2
+        #         mlew = deepcopy(usew); mles2 = deepcopy(uses2)
+        #     else:
+        #         self._update_graph(usew, uses2)
+        #         baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
+        #         # container for storing the MLE weights & s2
+        #         mlew = deepcopy(usew); mles2 = deepcopy(uses2)            
             
-            cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
-            prevc = []
+        #     cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
+        #     prevc = []
 
-            curedge = deepcopy(self.edge)
+        #     curedge = deepcopy(self.edge)
 
-            for ie, e in enumerate(randedge):
+        #     for ie, e in enumerate(randedge):
 
-                print("\r\tOptimizing joint likelihood over {}/{} most likely demes in the graph".format(ie+1,len(randedge)), end="")
+        #         print("\r\tOptimizing joint likelihood over {}/{} most likely demes in the graph".format(ie+1,len(randedge)), end="")
                     
-                # initializing at baseline values
-                self._update_graph(usew, uses2)
+        #         # initializing at baseline values
+        #         self._update_graph(usew, uses2)
 
-                try:
-                    self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge.append(e), option='onlyc', verbose=False)
-                    cest2[ie] = self.c[-1]
-                    prevc.append(self.c[:-1])
-                    llc2[ie] = -obj.eems_neg_log_lik(self.c, {'edge':curedge.append(e),'mode':'compute'})
-                    # print(llc2[ie],randedge[ie])
-                    # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
-                    if llc2[ie] != -np.inf:
-                        if llc2[ie] > np.nanmax(np.append(llc2[:ie],[baselinell])):
-                            mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
-                except: 
-                    # TODO check if this try block is actually required
-                    try:
-                        # initializing at baseline values
-                        self._update_graph(mlew, mles2)
+        #         try:
+        #             self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge.append(e), option='onlyc', verbose=False)
+        #             cest2[ie] = self.c[-1]
+        #             prevc.append(self.c[:-1])
+        #             llc2[ie] = -obj.eems_neg_log_lik(self.c, {'edge':curedge.append(e),'mode':'compute'})
+        #             # print(llc2[ie],randedge[ie])
+        #             # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
+        #             if llc2[ie] != -np.inf:
+        #                 if llc2[ie] > np.nanmax(np.append(llc2[:ie],[baselinell])):
+        #                     mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
+        #         except: 
+        #             # TODO check if this try block is actually required
+        #             try:
+        #                 # initializing at baseline values
+        #                 self._update_graph(mlew, mles2)
 
-                        # optimizing over multiple edges
-                        self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge.append(e), option='onlyc', verbose=False)
-                        cest2[ie] = self.c[-1]
-                        prevc.append(self.c[:-1])
-                        llc2[ie] = -obj.eems_neg_log_lik(self.c, {'edge':curedge.append(e),'mode':'compute'})
+        #                 # optimizing over multiple edges
+        #                 self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge.append(e), option='onlyc', verbose=False)
+        #                 cest2[ie] = self.c[-1]
+        #                 prevc.append(self.c[:-1])
+        #                 llc2[ie] = -obj.eems_neg_log_lik(self.c, {'edge':curedge.append(e),'mode':'compute'})
                     
-                        # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
-                        if llc2[ie] != -np.inf:
-                            if llc2[ie] > np.nanmax(np.append(llc2[:ie],[baselinell])):
-                                mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
-                    except:
-                        cest2[ie] = np.nan
-                        llc2[ie] = np.nan
+        #                 # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
+        #                 if llc2[ie] != -np.inf:
+        #                     if llc2[ie] > np.nanmax(np.append(llc2[:ie],[baselinell])):
+        #                         mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
+        #             except:
+        #                 cest2[ie] = np.nan
+        #                 llc2[ie] = np.nan
     
-            print('...done!')
+        #     print('...done!')
 
-            df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
-            df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = llc2
-            df['prev. c'] = prevc
+        #     df = pd.DataFrame(index=range(1,len(randedge)+1), columns=['(source, dest.)', 'admix. prop.', 'log-lik', 'scaled log-lik'])
+        #     df['(source, dest.)'] = randedge; df['admix. prop.'] = cest2; df['log-lik'] = llc2
+        #     df['prev. c'] = prevc
             
-            # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
-            if search_area == 'radius' or search_area == 'range':
-                mles = df['(source, dest.)'].iloc[np.nanargmax(df['log-lik'])][0]
-                if len(list(self.neighbors(mles))) < 6:
-                    print("(Warning: MLE location of source found to be at the edge of the specified {:g}, consider increasing the `opts` to include a larger area.)".format(search_area))
+        #     # if MLE is found to be on the edge of the range specified by user then indicate that range should be extended
+        #     if search_area == 'radius' or search_area == 'range':
+        #         mles = df['(source, dest.)'].iloc[np.nanargmax(df['log-lik'])][0]
+        #         if len(list(self.neighbors(mles))) < 6:
+        #             print("(Warning: MLE location of source found to be at the edge of the specified {:g}, consider increasing the `opts` to include a larger area.)".format(search_area))
     
-            if np.sum(df['log-lik'].isna()) > 0.25*len(df):
-                print("(Warning: log-likelihood could not be computed for ~{:.0f}% of demes. Try increasing value of lamb)".format(np.sum(df['log-lik'].isna())*100/len(df)))
+        #     if np.sum(df['log-lik'].isna()) > 0.25*len(df):
+        #         print("(Warning: log-likelihood could not be computed for ~{:.0f}% of demes. Try increasing value of lamb)".format(np.sum(df['log-lik'].isna())*100/len(df)))
 
-            joint_contour_df = df
+        #     joint_contour_df = df
+        # else:
+        assert isinstance(lamb, (numbers.Real,)) and lamb >= 0, "lamb must be a float >=0"
+        assert isinstance(lamb_q, (numbers.Real,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
+        # get indices of the top hits
+        if top<1:
+            # treat as a percentage
+            topidx = contour_df['log-lik'].nlargest(int(np.ceil(top * len(contour_df)))).index
+        else: 
+            # treat as a number 
+            topidx = contour_df['log-lik'].nlargest(int(top)).index
+        # print("Jointly optimizing likelihood over {:d} demes in the graph:\n".format(len(topidx)))
+
+        if usew is None:                
+            baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
+            usew = deepcopy(self.w); uses2 = deepcopy(self.s2)
+            mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
         else:
-            assert isinstance(lamb, (float,)) and lamb >= 0, "lamb must be a float >=0"
-            assert isinstance(lamb_q, (float,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
-            # get indices of the top hits
-            if top<1:
-                # treat as a percentage
-                topidx = contour_df['log-lik'].nlargest(int(np.ceil(top * len(contour_df)))).index
-            else: 
-                # treat as a number 
-                topidx = contour_df['log-lik'].nlargest(int(top)).index
-            # print("Jointly optimizing likelihood over {:d} demes in the graph:\n".format(len(topidx)))
+            self._update_graph(usew, uses2)
+            mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
+            baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
+        
+        # run the joint fitting scheme for each top hit
+        joint_contour_df = contour_df.loc[topidx]; cnt = 1
 
-            if usew is None:                
-                baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
-                usew = deepcopy(self.w); uses2 = deepcopy(self.s2)
-                mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
-            else:
-                self._update_graph(usew, uses2)
-                mlew = deepcopy(usew); mles2 = deepcopy(uses2) 
-                baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
+        # add extra column to store previous c values
+        joint_contour_df['prev. c'] = None
+
+        curedge = deepcopy(self.edge)
+        print(curedge)
+        
+        for i, row in joint_contour_df.iterrows():
+            print("\r\tOptimizing joint likelihood over {}/{} most likely demes in the graph".format(cnt,len(topidx)), end="")
+
+            # update counter (cos apparently iterrows() passes index back)
+            cnt += 1
             
-            # run the joint fitting scheme for each top hit
-            joint_contour_df = contour_df.loc[topidx]; cnt = 1
+            # initializing at baseline values
+            self._update_graph(usew, uses2)
 
-            # add extra column to store previous c values
-            joint_contour_df['prev. c'] = None
-
-            curedge = deepcopy(self.edge)
-            print(curedge)
-            
-            for i, row in joint_contour_df.iterrows():
-                print("\r\tOptimizing joint likelihood over {}/{} most likely demes in the graph".format(cnt,len(topidx)), end="")
-
-                # update counter (cos apparently iterrows() passes index back)
-                cnt += 1
+            try:
+                self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge + [row['(source, dest.)']], option='onlyc', verbose=False)
                 
-                # initializing at baseline values
-                self._update_graph(usew, uses2)
+                joint_contour_df.at[i, 'admix. prop.'] = self.c[-1]
+                # also track the estimates for c for pre-existing long-range edges
+                joint_contour_df.at[i, 'prev. c'] = list(self.c[:-1])
+                # TODO keep a rolling (hidden?) variable for the log-likelihood under each fit
+                joint_contour_df.at[i, 'log-lik'] = -obj.eems_neg_log_lik(self.c, {'edge':curedge + [row['(source, dest.)']],'mode':'compute'})
 
-                try:
-                    # TODO verbose print message here?
-                    self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge + [row['(source, dest.)']], option='onlyc', verbose=False)
-                    
-                    joint_contour_df.at[i, 'admix. prop.'] = self.c[-1]
-                    # also track the estimates for c for pre-existing long-range edges
-                    joint_contour_df.at[i, 'prev. c'] = list(self.c[:-1])
-                    # TODO keep a rolling (hidden?) variable for the log-likelihood under each fit
-                    joint_contour_df.at[i, 'log-lik'] = -obj.eems_neg_log_lik(self.c, {'edge':curedge + [row['(source, dest.)']],'mode':'compute'})
-
-                    # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
-                    if joint_contour_df.index.get_loc(i) == 0:
+                # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
+                if joint_contour_df.index.get_loc(i) == 0:
+                    mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
+                else:
+                    if joint_contour_df.at[i, 'log-lik'] > np.nanmax(joint_contour_df['log-lik'].iloc[:joint_contour_df.index.get_loc(i)]):
                         mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
-                    else:
-                        if joint_contour_df.at[i, 'log-lik'] > np.nanmax(joint_contour_df['log-lik'].iloc[:joint_contour_df.index.get_loc(i)]):
-                            mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
-                except:  
-                    joint_contour_df.at[i, 'admix. prop.'] = np.nan
-                    joint_contour_df.at[i, 'log-lik'] = np.nan
+            except:  
+                joint_contour_df.at[i, 'admix. prop.'] = np.nan
+                joint_contour_df.at[i, 'log-lik'] = np.nan
 
-            print("...done!")
-    
-            if np.sum(joint_contour_df['log-lik'].isna()) > 0.25*len(joint_contour_df):
-                print("(Warning: log-likelihood could not be computed for ~{:.0f}% of demes. Try increasing value of lamb)".format(np.sum(joint_contour_df['log-lik'].isna())*100/len(joint_contour_df)))
-                
+        print("...done!")
+
+        if np.sum(joint_contour_df['log-lik'].isna()) > 0.25*len(joint_contour_df):
+            print("(Warning: log-likelihood could not be computed for ~{:.0f}% of demes. Try increasing value of lamb)".format(np.sum(joint_contour_df['log-lik'].isna())*100/len(joint_contour_df)))
+            
         joint_contour_df['scaled log-lik'] = joint_contour_df['log-lik'] - np.nanmax(joint_contour_df['log-lik']) 
-
+    
         # updating the graph with MLE weights so it does not need to be fit again
         self._update_graph(mlew, mles2)
         # print(obj.eems_neg_log_lik())
-
+    
         # set bounds for c values
         joint_contour_df['admix. prop.'] = joint_contour_df['admix. prop.'].apply(lambda x: 0 if x < 0 else 1 if x > 1 else x)
-
+    
         # only replace the edge if there is a single fit edge 
         if len(self.edge) == 1:
             self.edge = [joint_contour_df['(source, dest.)'].iloc[np.nanargmax(joint_contour_df['log-lik'])]]
             self.c = [joint_contour_df['admix. prop.'].iloc[np.nanargmax(joint_contour_df['log-lik'])]]
-
+    
         # checking whether adding an extra admixture parameter improves model fit using a LRT
         joint_contour_df['pval'] = chi2.sf(2*(joint_contour_df['log-lik'] - baselinell), df=len(self.edge))
         
@@ -1209,7 +1210,6 @@ class SpatialGraph(nx.Graph):
         obj = Objective(self)
         obj.inv(); obj.grad(reg=False); obj.Linv_diag = obj._comp_diag_pinv()
 
-        # TODO include np.int 
         assert isinstance(destid, (numbers.Integral)), "destid must be an integer"
 
         try:
@@ -1223,8 +1223,8 @@ class SpatialGraph(nx.Graph):
             # including every possible node in graph as a putative source
             randedge = [(x,destid) for x in list(set(range(self.number_of_nodes()))-set([destid]+list(self.neighbors(destid))))]
         elif search_area == 'radius':
-            assert isinstance(sourceid, (int,)), "sourceid must be an integer"
-            assert isinstance(opts, (int,)) and opts > 0, "radius must be an integer >=1"
+            assert isinstance(sourceid, (numbers.Integral,)), "sourceid must be an integer"
+            assert isinstance(opts, (numbers.Integral,)) and opts > 0, "radius must be an integer >=1"
             
             neighs = [] 
             neighs = list(self.neighbors(sourceid)) + [sourceid]

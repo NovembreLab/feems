@@ -398,18 +398,22 @@ class Objective(object):
         """
 
         # do not recompute inverses if already exists
-        if not hasattr(self, 'Linv'):
-            self.inv(); self.grad(reg=False)
+        # if not hasattr(self, 'Linv'):
+        #     self.inv(); self.grad(reg=False); self.Linv_diag = self._comp_diag_pinv()
 
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes, :self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv), (self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes)) 
         Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(), (self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes))
         
-        if 'delta' in opts:
-            resmat = np.copy(opts['delta'])
-        else:
-            resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag 
-            if cvals is None:
-                return np.array(resmat)
+        # if 'delta' in opts:
+        #     resmat = np.copy(opts['delta'])
+        # else:
+        #     resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag 
+        #     if cvals is None:
+        #         return np.array(resmat)
+        
+        resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag 
+        if cvals is None:
+            return np.array(resmat)
 
         for c, lre in zip(cvals, opts['lre']):
             source, target = lre
