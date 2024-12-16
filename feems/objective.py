@@ -11,7 +11,7 @@ import scipy.sparse as sp
 from scipy.optimize import minimize
 from scipy.stats import wishart, norm, chi2
 
-from .utils import cov_to_dist, benjamini_hochberg, get_outlier_idx
+from .utils import cov_to_dist, dist_to_cov, benjamini_hochberg, get_outlier_idx
 
 class Objective(object):
     def __init__(self, sp_graph):
@@ -34,9 +34,9 @@ class Objective(object):
         self.C = np.vstack((-np.ones(self.sp_graph.n_observed_nodes-1), np.eye(self.sp_graph.n_observed_nodes-1))).T
         
         # genetic distance matrix
-        self.sp_graph.D = np.ones(self.sp_graph.n_observed_nodes).reshape(-1,1) @ np.diag(self.sp_graph.S).reshape(1,-1) + np.diag(self.sp_graph.S).reshape(-1,1) @ np.ones(self.sp_graph.n_observed_nodes).reshape(1,-1) - 2*self.sp_graph.S
+        self.sp_graph.Dhat = cov_to_dist(sp_graph.S)
 
-        self.CDCt = self.C @ self.sp_graph.D @ self.C.T
+        self.CDCt = self.C @ self.sp_graph.Dhat @ self.C.T
 
     def _rank_one_solver(self, B):
         """Solver for linear system (L_{d-o,d-o} + ones/d) * X = B using rank
@@ -228,10 +228,9 @@ class Objective(object):
                                           - c * Q1mat[did, did] + c * self.sp_graph.q_prox[sid - self.sp_graph.n_observed_nodes]
                         resmat[did, i] = resmat[i, did]
             
-        # convert distance matrix to covariance matrix (using code from rwc package in Hanks & Hooten 2013)
-        rwsm = np.mean(resmat, 0).reshape(-1,1) @ np.ones(resmat.shape[0]).reshape(1,-1)
-        clsm = np.ones(resmat.shape[0]).reshape(-1, 1) @ np.mean(resmat, 1).reshape(1,-1)
-        Sigma = 0.5 * (-resmat + rwsm + clsm - np.sum(resmat)/resmat.shape[0]**2)
+        # convert distance matrix to covariance matrix for use in FEEMS
+        # TODO check if you can use the same machinery as FEEMS by computing the covariance matrix from resmat instead of using Eqn 12
+        Sigma = dist_to_cov(resmat)
 
         # Eqn 18 in Marcus et al 2021 
         CRCt = np.linalg.inv(self.C @ Sigma @ self.C.T) 
@@ -368,31 +367,34 @@ class Objective(object):
                     did = np.where(self.sp_graph.perm_idx == edge[1])[0][0]
                     assert did < self.sp_graph.n_observed_nodes, "ensure that the destination is a sampled deme (check ID from the map or from output of extract_outliers)"
                     opts['lre'].append((sid,did))
-                    
+
+            # TODO speed up matrix multiplications seeing if C @ dd @ C.T can be done wiht faster vector ops
             if opts['mode'] != 'update':
                 dd = self._compute_delta_matrix(c, opts)
                 try:
-                    nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
+                    nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -(self.C @ dd @ self.C.T)/self.sp_graph.n_snps)
                 except: 
                     nll = np.inf
             else:
                 opts['delta'] = self._compute_delta_matrix(c, opts)
                 try:
-                    nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ opts['delta'] @ self.C.T)
+                    nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -(self.C @ opts['delta'] @ self.C.T)/self.sp_graph.n_snps)
                 except:
                     nll = np.inf
         else:
             dd = self._compute_delta_matrix(None, {})
-            if opts['mode'] == 'update':
-                opts['delta'] = dd
+            if opts is not None:
+                if opts['mode'] == 'update':
+                    opts['delta'] = dd
             
             try:
-                nll = -wishart.logpdf(-self.sp_graph.n_snps*self.CDCt, self.sp_graph.n_snps, -self.C @ dd @ self.C.T)
+                nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -(self.C @ dd @ self.C.T)/self.sp_graph.n_snps)
             except:
                 nll = np.inf
                    
         return nll
-    
+
+    ## checked in simulations to ensure that it gives the same distance matrix with c=0 as FEEMS
     def _compute_delta_matrix(self, cvals, opts):
         """(internal function) Compute a new delta matrix given a previous delta matrix as a perturbation from multiple long range gene flow events OR create a new delta matrix from resmat 
         """

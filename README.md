@@ -14,7 +14,7 @@ For details on the method see our [publication](https://doi.org/10.7554/eLife.61
 
 # `FEEMSmix`
 
-_This method is still currently under review._
+_This method is still currently under review, so there may be some changes along the way._
 
 **F**ast **E**stimation of **E**ffective **M**igration **S**urfaces + ad**mix**ture (`FEEMSmix`) 
 is built on top of `FEEMS`, and is a method for representing long-range gene flow 
@@ -104,9 +104,9 @@ Windows environment because at least one of the dependencies does not
 have a Windows port. A virtual Linux machine should be preferable if 
 you are on a Windows machine. 
 
-## Quick start using bioconda
+## Quick start using bioconda (not available for `FEEMSmix`)
 
-Typically, the simplest way to get started with `FEEMS` (or `FEEMSmix`) is to install 
+Typically, the simplest way to get started with `FEEMS` is to install 
 [Anaconda][anaconda] or [Miniconda][miniconda] or [mamba][mamba], 
 then install `FEEMS` using the [Bioconda recipe][bioconda-recipe]:
 
@@ -155,13 +155,13 @@ pip install notebook
 ```
 
 Once the `conda` environment has 
-been setup with these dependencies, we can install `FEEMS`:
+been setup with these dependencies, we can install `FEEMS`/`FEEMSmix`:
 
 ```bash
 pip install git+https://github.com/VivaswatS/feems
 ```
 
-You can also install `FEEMS` locally by:
+You can also install `FEEMS`/`FEEMSmix` locally by:
 
 ```bash
 git clone https://github.com/VivaswatS/feems
@@ -175,7 +175,7 @@ NOTE: Some users have reported a compatibility error arising at this step with t
 
 Another easy option is also to use the `feems.yml` file from this repo as a blueprint for the installation and setup of the appropriate conda environment. 
 
-You can download the file onto your computer and simply run:
+You can download the file onto your computer and simply run in the appropriate directory:
 
 ```bash
 conda env create -f feems.yml
@@ -190,7 +190,7 @@ To help get your analysis started (and to verify appropriate installation), we p
 
 An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
 
-*NOTE:* please use the `<v2.0` format for input files if using the `plink` format. 
+*NOTE:* We have not tested working with `plink == v2.0` format for input files.  
 
 # RUNNING `FEEMSmix`
 

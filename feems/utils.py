@@ -11,9 +11,9 @@ from shapely.affinity import translate
 from shapely.geometry import MultiPoint, Point, Polygon, shape
 from sklearn.decomposition import PCA
 from statsmodels.distributions.empirical_distribution import ECDF
+# import statsmodels.api as sm
 
-import matplotlib.pyplot as plt
-
+from .objective import Objective, comp_mats
 
 def load_tiles(s):
     tiles = fiona.collection(s)
@@ -134,7 +134,7 @@ def prepare_graph_inputs(coord, ggrid, translated=False, buffer=0, outer=None, w
     res = (outer, edges, grid, ipmap)
     return res
 
-def get_outlier_idx(emp_dist, fit_dist, fdr=0.25):
+def get_outlier_idx(emp_dist, fit_dist, fdr=0.1):
     bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
 
     max_res_node = []
@@ -171,30 +171,83 @@ def get_robust_normal_pvals_lower(data, q=25):
     
     return p_values, mu, sigma
 
-def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
+def parametric_bootstrap(sp_graph, emp_dist, fit_dist, lamb, lamb_q, optimize_q='n-dim', numdraws=100, fdr=0.1, dfscaler=5):
     """
-    Apply the Benjamini-Hochberg procedure to a list of p-values to determine significance
-    and the largest k such that p_(k) <= k/m * FDR.
+    Apply the parametric bootstrap procedure to a obtain a list of p-values for points.
     Required:
-        emp_dist, fit_dist (numpy.array)
+        emp_cov, fit_cov (numpy.array)
     Optional:    
-        fdr (float): False discovery rate threshold.
+        numdraws (int), fdr (float), dfscaler (float): False discovery rate threshold.
     """
+    n = sp_graph.n_observed_nodes
 
-    logratio = np.log(emp_dist/fit_dist)
-    # logratio = emp_dist-fit_dist
-
-    mean_logratio = np.mean(logratio)
-    var_logratio = np.var(logratio,ddof=1)
-    logratio_norm = (logratio-mean_logratio)/np.sqrt(var_logratio)
+    tril_idx = np.tril_indices(n, k=-1)
     
-    p_value_neg = sp.stats.norm.cdf(logratio_norm)
-    p_values = p_value_neg
-    ## if you want to look for outliers in the other directions
-    # p_values=1-p_value_neg
+    emp_distmat = np.zeros((n, n))
+    emp_distmat[tril_idx] = emp_dist; emp_distmat += emp_distmat.T
+    fit_distmat = np.zeros((n, n))
+    fit_distmat[tril_idx] = fit_dist; fit_distmat += fit_distmat.T
+    D_sample = np.zeros_like(fit_distmat)
 
-    p_values, _, _ = get_robust_normal_pvals_lower(logratio, 25)
+    bootstrapped_distances = np.zeros((100, n, n)); bootstrapped_fits = np.zeros_like(bootstrapped_distances)
 
+    oldw = sp_graph.w; olds2 = sp_graph.s2
+
+    C = np.vstack((-np.ones(n-1), np.eye(n-1))).T
+    
+    print('\n\tNumber of random draws in bootstrap:', end=' ')
+    for d in range(numdraws):
+        if d%20 == 0:
+            print(d, end='...')
+            
+        # random draw given the EEMS scale matrix
+        W = -sp.stats.wishart.rvs(df=sp_graph.n_snps/dfscaler, scale=-dfscaler*(C@fit_distmat@C.T)/sp_graph.n_snps)
+        
+        # holder for random distance matrix
+        D_sample[1:,0] = -np.diagonal(W)/2
+        D_sample[0,1:] = D_sample[1:,0]
+        for i in range(1,n):
+            for j in range(i+1,n):
+                D_sample[i,j] = W[i-1,j-1] + D_sample[i,0] + D_sample[j,0]
+                D_sample[j,i] = D_sample[i,j]
+    
+        bootstrapped_distances[d, :, :] = D_sample
+    
+        # constructing the covariance matrix for fitting
+        Sigma = dist_to_cov(D_sample)
+
+        # refitting the weights on the newly drawn samples
+        sp_graph.S = Sigma
+        
+        sp_graph.fit(lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q)
+        # sp_graph.fit(lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, option='onlyc', long_range_edges=edges)
+        
+        objn = Objective(sp_graph); #objn.inv(); objn.grad(reg=False); objn.Linv_diag = objn._comp_diag_pinv()
+        fit_cov2, _, _ = comp_mats(objn)
+        bootstrapped_fits[d, :, :] = cov_to_dist(fit_cov2)
+
+    print('done!')
+
+    # updating the graph to the baseline state
+    sp_graph.S = sp_graph.frequencies @ sp_graph.frequencies.T / sp_graph.n_snps
+    sp_graph._update_graph(oldw, olds2)
+    
+    # p_values = np.zeros_like(sp_graph.Dhat)
+    # for i in range(0,n):
+    #     for j in range(i+1, n):  # Iterate over upper triangular 
+    #         p_values[i, j] = np.mean(np.log(bootstrapped_distances[:, i, j]/bootstrapped_fits[:, i, j]) <= 
+    #                              np.log(emp_distmat[i, j]/fit_distmat[i, j]))
+    #         p_values[j, i] = p_values[i, j] 
+
+    # p_values = p_values[np.tril_indices(n, k=-1)]
+
+    log_ratios_emp = np.log(emp_distmat[tril_idx] / fit_distmat[tril_idx])
+    log_ratios_boot = np.log(bootstrapped_distances[:, tril_idx[0], tril_idx[1]] /
+                         bootstrapped_fits[:, tril_idx[0], tril_idx[1]])
+
+    # Compute p-values for upper triangular elements
+    p_values = np.mean(log_ratios_boot <= log_ratios_emp, axis=0)
+    
     m = len(p_values)  # total number of hypotheses
     sorted_p_values = np.sort(p_values)
 
@@ -214,15 +267,56 @@ def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
     # max_significant + 1 because indices are 0-based, but k should be 1-based
     return results
 
-# def mean_pairwise_differences_between(ac1, ac2):
-#     "(borrowed completely from allel package to compute Fst)"
-#     an1 = np.sum(ac1, axis=1); an2 = np.sum(ac2, axis=1)
-#     n_pairs = an1 * an2
-#     n_same = np.sum(ac1 * ac2, axis=1)
-#     n_diff = n_pairs - n_same
-#     mpd = np.where(n_pairs > 0, n_diff / n_pairs, np.nan)
-#     return np.mean(mpd)
+def benjamini_hochberg(emp_dist, fit_dist, fdr=0.1):
+    """
+    Apply the Benjamini-Hochberg procedure to a list of p-values to determine significance
+    and the largest k such that p_(k) <= k/m * FDR.
+    Required:
+        emp_dist, fit_dist (numpy.array)
+    Optional:    
+        fdr (float): False discovery rate threshold.
+    """
 
+    logratio = np.log(emp_dist/fit_dist)
+    # logratio = emp_dist-fit_dist
+
+    mean_logratio = np.mean(logratio)
+    var_logratio = np.var(logratio,ddof=1)
+    logratio_norm = (logratio-mean_logratio)/np.sqrt(var_logratio)
+    
+    # p_value_neg = sp.stats.norm.cdf(logratio_norm)
+    # p_values = p_value_neg
+    ## if you want to look for outliers in the other directions
+    # p_values=1-p_value_neg
+
+    p_values, _, _ = get_robust_normal_pvals_lower(logratio_norm, 25)
+
+    # X = sm.add_constant(fit_dist)
+    # mod = sm.OLS(emp_dist, X)
+    # res = mod.fit()
+    # muhat, betahat = res.params
+
+    # p_values, _, _ = get_robust_normal_pvals_lower(res.resid, 25)
+
+    m = len(p_values)  # total number of hypotheses
+    sorted_p_values = np.sort(p_values)
+
+    sorted_indices = np.argsort(p_values)
+    critical_values = np.array([fdr * (i + 1) / m for i in range(m)])
+
+    # Find the largest p-value that meets the Benjamini-Hochberg criterion
+    is_significant = sorted_p_values <= critical_values
+    if np.any(is_significant):
+        max_significant = np.max(np.where(is_significant)[0])  # max index where condition is true
+    else:
+        max_significant = -1  # no significant results
+    # All p-values with rank <= max_significant are significant
+    significant_indices = sorted_indices[:max_significant + 1]
+    results = np.zeros(m, dtype=bool)
+    results[significant_indices] = True
+    # max_significant + 1 because indices are 0-based, but k should be 1-based
+    return results
+    
 def pairwise_PCA_distances(genotypes, numPC = None):
     """Function to compute pairwise distance between individuals on a PCA plot
     genotypes (matrix) : input used for FEEMSmix
@@ -283,3 +377,14 @@ def cov_to_dist(S):
     ones = np.ones((s2.shape[0], 1))
     D = s2 @ ones.T + ones @ s2.T - 2 * S
     return D 
+
+def dist_to_cov(D):
+    """Convert a distance matrix to a covariance matrix."""
+    n = D.shape[0]
+    row_mean = np.mean(D, axis=1)
+    col_mean = np.mean(D, axis=0)
+    total_mean = np.mean(D)
+    
+    # Apply the transformation
+    S = -0.5 * (D - row_mean - col_mean + total_mean)
+    return S

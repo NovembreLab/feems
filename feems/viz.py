@@ -243,12 +243,12 @@ class Viz(object):
                     self.ax.text(
                         obs_grid[i, 0],
                         obs_grid[i, 1],
-                        str(perm_id),
+                        f'{perm_id}\u0332',
                         horizontalalignment="center",
                         verticalalignment="center",
-                        size=self.obs_node_textsize*1.05,
+                        size=self.obs_node_textsize,
                         zorder=self.obs_node_zorder,
-                        color='grey'
+                        color='#707070'
                     )
                 else:    
                     self.ax.text(
@@ -613,6 +613,7 @@ class Viz(object):
         Returns:
             None
         """
+        # TODO plot log-lik contour for a certain deme (passed in by user WITH seq_results) while accounting for all previous edges
 
         self.obj = Objective(self.sp_graph); self.obj.inv(); self.obj.grad(reg=False)
         self.obj.Linv_diag = self.obj._comp_diag_pinv()
@@ -669,7 +670,7 @@ class Viz(object):
         cprofll = np.zeros(len(cgrid))
         for ic, c in enumerate(cgrid):
             try:
-                cprofll[ic] = -self.obj.eems_neg_log_lik(c, {'edge':[df['(source, dest.)'].iloc[np.argmax(df['log-lik'])]], 'mode':'compute'})
+                cprofll[ic] = -self.obj.eems_neg_log_lik([c], {'edge':[df['(source, dest.)'].iloc[np.argmax(df['log-lik'])]], 'mode':'compute'})
             except:
                 cprofll[ic] = np.nan
         
@@ -677,7 +678,7 @@ class Viz(object):
         for idx, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-3]):
             for ic, c in enumerate(cgrid):
                 try:
-                    cprofll2[idx,ic] = -self.obj.eems_neg_log_lik(c, {'edge':[ed], 'mode':'compute'})
+                    cprofll2[idx,ic] = -self.obj.eems_neg_log_lik([c], {'edge':[ed], 'mode':'compute'})
                 except:
                     cprofll2[idx,ic] = np.nan
 
@@ -702,13 +703,13 @@ class Viz(object):
         # plt.axvline(cgrid[ub], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6)
         
         # drawing the colorbar for the log-lik surface
-        self.c_axins = inset_axes(self.ax, 
-                                  loc = lbar_loc, 
-                                  width = str(lbar_width)+'%', 
-                                  height = str(lbar_height)+'%')
-        self.c_axins.set_title(r"scaled $\ell$", fontsize = 1.2*cbar_font_size)
-        self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
-        self.c_cbar.set_ticks([levels,0]); self.c_cbar.ax.tick_params(labelsize=cbar_ticklabelsize)
+        # self.c_axins = inset_axes(self.ax, 
+        #                           loc = lbar_loc, 
+        #                           width = str(lbar_width)+'%', 
+        #                           height = str(lbar_height)+'%')
+        # self.c_axins.set_title(r"scaled $\ell$", fontsize = 1.2*cbar_font_size)
+        # self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal')
+        # self.c_cbar.set_ticks([levels,0]); self.c_cbar.ax.tick_params(labelsize=cbar_ticklabelsize)
 
 def draw_FEEMSmix_fit(
     v,
