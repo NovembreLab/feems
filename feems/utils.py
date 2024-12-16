@@ -13,7 +13,8 @@ from sklearn.decomposition import PCA
 from statsmodels.distributions.empirical_distribution import ECDF
 # import statsmodels.api as sm
 
-from .objective import Objective, comp_mats
+from . import Objective
+from .objective import comp_mats
 
 def load_tiles(s):
     tiles = fiona.collection(s)
@@ -222,8 +223,8 @@ def parametric_bootstrap(sp_graph, emp_dist, fit_dist, lamb, lamb_q, optimize_q=
         sp_graph.fit(lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q)
         # sp_graph.fit(lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, option='onlyc', long_range_edges=edges)
         
-        objn = Objective(sp_graph); #objn.inv(); objn.grad(reg=False); objn.Linv_diag = objn._comp_diag_pinv()
-        fit_cov2, _, _ = comp_mats(objn)
+        objn = Objective.Objective(sp_graph); #objn.inv(); objn.grad(reg=False); objn.Linv_diag = objn._comp_diag_pinv()
+        fit_cov2, _, _ = Objective.comp_mats(objn)
         bootstrapped_fits[d, :, :] = cov_to_dist(fit_cov2)
 
     print('done!')
