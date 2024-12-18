@@ -412,8 +412,8 @@ class SpatialGraph(nx.Graph):
         Optional:
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
             fdr (:obj:`float`): false-discovery rate of outlier edges 
-            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
-            stop (:obj:`int`): number of admixture edges to add sequentially 
+            pval (:obj:`float`): p-value for assessing whether adding a long-range edge significantly increases log-likelihood over previous fit
+            stop (:obj:`int`): number of long-range edges to add sequentially 
             exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes from fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
             alpha_q (:obj:`float`): penalty strength on log residual variances
@@ -462,7 +462,7 @@ class SpatialGraph(nx.Graph):
         cnt = 1
         
         while cnt <= stop:
-            print('\nFitting admixture edge to deme {:d}:'.format(dest[cnt-1]))
+            print('\nFitting long-range edge to deme {:d}:'.format(dest[cnt-1]))
             self._update_graph(usew, uses2)
             
             # get the log-lik surface across the landscape
@@ -510,6 +510,7 @@ class SpatialGraph(nx.Graph):
         stop=None,
         pval=0.05,
         top=0.05,
+        numdraws=100,
         exclude_boundary=True,
         maxls=50,
         m=10,
@@ -529,8 +530,8 @@ class SpatialGraph(nx.Graph):
         Optional:
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
             fdr (:obj:`float`): false-discovery rate of outlier edges 
-            pval (:obj:`float`): p-value for assessing whether adding an admixture edge significantly increases log-likelihood over previous fit
-            stop (:obj:`int`): number of admixture edges to add sequentially (default: None)
+            pval (:obj:`float`): p-value for assessing whether adding a long-range edge significantly increases log-likelihood over previous fit
+            stop (:obj:`int`): number of long-range edges to add sequentially (default: None)
             exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes in fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
             lamb_q (:obj:`float`): penalty strength on the residual variances
@@ -602,11 +603,12 @@ class SpatialGraph(nx.Graph):
             
         cnt = 1; keepgoing = True
         while keepgoing and cnt <= stop:
-            print('\nFitting admixture edge to deme {:d}:'.format(destid[-1]))
+            print('\nFitting long-range edge to deme {:d}:'.format(destid[-1]))
             # fit the contour on the deme to get the log-lik surface across the landscape
             if search_area=='radius':
                 # picking the source deme with the lowest p-value
-                df = self.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, args=args, exclude_boundary=exclude_boundary)
+                # df = self.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, args=args, exclude_boundary=exclude_boundary)
+                df = self.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['raw diff.'].argmin()], opts=opts, args=args, exclude_boundary=exclude_boundary)
             else:
                 df = self.calc_contour(destid=int(destid[-1]), search_area=search_area, opts=opts, args=args, exclude_boundary=exclude_boundary)
 
@@ -638,7 +640,7 @@ class SpatialGraph(nx.Graph):
 
             # function to obtain outlier indices given two pairwise distances 
             # outliers_df = self.extract_outliers(fdr=fdr, res_dist=res_dist, verbose=False)
-            outliers_df = self.extract_outliers_boot(lamb, lamb_q, optimize_q, numdraws=50, fdr=fdr, dfscaler=20, tol=2, res_dist=res_dist, verbose=False)
+            outliers_df = self.extract_outliers_boot(lamb, lamb_q, optimize_q, numdraws=numdraws, fdr=fdr, dfscaler=20, tol=2, res_dist=res_dist, verbose=False)
 
             results[cnt] = {'deme': destid[-1], 
                            'contour_df': df,
@@ -905,7 +907,7 @@ class SpatialGraph(nx.Graph):
             else:
                 # approximately similar likelihood of either deme being destination 
                 if np.abs(rescopp.fun - resc.fun) <= tol:
-                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k]])
+                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), pvals[k], ls[k][-1]])
                 else:
                     # if the "opposite" direction has a much higher log-likelihood then replace it entirely 
                     if rescopp.fun < resc.fun:
@@ -925,11 +927,11 @@ class SpatialGraph(nx.Graph):
             # print('{:d} outlier deme pairs found'.format(len(df)))
             if verbose:
                 print(df.sort_values(by='pval').to_string(index=False))
-                print('Putative destination demes (and # of times the deme appears as an outlier) experiencing admixture: ')
+                print('Putative recipient demes (and # of times the deme appears as an outlier): ')
                 print(df['dest.'].value_counts())
             else:
                 b, c = np.unique(df['dest.'], return_counts=True)
-                print('Putative destination demes: {}'.format(b[np.argsort(-c)]))
+                print('Putative recipient demes: {}'.format(b[np.argsort(-c)]))
             return df.sort_values('pval', ascending=True)
 
     def extract_outliers_boot(
@@ -970,7 +972,7 @@ class SpatialGraph(nx.Graph):
         print('Using a FDR of {:g}: '.format(fdr), end='')
         ls = []; x, y = [], []
 
-        bh = parametric_bootstrap(self, emp_dist, fit_dist, lamb, lamb_q, optimize_q='n-dim', numdraws=100, fdr=fdr, dfscaler=dfscaler)
+        bh = parametric_bootstrap(self, emp_dist, fit_dist, lamb, lamb_q, optimize_q='n-dim', numdraws=numdraws, fdr=fdr, dfscaler=dfscaler)
 
         print('{:d} outlier pairs found'.format(np.sum(bh)))
                 
@@ -992,7 +994,7 @@ class SpatialGraph(nx.Graph):
             else:
                 # approximately similar likelihood of either deme being destination 
                 if np.abs(rescopp.fun - resc.fun) <= tol:
-                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), emp_dist[k]-fit_dist[k]])
+                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), ls[k][-1]])
                 else:
                     # if the "opposite" direction has a much higher log-likelihood then replace it entirely 
                     if rescopp.fun < resc.fun:
@@ -1012,11 +1014,11 @@ class SpatialGraph(nx.Graph):
             # print('{:d} outlier deme pairs found'.format(len(df)))
             if verbose:
                 print(df.to_string(index=False))
-                print('Putative destination demes (and # of times the deme appears as an outlier) experiencing admixture: ')
+                print('Putative recipient demes (and # of times the deme appears as an outlier): ')
                 print(df['dest.'].value_counts())
             else:
                 b, c = np.unique(df['dest.'], return_counts=True)
-                print('Putative destination demes: {}'.format(b[np.argsort(-c)]))
+                print('Putative recipient demes: {}'.format(b[np.argsort(-c)]))
             return df.sort_values('raw diff.', ascending=False)
             
     def calc_joint_contour(
@@ -1036,7 +1038,7 @@ class SpatialGraph(nx.Graph):
             contour_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_contour` 
             top (:obj:`float`) : how many top entries (based on log-lik) to consider for the joint fitting? (if top >= 1, then it is the number of top entries, but if top < 1 then it is the top percent of total entries to consider)
             NOTE: if the above two flags are specified, then none of the flags below need to be specified. 
-            destid (:obj:`int`) : ID of the putative destination deme  
+            destid (:obj:`int`) : ID of the putative recipient deme  
             The flag coverage is used to signifiy how large the contour should be:
                 'all'    - include all demes from the entire graph
                 'radius' - include all demes within a certain radius of a user-specified sampled source deme 
@@ -1148,7 +1150,7 @@ class SpatialGraph(nx.Graph):
         Function to calculate admix. prop. values along with log-lik. values in a contour around the sampled source deme to capture uncertainty in the location of the source. 
 
         Required:
-            destid (:obj:`int`) : ID of the putative destination deme             
+            destid (:obj:`int`) : ID of the putative recipient deme             
 
         Optional:
             search_area (:obj:`str`): flag signifiy how large the search space should be for the source
@@ -1172,7 +1174,7 @@ class SpatialGraph(nx.Graph):
         try:
             destpid = np.where(self.perm_idx[:self.n_observed_nodes]==destid)[0][0] #-> 0:(o-1)
         except:
-            print('invalid ID for destination deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
+            print('invalid ID for recipient deme, please specify valid sampled ID from graph or from output of extract_outliers function\n')
             return None
 
         # creating a list of (source, dest.) pairings based on user-picked criteria

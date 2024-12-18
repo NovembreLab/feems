@@ -229,7 +229,7 @@ class Objective(object):
                         resmat[did, i] = resmat[i, did]
             
         # convert distance matrix to covariance matrix for use in FEEMS
-        # TODO check if you can use the same machinery as FEEMS by computing the covariance matrix from resmat instead of using Eqn 12
+        # TODO check if you can use the same machinery as FEEMS by computing the covariance matrix from resmat instead of
         Sigma = dist_to_cov(resmat)
 
         # Eqn 18 in Marcus et al 2021 
