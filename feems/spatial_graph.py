@@ -365,7 +365,7 @@ class SpatialGraph(nx.Graph):
         under the model that all the edge weights have the same value
         """
         obj = Objective(self)
-        res = minimize(neg_log_lik_w0_s2, [0.0, 0.0], method="L-BFGS-B", args=(obj))
+        res = minimize(neg_log_lik_w0_s2, [0.0, 0.0], method="Nelder-Mead", args=(obj))
         assert res.success is True, "did not converge"
         w0_hat = np.exp(res.x[0])
         s2_hat = np.exp(res.x[1])
@@ -639,8 +639,8 @@ class SpatialGraph(nx.Graph):
             res_dist = np.array(cov_to_dist(-0.5*args['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
 
             # function to obtain outlier indices given two pairwise distances 
-            # outliers_df = self.extract_outliers(fdr=fdr, res_dist=res_dist, verbose=False)
-            outliers_df = self.extract_outliers_boot(lamb, lamb_q, optimize_q, numdraws=numdraws, fdr=fdr, dfscaler=20, tol=2, res_dist=res_dist, verbose=False)
+            outliers_df = self.extract_outliers(fdr=fdr, res_dist=res_dist, verbose=False)
+            # outliers_df = self.extract_outliers_boot(lamb, lamb_q, optimize_q, numdraws=numdraws, fdr=fdr, dfscaler=20, tol=2, res_dist=res_dist, verbose=False)
 
             results[cnt] = {'deme': destid[-1], 
                            'contour_df': df,
@@ -899,8 +899,8 @@ class SpatialGraph(nx.Graph):
         newls = []
         for k in range(len(ls)):
             # checking the log-lik of fits with deme1 - deme2 to find the source & dest.
-            resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
-            rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
+            resc = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
+            rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
             
             if resc.x<1e-3 and rescopp.x<1e-3:
                 rm.append(k)
@@ -986,8 +986,8 @@ class SpatialGraph(nx.Graph):
         newls = []
         for k in range(len(ls)):
             # checking the log-lik of fits with deme1 - deme2 to find the source & dest.
-            resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
-            rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.random(), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
+            resc = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2), args={'edge':[(ls[k][0],ls[k][1])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
+            rescopp = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2), args={'edge':[(ls[k][1],ls[k][0])],'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)])
             
             if resc.x<1e-3 and rescopp.x<1e-3:
                 rm.append(k)
@@ -1022,13 +1022,12 @@ class SpatialGraph(nx.Graph):
             return df.sort_values('raw diff.', ascending=False)
             
     def calc_joint_contour(
-        self,  
+        self, 
+        contour_df,
         lamb, 
         lamb_q,
         optimize_q='n-dim',
-        contour_df=None,
         top=0.05, 
-        destid=None, search_area='all', sourceid=None, opts=None, 
         exclude_boundary=True, 
         usew=None, uses2=None
     ):
@@ -1037,20 +1036,9 @@ class SpatialGraph(nx.Graph):
         Required:
             contour_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_contour` 
             top (:obj:`float`) : how many top entries (based on log-lik) to consider for the joint fitting? (if top >= 1, then it is the number of top entries, but if top < 1 then it is the top percent of total entries to consider)
-            NOTE: if the above two flags are specified, then none of the flags below need to be specified. 
-            destid (:obj:`int`) : ID of the putative recipient deme  
-            The flag coverage is used to signifiy how large the contour should be:
-                'all'    - include all demes from the entire graph
-                'radius' - include all demes within a certain radius of a user-specified sampled source deme 
-                    - sourceid : integer ID of a sampled deme as seen on a FEEMS map
-                    - opts : integer specifying radius (as an `int`) around the sampled source deme
-                'range'  - include all demes within a certain long. & lat. rectangle 
-                    - opts : list of lists specifying long. & lat. limits (e.g., [[-120,-70],[25,50]] for contiguous USA)
-                'custom' - specific array of deme ids
-                    - opts : list of specific deme ids as index
-
+            
         Returns:
-            None
+            (:obj:`pandas.DataFrame`)
         """
 
         # TODO potentially pass in obj as an object (low priority)
@@ -1235,7 +1223,7 @@ class SpatialGraph(nx.Graph):
         # randpedge = []
         cest2 = np.zeros(len(randedge)); llc2 = np.zeros(len(randedge))
         print("  Optimizing likelihood over {:d} demes in the graph".format(len(randedge)),end='...')
-        checkpoints = {int(np.percentile(range(len(self.perm_idx)),25)): 25, int(np.percentile(range(len(self.perm_idx)),50)): 50, int(np.percentile(range(len(self.perm_idx)),75)): 75}
+        checkpoints = {int(np.percentile(range(len(randedge)),25)): 25, int(np.percentile(range(len(randedge)),50)): 50, int(np.percentile(range(len(randedge)),75)): 75}
         for ie, e in enumerate(randedge):
 
             if ie in checkpoints:
@@ -1246,7 +1234,7 @@ class SpatialGraph(nx.Graph):
             # randpedge.append((e[0],destid)) # -> contains the *un*permuted ids (useful for external viz)
             args['edge'] = [e]
             try:
-                res = minimize(obj.eems_neg_log_lik, x0=np.random.random(), tol=1e-3, method='L-BFGS-B', args=args)
+                res = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2), method='Nelder-Mead', args=args, bounds=[(0,1)])
                 cest2[ie] = res.x; llc2[ie] = res.fun
             except:
                 cest2[ie] = np.nan; llc2[ie] = np.nan
@@ -1287,15 +1275,16 @@ def coordinate_descent(
     for bigiter in range(maxiter):
         
         # first fit admix. prop. c given the weights
-        resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(len(obj.sp_graph.edge)), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)]*len(obj.sp_graph.edge))
+        # resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(len(obj.sp_graph.edge)), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)]*len(obj.sp_graph.edge))
+        resc = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2,len(obj.sp_graph.edge)), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='Nelder-Mead', bounds=[(0,1)]*len(obj.sp_graph.edge))
 
         if resc.status != 0:
-            print('(Warning: admix. prop. optimization failed for deme {:d}, increase factr slightly or change optimization parameters)'.format(obj.sp_graph.edge[0][0]))
+            print(' (warning: admix. prop. optimization failed for deme {:d}, increase factr slightly or change optimization parameters) '.format(obj.sp_graph.edge[0][0]))
             return None
 
         if obj.sp_graph.c is not None:
             if len(obj.sp_graph.c) == len(resc.x):
-                if np.allclose(resc.x, obj.sp_graph.c, atol=1e-3):
+                if np.allclose(resc.x, obj.sp_graph.c, atol=1e-5):
                     optimc = False
 
         obj.sp_graph.c = deepcopy(resc.x)
