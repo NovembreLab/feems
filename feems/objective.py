@@ -175,7 +175,7 @@ class Objective(object):
             self.grad_obj_q = self.sp_graph.n_snps * (np.diag(M) @ self.sp_graph.q_inv_grad) 
 
     def _comp_grad_obj_c(self):
-        """Computes the gradient of the objective function (now defined with admix. prop. c) with respect to the latent variables dLoss / dL
+        """Computes the gradient of the objective function (now defined with source fraction c) with respect to the latent variables dLoss / dL
         """
 
         # compute inverses
@@ -187,6 +187,7 @@ class Objective(object):
         Q1mat = np.ones((self.sp_graph.n_observed_nodes,1)) @ self.sp_graph.q_inv_diag.diagonal().reshape(1,-1) 
         resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag
 
+        # check if length is greater than 0
         if self.sp_graph.c is not None:
             for c, edge in zip(self.sp_graph.c, self.sp_graph.edge):
                 
@@ -406,13 +407,6 @@ class Objective(object):
         Rmat = -2*self.Linv[:self.sp_graph.n_observed_nodes, :self.sp_graph.n_observed_nodes] + np.broadcast_to(np.diag(self.Linv),(self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes)).T + np.broadcast_to(np.diag(self.Linv), (self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes)) 
         Q1mat = np.broadcast_to(self.sp_graph.q_inv_diag.diagonal(), (self.sp_graph.n_observed_nodes, self.sp_graph.n_observed_nodes))
         
-        # if 'delta' in opts:
-        #     resmat = np.copy(opts['delta'])
-        # else:
-        #     resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag 
-        #     if cvals is None:
-        #         return np.array(resmat)
-        
         resmat = Rmat + (Q1mat + Q1mat.T) - 2*self.sp_graph.q_inv_diag 
         if cvals is None:
             return np.array(resmat)
@@ -432,9 +426,7 @@ class Objective(object):
                     resmat[target, i] = resmat[i, target]
             else:
                 # Case where source is an unsampled deme
-                # trace these equations down to ensure you have 0 when c = 0
-                neighs = list(self.sp_graph.neighbors(
-                    nx.get_node_attributes(self.sp_graph, 'permuted_idx')[source]))
+                neighs = list(self.sp_graph.neighbors(self.sp_graph.perm_idx[source]))
                 neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph, 'n_samples')[s] > 0]
                 
                 R1d = -2 * self.Linv[source, target] + self.Linv_diag[source] + self.Linv[target, target]
@@ -450,6 +442,14 @@ class Objective(object):
                     resmat[i, target] += - c * Rmat[i, target] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
                                          - c * Q1mat[target, target] + c * self.sp_graph.q_prox[source - self.sp_graph.n_observed_nodes]
                     resmat[target, i] = resmat[i, target]
+
+                ## testing with proxs framing 
+                ## proxs = np.argmin([nx.shortest_path_length(self.sp_graph, source=source,target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([source])])
+                # for i in set(range(self.sp_graph.n_observed_nodes)) - {source, target} - set(neighs):
+                #     Ri1 = -2 * self.Linv[source, i] + self.Linv[i, i] + self.Linv_diag[source]
+                #     resmat[i, target] += - c * Rmat[i, target] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
+                #                          - c * Q1mat[target, target] + c * Q1mat[self.sp_graph.proxs[source], self.sp_graph.proxs[source]]
+                #     resmat[target, i] = resmat[i, target]
 
         return np.array(resmat)
 
@@ -538,9 +538,9 @@ def fit_variogram(distances, values):
         h = distances.flatten()
         gamma = 0.5 * np.power(values[:, None] - values[None, :], 2).flatten()
         var_model = exponential_variogram(h, nugget, sill, rangep)
-        return np.sum((gamma - var_model)**2)
-    
-    result = minimize(objective, [0, np.var(values), np.mean(distances)], method='L-BFGS-B', bounds=((0, None), (1e-10, None), (1e-10, None)))
+        return np.sqrt(np.mean((gamma - var_model)**2))
+
+    result = minimize(objective, [0, np.var(values), np.mean(distances)], method='Nelder-Mead', bounds=((0, None), (1e-10, None), (1e-10, None)))
     return result.x
 
 def interpolate_q(observed_values, distances_to_observed, distances_between_observed):
@@ -549,7 +549,7 @@ def interpolate_q(observed_values, distances_to_observed, distances_between_obse
     
     # Fit variogram
     nugget, sill, rangep = fit_variogram(distances_between_observed, observed_values)
-    # print(nugget, sill, rangep)
+    # nugget = res[0]; sill = res[1]; rangep = res[2]
     
     # Construct kriging matrices
     K = exponential_variogram(distances_between_observed, nugget, sill, rangep)

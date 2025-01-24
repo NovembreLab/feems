@@ -113,9 +113,14 @@ class SpatialGraph(nx.Graph):
         # creating an internal index for easier access
         self.perm_idx = query_node_attributes(self, "permuted_idx") 
 
+        # dict container to store the closest sampled node to every unsampled node (based on estimated weights)
+        # self.proxs = {}
+        # for s in self.perm_idx[self.n_observed_nodes:]:
+        #     self.proxs[s] = -1
+
         # container to store long-range edge attributes
         self.edge = []
-        self.c = None
+        self.c = []
 
         print("done.")
 
@@ -229,6 +234,9 @@ class SpatialGraph(nx.Graph):
         vect_idx_c = col + len(self) * row
         self.P = self.diag_oper[:, vect_idx_r] + self.diag_oper[:, vect_idx_c]
 
+    def _get_dist(self, u, v, e=None):
+        return 1/self.W[np.where(self.perm_idx==u)[0], np.where(self.perm_idx==v)[0]]
+
     def _update_graph(self, basew, bases2):
         # self.option = 'default'
         
@@ -242,7 +250,13 @@ class SpatialGraph(nx.Graph):
         Rmatdo = -2 * obj.Linv[self.n_observed_nodes:, :self.n_observed_nodes] + obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes].diagonal() + obj.Linv_diag[self.n_observed_nodes:, np.newaxis]
         Rmatoo = -2*obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes] + np.broadcast_to(np.diag(obj.Linv),(self.n_observed_nodes, self.n_observed_nodes)).T + np.broadcast_to(np.diag(obj.Linv), (self.n_observed_nodes, self.n_observed_nodes))
         
-        self.q_prox = interpolate_q(1/self.q, Rmatdo, Rmatoo)
+        self.q_prox = 10**interpolate_q(np.log10(1/self.q), Rmatdo, Rmatoo)
+
+        # for s in self.perm_idx[self.n_observed_nodes:]:
+        #     # self.proxs[s] = np.argmin([nx.shortest_path_length(self, source=s, target=d, weight=self._get_dist) for d in self.perm_idx[:self.n_observed_nodes]])
+        #     _, distances = nx.dijkstra_predecessor_and_distance(self, s, weight=self._get_dist)
+        #     target_distances = {node: dist for node, dist in distances.items() if node in set(self.perm_idx[:self.n_observed_nodes])}
+        #     self.proxs[s] = np.where(self.perm_idx==min(target_distances.items(), key=lambda x: x[1])[0])[0][0]
     
     def inv_triu(self, w, perm=True):
         """Take upper triangular vector as input and return symmetric weight
@@ -391,8 +405,8 @@ class SpatialGraph(nx.Graph):
         lamb,
         lamb_q,
         optimize_q='n-dim',
-        fdr=0.1,
-        stop=None,
+        fraction_of_pairs=0.1,
+        nedges=None,
         top=0.05,
         exclude_boundary=True,
         maxls=50,
@@ -411,9 +425,9 @@ class SpatialGraph(nx.Graph):
             
         Optional:
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
-            fdr (:obj:`float`): false-discovery rate of outlier edges 
+            fraction_of_pairs (:obj:`float`): fraction of pairs with largest negative residual to use when compiling list of putative recipient demes 
             pval (:obj:`float`): p-value for assessing whether adding a long-range edge significantly increases log-likelihood over previous fit
-            stop (:obj:`int`): number of long-range edges to add sequentially 
+            nedges (:obj:`int`): number of long-range edges to add sequentially 
             exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes from fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
             alpha_q (:obj:`float`): penalty strength on log residual variances
@@ -450,30 +464,29 @@ class SpatialGraph(nx.Graph):
         results[0] = {'log-lik': -nllnull, 
                      'emp_dist': emp_dist,
                      'fit_dist': fit_dist,
-                     'outliers_df': outliers_df,
-                     'fdr': fdr}
+                     'outliers_df': outliers_df}
 
         b, c = np.unique(outliers_df['dest.'], return_counts=True)
         dest = list(b[np.argsort(-c)])
 
-        if stop is None:
-            stop = len(dest)
+        if nedges is None:
+            nedges = len(dest)
 
         cnt = 1
         
-        while cnt <= stop:
+        while cnt <= nedges:
             print('\nFitting long-range edge to deme {:d}:'.format(dest[cnt-1]))
             self._update_graph(usew, uses2)
             
             # get the log-lik surface across the landscape
             if search_area=='radius':
                 # picking the source deme with the lowest p-value
-                df = self.calc_contour(destid=dest[cnt-1], search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, exclude_boundary=exclude_boundary)
+                df = self.calc_surface(destid=dest[cnt-1], search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['scaled diff.'].argmin()], opts=opts, exclude_boundary=exclude_boundary)
             else:
-                df = self.calc_contour(destid=dest[cnt-1], search_area=search_area, exclude_boundary=exclude_boundary)
+                df = self.calc_surface(destid=dest[cnt-1], search_area=search_area, exclude_boundary=exclude_boundary)
                 
             
-            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
+            joint_df = self.calc_joint_surface(surface_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
 
             # replacing inf with nan
             joint_df = joint_df.replace([np.inf, -np.inf], np.nan)
@@ -487,8 +500,8 @@ class SpatialGraph(nx.Graph):
             res_dist = np.array(cov_to_dist(-0.5*args['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
             
             results[cnt] = {'deme': dest[cnt-1], 
-                           'contour_df': df,
-                           'joint_contour_df': joint_df, 
+                           'surface_df': df,
+                           'joint_surface_df': joint_df, 
                            'log-lik': np.nanmax(joint_df['log-lik']),
                            'mle_w': self.w,
                            'mle_s2': self.s2,
@@ -505,12 +518,13 @@ class SpatialGraph(nx.Graph):
         outliers_df, 
         lamb,
         lamb_q,
+        nedges,
         optimize_q='n-dim',
-        fdr=0.1, 
-        stop=None,
+        fraction_of_pairs=0.05, 
+        nedges_to_same_deme=2,
         pval=0.05,
         top=0.05,
-        numdraws=100,
+        # numdraws=100,
         exclude_boundary=True,
         maxls=50,
         m=10,
@@ -526,15 +540,15 @@ class SpatialGraph(nx.Graph):
             outliers_df (:obj:`pandas.DataFrame`): outlier DataFrame as output by the sp_graph.extract_outliers() function
             lamb (:obj:`float`): penalty strength on weights
             lamb_q (:obj:`float`): penalty strength on the residual variances
+            nedges (:obj:`int`): number of long-range edges to add sequentially 
             
         Optional:
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
-            fdr (:obj:`float`): false-discovery rate of outlier edges 
+            fraction_of_pairs (:obj:`float`): fractions of pairs with largest negative residual to use when compiling list of putative recipient demes
             pval (:obj:`float`): p-value for assessing whether adding a long-range edge significantly increases log-likelihood over previous fit
-            stop (:obj:`int`): number of long-range edges to add sequentially (default: None)
+            nedges_to_same_deme (:obj: `int`): how many long-range edges to allow for same recipient deme? (default: 2)
             exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes in fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
-            lamb_q (:obj:`float`): penalty strength on the residual variances
             alpha_q (:obj:`float`): penalty strength on log residual variances
             factr (:obj:`float`): tolerance for convergence
             maxls (:obj:`int`): maximum number of line search steps
@@ -567,7 +581,13 @@ class SpatialGraph(nx.Graph):
         # dict storing all the results for plotting
         results = {}
 
-        # store the deme id of each consecutive maximum outlier
+        # storing the number of destinations that have been tried in total
+        super_destid = []
+
+        # container for blacklisted demes
+        neveragain = []
+
+        # store the deme id of each consecutive maximum outlier that passes the criterion
         destid = []; nll = []
 
         # passing in dummy variables just to initialize the procedure
@@ -583,9 +603,12 @@ class SpatialGraph(nx.Graph):
         # resolving ties if any...
         maxidx = outliers_df['dest.'].value_counts()[outliers_df['dest.'].value_counts() == outliers_df['dest.'].value_counts().max()].index.tolist()
         if len(maxidx) > 1:
-            # TODO add the deme with a lower p-value first
-            print("Multiple putative outlier demes ({:}) found, but only adding largest outlier deme {:d}".format(maxidx, maxidx[0]))
+            # sort based on p-values
+            min_pval = outliers_df[outliers_df['dest.'].isin(maxidx)].groupby('dest.')['scaled diff.'].min()
+            maxidx[0] = min_pval[min_pval == min_pval.min()].index[0]
+            print("Multiple putative outlier demes found, but only adding largest outlier: deme {:d}".format(maxidx[0]))
         destid.append(maxidx[0])
+        super_destid.append(maxidx[0])
 
         fit_cov, _, emp_cov = comp_mats(obj)
         fit_dist = cov_to_dist(fit_cov)[np.tril_indices(self.n_observed_nodes, k=-1)]
@@ -594,27 +617,27 @@ class SpatialGraph(nx.Graph):
         results[0] = {'log-lik': -nll[-1], 
                      'emp_dist': emp_dist,
                      'fit_dist': fit_dist,
-                     'outliers_df': outliers_df,
-                     'fdr': fdr}
-
-        if stop is None:
-            # set the stop criterion to be the number of observed nodes - 1
-            stop = self.n_observed_nodes - 1
-            
-        cnt = 1; keepgoing = True
-        while keepgoing and cnt <= stop:
+                     'outliers_df': outliers_df}
+        
+        cnt = 1
+        # stop condition if we've tried twice as many edges as requested
+        while cnt <= nedges and len(super_destid) <= 2*nedges:
             print('\nFitting long-range edge to deme {:d}:'.format(destid[-1]))
-            # fit the contour on the deme to get the log-lik surface across the landscape
+            
+            # fit the surface on the deme to get the log-lik surface across the landscape
             if search_area=='radius':
                 # picking the source deme with the lowest p-value
-                # df = self.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, args=args, exclude_boundary=exclude_boundary)
-                df = self.calc_contour(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['raw diff.'].argmin()], opts=opts, args=args, exclude_boundary=exclude_boundary)
+                # df = self.calc_surface(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['pval'].argmin()], opts=opts, args=args, exclude_boundary=exclude_boundary)
+                df = self.calc_surface(destid=int(destid[-1]), search_area='radius', sourceid=outliers_df['source'].iloc[outliers_df['scaled diff.'].argmin()], opts=opts, args=args, exclude_boundary=exclude_boundary)
             else:
-                df = self.calc_contour(destid=int(destid[-1]), search_area=search_area, opts=opts, args=args, exclude_boundary=exclude_boundary)
+                df = self.calc_surface(destid=int(destid[-1]), search_area=search_area, opts=opts, args=args, exclude_boundary=exclude_boundary)
 
+            # container for current weights 
             usew = deepcopy(self.w); uses2 = deepcopy(self.s2)
-            joint_df = self.calc_joint_contour(contour_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
+            joint_df = self.calc_joint_surface(surface_df=df, top=top, lamb=lamb, lamb_q=lamb_q, optimize_q=optimize_q, usew=usew, uses2=uses2, exclude_boundary=exclude_boundary)
             # print(obj.eems_neg_log_lik())
+
+            # TODO check here that the obj.Linv_diag and other estimates have been updated with the new estimates...
 
             # only change the last element
             self.edge[-1] = joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])]
@@ -624,48 +647,109 @@ class SpatialGraph(nx.Graph):
             nll.append(-np.nanmax(joint_df['log-lik']))
             print('\n  Log-likelihood after fitting deme {:d}: {:.1f}'.format(destid[-1], -nll[-1]))
 
-            if chi2.sf(2*(nll[-2]-nll[-1]), df=len(nll)-1) > pval: 
-                print("Previous edge to deme {:d} did not significantly increase the log-likelihood at a p-value of {:g}\n".format(destid[-1],pval))
-                keepgoing=False
-                print("\nExiting sequential fitting algorithm after adding {:d} edge(s).".format(cnt-1))
-                print("Log-likelihood of final fit: {:.1f}, and improved over baseline with a p-value of {:.2e}".format(-nll[-2], chi2.sf(2*(nll[0]-nll[-2]), df=len(nll)-2)))
+            if chi2.sf(2*(nll[-2]-nll[-1]), df=1) > pval: 
+                print("  Previous edge to deme {:d} did not significantly increase the log-likelihood at a p-value of {:g}".format(destid[-1],pval))
+            else:
+                print("  Previous edge to deme {:d} significantly increased the log-likelihood.".format(destid[-1]))
+
+            # whether we keep the fit or not?
+            # get indices of all matching elements
+            previdx = [i+1 for i, x in enumerate(destid[:-1]) if x==destid[-1]]
+            if len(previdx) == 1:
+                # the deme already has one previous edge to it
+                # compute overlap based on top 10% of surface_df instead of joint_surface_df
+                overlap = len(set(joint_df['(source, dest.)']) & set(results[previdx[0]]['joint_surface_df']['(source, dest.)'])) / len(set(joint_df['(source, dest.)']) | set(results[previdx[0]]['joint_surface_df']['(source, dest.)']))
+                print("Overlap in coverage source area between current and previous fit to deme {:d} is {:d}%.\n".format(destid[-1], int(overlap*100)))
+
+                # print(joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])], results[previdx[0]]['joint_surface_df']['(source, dest.)'].iloc[np.nanargmax(results[previdx[0]]['joint_surface_df']['log-lik'])])
+                if joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])] == results[previdx[0]]['joint_surface_df']['(source, dest.)'].iloc[np.nanargmax(results[previdx[0]]['joint_surface_df']['log-lik'])]:
+                    print('Current edge is same as previous edge, so not included in final fit.\n')
+                    destid = destid[:-1]; nll = nll[:-1]
+
+                    self.edge = self.edge[:-1]; self.c = self.c[:-1]
+                else:
+                    print('New source location found for current deme, so included in final fit.\n')
+                
+                    args['edge'] = self.edge; args['mode'] = 'update'
+                    obj.eems_neg_log_lik(self.c, args)
+                    res_dist = np.array(cov_to_dist(-0.5*args['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
         
-                return results 
+                    # function to obtain outlier indices given two pairwise distances 
+                    outliers_df = self.extract_outliers(fraction_of_pairs=fraction_of_pairs, res_dist=res_dist, verbose=False)
+                    # outliers_df = self.extract_outliers_boot(lamb, lamb_q, optimize_q, numdraws=numdraws, fraction_of_pairs=fraction_of_pairs, dfscaler=20, tol=2, res_dist=res_dist, verbose=False)
+                    
+                    # this means the two fits cover different areas and can be included as separate 'edges'
+                    results[cnt] = {'deme': destid[-1], 
+                                   'surface_df': df,
+                                   'joint_surface_df': joint_df, 
+                                   'log-lik': -nll[-1],
+                                   'fit_dist': res_dist,
+                                   'mle_w': self.w,
+                                   'mle_s2': self.s2,
+                                   'outliers_df': outliers_df,
+                                   'pval': chi2.sf(2*(nll[-2]-nll[-1]), df=1)}
+                    cnt += 1
+            elif len(previdx) < 1:
+                print('Current edge included in final fit.\n')
+                # new deme!
+                args['edge'] = self.edge; args['mode'] = 'update'
+                obj.eems_neg_log_lik(self.c, args)
+                res_dist = np.array(cov_to_dist(-0.5*args['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
+    
+                # function to obtain outlier indices given two pairwise distances 
+                outliers_df = self.extract_outliers(fraction_of_pairs=fraction_of_pairs, res_dist=res_dist, verbose=False)
+                # outliers_df = self.extract_outliers_boot(lamb, lamb_q, optimize_q, numdraws=numdraws, fraction_of_pairs=fraction_of_pairs, dfscaler=20, tol=2, res_dist=res_dist, verbose=False)
+                results[cnt] = {'deme': destid[-1], 
+                               'surface_df': df,
+                               'joint_surface_df': joint_df, 
+                               'log-lik': -nll[-1],
+                               'fit_dist': res_dist,
+                               'mle_w': self.w,
+                               'mle_s2': self.s2,
+                               'outliers_df': outliers_df,
+                               'pval': chi2.sf(2*(nll[-2]-nll[-1]), df=1)}
+                cnt += 1
+            elif len(previdx) >= nedges_to_same_deme:
+                # deme has two previous edges to it
+                print("Deme {:d} already has {:d} previous edges to it — forgoing adding current edge to avoid overfitting.\n".format(destid[-1],len(previdx)))
+                neveragain.append(destid[-1])
+                
+                destid = destid[:-1]; nll = nll[:-1]
+                
+                self.edge = self.edge[:-1]; self.c = self.c[:-1]
+
+            maxidx = outliers_df.groupby('dest.').agg({'dest.': 'count', 'scaled diff.': 'min'}).rename(columns={'dest.': 'count'}).sort_values(['count', 'scaled diff.'], ascending=[False, True]).index.tolist()
+
+            print('Deme ID and # of times it was implicated as an outlier:')
+            print(pd.concat([outliers_df['dest.']]).value_counts().iloc[:5])
+
+            # include a way of skipping over the most recent deme if it is picked again (was experiencing some weird refitting issues)
+            if super_destid[-1] in maxidx:
+                maxidx.remove(super_destid[-1])
+
+            # add a deme to blacklist if it has already been tried three times
+            counts = np.array([super_destid.count(im) for im in maxidx])
+            maxidx = [ele for idx, ele in enumerate(maxidx) if idx not in np.where(counts>=3)[0]]
+            
+            # find the next big outlier deme by skipping over the blacklisted demes
+            newdeme = next((x for x in maxidx if x not in neveragain), (None))
+
+            if newdeme is None:
+                print('No new outlier demes found, consider rerunning with a higher fraction_of_pairs if needed.')
+                break
             else:
-                print("Previous edge to deme {:d} significantly increased the log-likelihood.\n".format(destid[-1]))
-
-            args['edge'] = self.edge; args['mode'] = 'update'
-            obj.eems_neg_log_lik(self.c, args)
-            res_dist = np.array(cov_to_dist(-0.5*args['delta'])[np.tril_indices(self.n_observed_nodes, k=-1)])
-
-            # function to obtain outlier indices given two pairwise distances 
-            outliers_df = self.extract_outliers(fdr=fdr, res_dist=res_dist, verbose=False)
-            # outliers_df = self.extract_outliers_boot(lamb, lamb_q, optimize_q, numdraws=numdraws, fdr=fdr, dfscaler=20, tol=2, res_dist=res_dist, verbose=False)
-
-            results[cnt] = {'deme': destid[-1], 
-                           'contour_df': df,
-                           'joint_contour_df': joint_df, 
-                           'log-lik': -nll[-1],
-                           'fit_dist': res_dist,
-                           'mle_w': self.w,
-                           'mle_s2': self.s2,
-                           'outliers_df': outliers_df, 
-                           'pval': chi2.sf(2*(nll[-2]-nll[-1]), df=1)}
-
-            if outliers_df is None:
-                keepgoing = False
-            else:
-                maxidx = outliers_df['dest.'].value_counts()[outliers_df['dest.'].value_counts() == outliers_df['dest.'].value_counts().max()].index.tolist()
-                print('Deme ID and # of times it was implicated as an outlier:')
-                print(pd.concat([outliers_df['dest.']]).value_counts().iloc[:5])
-                if len(maxidx) > 1:        
-                    print("Multiple putative outlier demes ({:}) found, but only adding largest outlier deme {:d}".format(maxidx, maxidx[0]))
-                destid.append(maxidx[0])
-
-            cnt += 1
-
+                if maxidx.index(newdeme) > 0:
+                    print('Skipping previously added demes and choosing deme {:d}'.format(newdeme))
+                    destid.append(newdeme)
+                    super_destid.append(newdeme)
+                else:
+                    destid.append(newdeme)
+                    super_destid.append(newdeme)
+            # print(cnt, destid, self.edge)
+                                  
         print("\nExiting sequential fitting algorithm after adding {:d} edge(s).".format(cnt-1))
-        print("Log-likelihood of final fit: {:.1f}, and improved over baseline with a p-value of {:.2e}".format(-nll[-1], chi2.sf(2*(nll[0]-nll[-1]), df=len(nll)-1)))
+        # print("Log-likelihood of final fit: {:.1f}, and improved over baseline with a p-value of {:.2e}".format(-nll[-1], chi2.sf(2*(nll[0]-nll[-1]), df=len(nll)-1)))
+        print("Log-likelihood of final fit: {:.1f}".format(-nll[-1]))
 
         return results          
     
@@ -724,7 +808,7 @@ class SpatialGraph(nx.Graph):
         # creating a container to store these edges 
         if long_range_edges is not None:
             self.edge = long_range_edges
-
+        
         self.optimize_q = optimize_q
         self.option = option
 
@@ -779,6 +863,14 @@ class SpatialGraph(nx.Graph):
                 maxiter=maxiter,
                 approx_grad=False,
             )
+
+            # update the dict with proxy sources
+            # for s in self.perm_idx[self.n_observed_nodes:]:
+            #     # self.proxs[s] = np.argmin([nx.shortest_path_length(self, source=s, target=d, weight=self._get_dist) for d in self.perm_idx[:self.n_observed_nodes]])
+            #     _, distances = nx.dijkstra_predecessor_and_distance(self, s, weight=self._get_dist)
+            #     target_distances = {node: dist for node, dist in distances.items() if node in set(self.perm_idx[:self.n_observed_nodes])}
+            #     self.proxs[s] = np.where(self.perm_idx==min(target_distances.items(), key=lambda x: x[1])[0])[0][0]
+
         else: 
             if alpha is None:
                 alpha = 1.0 / self.w.mean()
@@ -821,8 +913,8 @@ class SpatialGraph(nx.Graph):
                 # interpolation scheme using Kriging
                 Rmatdo = -2 * obj.Linv[self.n_observed_nodes:, :self.n_observed_nodes] + obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes].diagonal() + obj.Linv_diag[self.n_observed_nodes:, np.newaxis]
                 Rmatoo = -2*obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes] + np.broadcast_to(np.diag(obj.Linv),(self.n_observed_nodes, self.n_observed_nodes)).T + np.broadcast_to(np.diag(obj.Linv), (self.n_observed_nodes, self.n_observed_nodes))
-            
-                self.q_prox = interpolate_q(1/self.q, Rmatdo, Rmatoo)
+
+                self.q_prox = 1/interpolate_q(self.q, Rmatdo, Rmatoo)
             else:    
                 self.w = np.exp(res[0])
                 
@@ -840,24 +932,27 @@ class SpatialGraph(nx.Graph):
 
     def extract_outliers(
         self, 
-        fdr=0.05, 
+        fraction_of_pairs=0.05, 
         tol=2,
         res_dist=None, 
         verbose=False
     ):
-        """Function to extract outlier deme pairs based on a FDR threshold specified by the user. 
+        """Function to extract outlier deme pairs based on a fraction_of_pairs threshold specified by the user. 
         
         Required: 
-            fdr (:obj:`float`): FDR control rate, a number between 0 & 1 (default: 0.05)
+            fraction_of_pairs (:obj:`float`): fraction_of_pairs control rate, a number between 0 & 1 (default: 0.05)
             
         Returns:
             (:obj:`pandas.DataFrame`)
         """
+
+        # TODO: this function shouldn't need to take res_dist as a flag and should just compute outliers on the current fit...
         
-        assert fdr>0 and fdr<1, "fdr should be a positive number between 0 and 1"
+        assert fraction_of_pairs>0 and fraction_of_pairs<1, "fraction_of_pairs should be a positive number between 0 and 1"
 
         obj = Objective(self)
         # computing pairwise covariance & distances between demes
+        # TODO check if inv_cov needs to be computed here and set to False for speed-up
         fit_cov, _, emp_cov = comp_mats(obj)
         emp_dist = cov_to_dist(emp_cov)[np.tril_indices(self.n_observed_nodes, k=-1)]
         if res_dist is None:
@@ -866,17 +961,19 @@ class SpatialGraph(nx.Graph):
             fit_dist = deepcopy(res_dist)
 
         # print('Using a significance threshold of {:g}:\n'.format(pthresh))
-        print('Using a FDR of {:g}: '.format(fdr), end='')
+        print('Using a top fraction of {:g}: '.format(fraction_of_pairs), end='\n')
         ls = []; x, y = [], []
 
-        # computing p-values (or z-values) for each pairwise comparison after mean centering
-        pvals, _, _ = get_robust_normal_pvals_lower((np.log(emp_dist/fit_dist)-np.mean(np.log(emp_dist/fit_dist)))/np.std(np.log(emp_dist/fit_dist),ddof=1),25)
+        # computing p-values for each pairwise comparison after mean centering and standardizing
+        # pvals, _, _ = get_robust_normal_pvals_lower((np.log(emp_dist/fit_dist)-np.mean(np.log(emp_dist/fit_dist)))/np.std(np.log(emp_dist/fit_dist),ddof=1),25)
         
-        bh = benjamini_hochberg(emp_dist, fit_dist, fdr=fdr)
+        # bh = benjamini_hochberg(emp_dist, fit_dist, fraction_of_pairs=fraction_of_pairs)
+        # print('{:d} outlier pairs found'.format(np.sum(bh)))
 
-        print('{:d} outlier pairs found'.format(np.sum(bh)))
+        logratio = np.log(emp_dist/fit_dist)
                 
-        for k in np.where(bh)[0]:
+        # for k in np.where(bh)[0]:
+        for k in np.argsort(logratio)[:int(len(logratio)*fraction_of_pairs)]:
             # code to convert single index to matrix indices
             x.append(np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1); y.append(int(k - 0.5*x[-1]*(x[-1]-1)))
 
@@ -892,8 +989,7 @@ class SpatialGraph(nx.Graph):
             # Ga2[Gi == 2] = 1
 
             # fst = allel.average_hudson_fst(allel.GenotypeArray(Ga1).count_alleles(), allel.GenotypeArray(Ga2).count_alleles(), blen=int(self.genotypes.shape[1]/10))[0]
-
-            ls.append([self.perm_idx[x[-1]], self.perm_idx[y[-1]], tuple(self.nodes[self.perm_idx[x[-1]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[y[-1]]]['pos'][::-1]), pvals[k], emp_dist[k]-fit_dist[k]])
+            ls.append([self.perm_idx[x[-1]], self.perm_idx[y[-1]], tuple(self.nodes[self.perm_idx[x[-1]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[y[-1]]]['pos'][::-1]), logratio[k]])
 
         rm = []
         newls = []
@@ -907,7 +1003,7 @@ class SpatialGraph(nx.Graph):
             else:
                 # approximately similar likelihood of either deme being destination 
                 if np.abs(rescopp.fun - resc.fun) <= tol:
-                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), pvals[k], ls[k][-1]])
+                    newls.append([self.perm_idx[y[k]], self.perm_idx[x[k]], tuple(self.nodes[self.perm_idx[y[k]]]['pos'][::-1]), tuple(self.nodes[self.perm_idx[x[k]]]['pos'][::-1]), logratio[k]])
                 else:
                     # if the "opposite" direction has a much higher log-likelihood then replace it entirely 
                     if rescopp.fun < resc.fun:
@@ -917,22 +1013,21 @@ class SpatialGraph(nx.Graph):
         ls += newls
 
         # print(np.array(ls), np.array(ls).shape)
-        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'pval', 'raw diff.'])
+        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'scaled diff.'])
 
         if len(df)==0:
-            print('No outliers found.')
-            print('Consider raising the FDR threshold slightly.')
+            print('  Consider raising the fraction_of_pairs threshold slightly.')
             return None
         else:
             # print('{:d} outlier deme pairs found'.format(len(df)))
             if verbose:
-                print(df.sort_values(by='pval').to_string(index=False))
-                print('Putative recipient demes (and # of times the deme appears as an outlier): ')
+                print(df.sort_values(by='scaled diff.').to_string(index=False))
+                print('  Putative recipient demes (and # of times the deme appears as an outlier): ')
                 print(df['dest.'].value_counts())
             else:
                 b, c = np.unique(df['dest.'], return_counts=True)
-                print('Putative recipient demes: {}'.format(b[np.argsort(-c)]))
-            return df.sort_values('pval', ascending=True)
+                print('  Putative recipient demes: {}'.format(b[np.argsort(-c)]))
+            return df.sort_values('scaled diff.', ascending=True)
 
     def extract_outliers_boot(
         self, 
@@ -969,10 +1064,10 @@ class SpatialGraph(nx.Graph):
             fit_dist = deepcopy(res_dist)
 
         # print('Using a significance threshold of {:g}:\n'.format(pthresh))
-        print('Using a FDR of {:g}: '.format(fdr), end='')
+        print('Using a FDR of {:g}: '.format(fdr), end='\n')
         ls = []; x, y = [], []
 
-        bh = parametric_bootstrap(self, emp_dist, fit_dist, lamb, lamb_q, optimize_q='n-dim', numdraws=numdraws, fdr=fdr, dfscaler=dfscaler)
+        bh = parametric_bootstrap(self, emp_dist, fit_dist, lamb, lamb_q, optimize_q='n-dim', numdraws=numdraws, fraction_of_pairs=fraction_of_pairs, dfscaler=dfscaler)
 
         print('{:d} outlier pairs found'.format(np.sum(bh)))
                 
@@ -1004,26 +1099,25 @@ class SpatialGraph(nx.Graph):
         ls += newls
 
         # print(np.array(ls), np.array(ls).shape)
-        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'raw diff.'])
+        df = pd.DataFrame(ls, columns = ['source', 'dest.', 'source (lat., long.)', 'dest. (lat., long.)', 'scaled diff.'])
 
         if len(df)==0:
-            print('No outliers found.')
-            print('Consider raising the FDR threshold slightly.')
+            print('  Consider raising the fraction_of_pairs threshold slightly.')
             return None
         else:
             # print('{:d} outlier deme pairs found'.format(len(df)))
             if verbose:
                 print(df.to_string(index=False))
-                print('Putative recipient demes (and # of times the deme appears as an outlier): ')
+                print('  Putative recipient demes (and # of times the deme appears as an outlier): ')
                 print(df['dest.'].value_counts())
             else:
                 b, c = np.unique(df['dest.'], return_counts=True)
-                print('Putative recipient demes: {}'.format(b[np.argsort(-c)]))
-            return df.sort_values('raw diff.', ascending=False)
+                print('  Putative recipient demes: {}'.format(b[np.argsort(-c)]))
+            return df.sort_values('scaled diff.', ascending=False)
             
-    def calc_joint_contour(
+    def calc_joint_surface(
         self, 
-        contour_df,
+        surface_df,
         lamb, 
         lamb_q,
         optimize_q='n-dim',
@@ -1031,10 +1125,10 @@ class SpatialGraph(nx.Graph):
         exclude_boundary=True, 
         usew=None, uses2=None
     ):
-        """Function to calculate admix. prop. values in a joint manner with weights w & deme-specific variance s2 (as opposed to just admix. prop. values in `calc_contour`).
+        """Function to calculate admix. prop. values in a joint manner with weights w & deme-specific variance s2 (as opposed to just admix. prop. values in `calc_surface`).
 
         Required:
-            contour_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_contour` 
+            surface_df (:obj:`pd.DataFrame`) : data frame containing the output from the function `calc_surface` 
             top (:obj:`float`) : how many top entries (based on log-lik) to consider for the joint fitting? (if top >= 1, then it is the number of top entries, but if top < 1 then it is the top percent of total entries to consider)
             
         Returns:
@@ -1050,10 +1144,10 @@ class SpatialGraph(nx.Graph):
         # get indices of the top hits
         if top<1:
             # treat as a percentage
-            topidx = contour_df['log-lik'].nlargest(int(np.ceil(top * len(contour_df)))).index
+            topidx = surface_df['log-lik'].nlargest(int(np.ceil(top * len(surface_df)))).index
         else: 
             # treat as a number 
-            topidx = contour_df['log-lik'].nlargest(int(top)).index
+            topidx = surface_df['log-lik'].nlargest(int(top)).index
         # print("Jointly optimizing likelihood over {:d} demes in the graph:\n".format(len(topidx)))
 
         if usew is None:                
@@ -1066,66 +1160,69 @@ class SpatialGraph(nx.Graph):
             baselinell = -obj.eems_neg_log_lik(None, {'mode':'compute'})
         
         # run the joint fitting scheme for each top hit
-        joint_contour_df = contour_df.loc[topidx]; cnt = 1
+        joint_surface_df = surface_df.loc[topidx]; cnt = 1
 
         # add extra column to store previous c values
-        joint_contour_df['prev. c'] = None
+        joint_surface_df['prev. c'] = None
 
         curedge = deepcopy(self.edge)
+
+        # update initial condition for source fraction
+        self.c = np.append(self.c, [joint_surface_df['admix. prop.'].iloc[0]])
         
-        for i, row in joint_contour_df.iterrows():
+        for i, row in joint_surface_df.iterrows():
             print("\r\tOptimizing joint likelihood over {}/{} most likely demes in the graph".format(cnt,len(topidx)), end="")
 
             # update counter (cos apparently iterrows() passes index back)
             cnt += 1
-            
+
             # initializing at baseline values
             self._update_graph(usew, uses2)
 
             try:
                 self.fit(lamb=lamb, optimize_q=optimize_q, lamb_q=lamb_q, long_range_edges=curedge + [row['(source, dest.)']], option='onlyc', verbose=False)
-                
-                joint_contour_df.at[i, 'admix. prop.'] = self.c[-1]
+
+                joint_surface_df.at[i, 'admix. prop.'] = self.c[-1]
                 # also track the estimates for c for pre-existing long-range edges
-                joint_contour_df.at[i, 'prev. c'] = list(self.c[:-1])
+                joint_surface_df.at[i, 'prev. c'] = list(self.c[:-1])
                 # TODO keep a rolling (hidden?) variable for the log-likelihood under each fit
-                joint_contour_df.at[i, 'log-lik'] = -obj.eems_neg_log_lik(self.c, {'edge':curedge + [row['(source, dest.)']],'mode':'compute'})
+                joint_surface_df.at[i, 'log-lik'] = -obj.eems_neg_log_lik(self.c, {'edge':curedge + [row['(source, dest.)']],'mode':'compute'})
 
                 # updating the MLE weights if the new log-lik is higher than the previous one (if not, keep the previous values)
-                if joint_contour_df.index.get_loc(i) == 0:
+                if joint_surface_df.index.get_loc(i) == 0:
                     mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
                 else:
-                    if joint_contour_df.at[i, 'log-lik'] > np.nanmax(joint_contour_df['log-lik'].iloc[:joint_contour_df.index.get_loc(i)]):
+                    if joint_surface_df.at[i, 'log-lik'] > np.nanmax(joint_surface_df['log-lik'].iloc[:joint_surface_df.index.get_loc(i)]):
                         mlew = deepcopy(self.w); mles2 = deepcopy(self.s2)
             except:  
-                joint_contour_df.at[i, 'admix. prop.'] = np.nan
-                joint_contour_df.at[i, 'log-lik'] = np.nan
+                joint_surface_df.at[i, 'admix. prop.'] = np.nan
+                joint_surface_df.at[i, 'log-lik'] = np.nan
 
         print("...done!")
 
-        if np.sum(joint_contour_df['log-lik'].isna()) > 0.25*len(joint_contour_df):
-            print("(Warning: log-likelihood could not be computed for ~{:.0f}% of demes. Try increasing value of lamb)".format(np.sum(joint_contour_df['log-lik'].isna())*100/len(joint_contour_df)))
+        if np.sum(joint_surface_df['log-lik'].isna()) > 0.25*len(joint_surface_df):
+            print("(Warning: log-likelihood could not be computed for ~{:.0f}% of demes. Try increasing value of lamb)".format(np.sum(joint_surface_df['log-lik'].isna())*100/len(joint_surface_df)))
             
-        joint_contour_df['scaled log-lik'] = joint_contour_df['log-lik'] - np.nanmax(joint_contour_df['log-lik']) 
+        joint_surface_df['scaled log-lik'] = joint_surface_df['log-lik'] - np.nanmax(joint_surface_df['log-lik']) 
     
         # updating the graph with MLE weights so it does not need to be fit again
         self._update_graph(mlew, mles2)
         # print(obj.eems_neg_log_lik())
     
         # set bounds for c values
-        joint_contour_df['admix. prop.'] = joint_contour_df['admix. prop.'].apply(lambda x: 0 if x < 0 else 1 if x > 1 else x)
+        joint_surface_df['admix. prop.'] = joint_surface_df['admix. prop.'].apply(lambda x: 0 if x < 0 else 1 if x > 1 else x)
     
         # only replace the edge if there is a single fit edge 
         if len(self.edge) == 1:
-            self.edge = [joint_contour_df['(source, dest.)'].iloc[np.nanargmax(joint_contour_df['log-lik'])]]
-            self.c = [joint_contour_df['admix. prop.'].iloc[np.nanargmax(joint_contour_df['log-lik'])]]
+            self.edge = [joint_surface_df['(source, dest.)'].iloc[np.nanargmax(joint_surface_df['log-lik'])]]
+            self.c = [joint_surface_df['admix. prop.'].iloc[np.nanargmax(joint_surface_df['log-lik'])]]
     
         # checking whether adding an extra admixture parameter improves model fit using a LRT
-        joint_contour_df['pval'] = chi2.sf(2*(joint_contour_df['log-lik'] - baselinell), df=len(self.edge))
+        joint_surface_df['pval'] = chi2.sf(2*(joint_surface_df['log-lik'] - baselinell), df=len(self.edge))
         
-        return joint_contour_df
+        return joint_surface_df
 
-    def calc_contour(
+    def calc_surface(
         self, 
         destid, 
         search_area='all', 
@@ -1135,7 +1232,7 @@ class SpatialGraph(nx.Graph):
         args=None
     ):
         """
-        Function to calculate admix. prop. values along with log-lik. values in a contour around the sampled source deme to capture uncertainty in the location of the source. 
+        Function to calculate admix. prop. values along with log-lik. values in a surface around the sampled source deme to capture uncertainty in the location of the source. 
 
         Required:
             destid (:obj:`int`) : ID of the putative recipient deme             
@@ -1207,7 +1304,6 @@ class SpatialGraph(nx.Graph):
             randedge = [(x,destid) for x in list(set(opts)-set([destid]+list(self.neighbors(destid))))]
 
         # only include central demes (==6 neighbors), since demes on edge of range exhibit some boundary effects during estimation
-        # randedge = list(it.compress(randedge,np.array([sum(1 for _ in self.neighbors(nx.get_node_attributes(self.sp_graph,'permuted_idx')[i])) for i in list(set(range(self.number_of_nodes()))-set([destid]))])==6))
         if exclude_boundary:
             randedge = [(e[0], e[1]) for e in randedge if sum(1 for _ in self.neighbors(e[0]))==6]
 
@@ -1234,7 +1330,7 @@ class SpatialGraph(nx.Graph):
             # randpedge.append((e[0],destid)) # -> contains the *un*permuted ids (useful for external viz)
             args['edge'] = [e]
             try:
-                res = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2), method='Nelder-Mead', args=args, bounds=[(0,1)])
+                res = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2), method='L-BFGS-B', args=args, bounds=[(0,1)])
                 cest2[ie] = res.x; llc2[ie] = res.fun
             except:
                 cest2[ie] = np.nan; llc2[ie] = np.nan
@@ -1248,7 +1344,7 @@ class SpatialGraph(nx.Graph):
         if search_area == 'radius' or search_area == 'range':
                 mles = df['(source, dest.)'].iloc[np.nanargmax(df['log-lik'])][0]
                 if len(list(self.neighbors(mles))) < 6:
-                    print("  (Warning: MLE location of source found to be at the edge of the specified {}, consider increasing the `opts` to include a larger area and rerunning this command.)".format(search_area))
+                    print("  (Warning: MLE location of source found to be at the edge of the specified {}, consider increasing the `opts` to include a larger area.)".format(search_area))
 
         df = df.replace([np.inf, -np.inf], np.nan)
         if np.sum(df['log-lik'].isna()) > 0.3*len(df):
@@ -1271,20 +1367,24 @@ def coordinate_descent(
 
     # flag to optimize admixture proportion
     optimc = True
-    
+
+    # TODO check if this is required
+    # if len(obj.sp_graph.edge) == 1:
+    #     obj.sp_graph.c = [np.random.uniform(0, 0.2)]
+
     for bigiter in range(maxiter):
-        
         # first fit admix. prop. c given the weights
         # resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(len(obj.sp_graph.edge)), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)]*len(obj.sp_graph.edge))
-        resc = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2,len(obj.sp_graph.edge)), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='Nelder-Mead', bounds=[(0,1)]*len(obj.sp_graph.edge))
+        # resc = minimize(obj.eems_neg_log_lik, x0=np.random.uniform(0,0.2,len(obj.sp_graph.edge)), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)]*len(obj.sp_graph.edge))
+        resc = minimize(obj.eems_neg_log_lik, x0=obj.sp_graph.c, args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)]*len(obj.sp_graph.edge))
 
         if resc.status != 0:
-            print(' (warning: admix. prop. optimization failed for deme {:d}, increase factr slightly or change optimization parameters) '.format(obj.sp_graph.edge[0][0]))
+            print(' (warning: admix. prop. optimization failed for deme {:d}, increase factr slightly or change optimization parameters) '.format(obj.sp_graph.edge[-1][0]))
             return None
 
         if obj.sp_graph.c is not None:
             if len(obj.sp_graph.c) == len(resc.x):
-                if np.allclose(resc.x, obj.sp_graph.c, atol=1e-5):
+                if np.allclose(resc.x, obj.sp_graph.c, atol=1e-3):
                     optimc = False
 
         obj.sp_graph.c = deepcopy(resc.x)
