@@ -14,7 +14,7 @@ For details on the method see our [publication](https://doi.org/10.7554/eLife.61
 
 # `FEEMSmix`
 
-_This method is still currently under review, so there may be some changes along the way._
+_This method is still currently under review, so there may be some changes along the way. Please make sure to always pull the latest version._
 
 **F**ast **E**stimation of **E**ffective **M**igration **S**urfaces + ad**mix**ture (`FEEMSmix`) 
 is built on top of `FEEMS`, and is a method for representing long-range gene flow 

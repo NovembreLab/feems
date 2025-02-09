@@ -173,7 +173,7 @@ class Viz(object):
 
     def draw_map(
         self, 
-        longlat=True
+        longlat=None
     ):
         """Viz function to draw the underlying map projection.
 
@@ -197,17 +197,16 @@ class Viz(object):
             zorder=0,
         )
 
-        if longlat is not False:
-            if len(longlat)==2:
-                gl = self.ax.gridlines(xlocs=longlat[1], ylocs=longlat[0], draw_labels=True, linewidth=0.5, color='grey', alpha=0.5, zorder=0)
-                gl.top_labels=False; gl.right_labels=False
-                gl.xlabel_style = {'rotation': 45}; gl.ylabel_style = {'rotation': 315}
-            else:
-                gl = self.ax.gridlines(draw_labels=True, linewidth=0.5, color='grey', alpha=0.5, zorder=0)
-                gl.top_labels=False; gl.right_labels=False
-                gl.xlabel_style = {'rotation': 45}; gl.ylabel_style = {'rotation': 315}
-            # else:
-            #     print('Please specify valid option for latlong: True (default) or tuple/list of [[lats],[longs]] for custom gridlines. When specifying just a single coordinate list, leave an empty list for the other coordinate.')            
+        if isinstance(longlat, tuple):
+            if len(longlat) != 2:
+                raise ValueError('Please specify valid option for longlat: True (default) or tuple/list of [[longs],[lats]] for custom gridlines. When specifying just a single coordinate list, leave an empty list for the other coordinate.')
+            gl = self.ax.gridlines(xlocs=longlat[1], ylocs=longlat[0], draw_labels=True, linewidth=0.5, color='grey', alpha=0.5, zorder=0)
+            gl.top_labels=False; gl.right_labels=False
+            gl.xlabel_style = {'rotation': 45}; gl.ylabel_style = {'rotation': 315}
+        elif longlat:
+            gl = self.ax.gridlines(draw_labels=True, linewidth=0.5, color='grey', alpha=0.5, zorder=0)
+            gl.top_labels=False; gl.right_labels=False
+            gl.xlabel_style = {'rotation': 45}; gl.ylabel_style = {'rotation': 315}
 
     def draw_samples(self, labels=None):
         """Draw the individual sample coordinates"""
@@ -273,6 +272,7 @@ class Viz(object):
                 zorder=self.obs_node_zorder,
             )
 
+
     def draw_edges(self, use_weights=False, use_foldchange=False):
         """Draw the edges of the graph"""
         if not use_foldchange:
@@ -330,7 +330,7 @@ class Viz(object):
         self.c_axins = inset_axes(self.ax, 
                                   loc = 'upper right',
                                   width='15%',
-                                  height='3%')
+                                  height='3%', borderpad=0)
         self.c_axins.set_title(r"het. ($\propto N$)")
         self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=plt.get_cmap('Purples')), cax=self.c_axins, orientation='horizontal')
         
@@ -400,7 +400,7 @@ class Viz(object):
         """Viz function to draw an arrow between two nodes on the graph & colored by an admixture proportion c between 0 and 1 (grey-scale, with 0 being white). Typically, an internal function, but can also be called externally.  
         Required:
             lre (:obj:`list of tuple`): [(source, destination)] ID as displayed by baseline FEEMS viz
-            c (:obj:`float`): admixture proportion of long-range edge
+            c (:obj:`float`): admixture proportion of LRE
 
         Optional:
             hw (:obj:`float`): head width
@@ -509,12 +509,12 @@ class Viz(object):
     def draw_c_surface(
         self, 
         df, 
-        levels=-5, 
+        levels=-10, 
         c_cbar_loc=None,
         c_cbar_width=None,
         c_cbar_height=None
     ):
-        """Viz function to draw the log-likelihood surface for the source of a particular destination deme. 
+        """Viz function to draw the log-likelihood surface for the source fraction c of a particular destination deme. 
         Required:
             df (:obj:`pandas.DataFrame`): DataFrame containing the output of sp_graph.calc_surface or sp_graph.calc_joint_surface
             
@@ -541,16 +541,17 @@ class Viz(object):
             print("Not enough demes fall within the specified levels threshold to draw a surface, consider decreasing levels.")
             return 
             
-        self.ax.trisurfacef([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]],[self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend='both', levels=np.linspace(0,1,21)); 
-        CS = self.ax.trisurfacef([self.grid[x[0],0] for x in df['(source, dest.)'].iloc[idx]], [self.grid[x[0],1] for x in df['(source, dest.)'].iloc[idx]], df['admix. prop.'].iloc[idx], cmap='Greys', vmin=0, vmax=1, alpha=0.7, extend='both', levels=np.linspace(0,1,21))
-        self.ax.clabel(CS, inline=False, levels=np.linspace(0,1,21)[((np.linspace(0,1,21) >= np.min(df['admix. prop.'].iloc[idx])) & (np.linspace(0,1,21) <= np.max(df['admix. prop.'].iloc[idx])))], fontsize=self.obs_node_textsize, colors='k')
+        for idx, row in df.loc[df['scaled log-lik']>=levels].iterrows():
+            self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], 
+                            c=row['scaled log-lik'],
+                            marker='h', zorder=2, edgecolors='white', cmap='Greys', edgecolor='k',
+                            # facecolors=ll(int(-row['scaled log-lik'])), 
+                            linewidth=0.25*self.obs_node_linewidth, s=5*self.obs_node_size)
         
         # drawing a X at the location of the MLE
-        self.ax.scatter(self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],0], self.grid[df.iloc[df['scaled log-lik'].argmax(),0][0],1], marker='x', zorder=3, facecolors='firebrick', s=2*self.obs_node_size)
         self.draw_c_colorbar(c_cbar_loc, c_cbar_width, c_cbar_height)
 
-        # drawing a circle around the destination
-        self.ax.scatter(self.grid[df['(source, dest.)'].iloc[0][1],0],self.grid[df['(source, dest.)'].iloc[0][1],1], marker='o', zorder=3, facecolors='dodgerblue', alpha=0.5, s=3*self.obs_node_size)
+        self.draw_arrow([df['(source, dest.)'].iloc[df['log-lik'].argmax()]], df['admix. prop.'].iloc[df['log-lik'].argmax()])
 
     def draw_outliers(
         self, 
@@ -633,7 +634,7 @@ class Viz(object):
         if lbar_loc is None:
             lbar_loc = 'lower right'
         if lbar_width is None:
-            lbar_width = 10
+            lbar_width = 15
         if lbar_height is None:
             lbar_height = 2
 
@@ -676,23 +677,23 @@ class Viz(object):
             except:
                 cprofll[ic] = np.nan
         
-        cprofll2 = np.zeros((np.sum(df['scaled log-lik']>-3),len(cgrid)))
-        for idx, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-3]):
+        cprofll2 = np.zeros((np.sum(df['scaled log-lik']>-2),len(cgrid)))
+        for idx, ed in enumerate(df['(source, dest.)'].loc[df['scaled log-lik']>-2]):
             for ic, c in enumerate(cgrid):
                 try:
                     cprofll2[idx,ic] = -self.obj.eems_neg_log_lik([c], {'edge':[ed], 'mode':'compute'})
                 except:
                     cprofll2[idx,ic] = np.nan
-
+        
         inset_axes(self.ax, 
                    loc = profile_c_loc, 
                    width = str(profile_c_width)+'%', 
-                   height = str(profile_c_height)+'%')            
+                   height = str(profile_c_height)+'%', borderpad=2)            
 
-        plt.plot(cgrid, cprofll, color='grey')
+        plt.plot(cgrid, cprofll-np.nanmax(cprofll), color='grey')
         # plt.ylim((np.nanmax(cprofll)+levels, np.nanmax(cprofll)-levels/20))
-        plt.ylim((np.nanmax(cprofll)-10, np.nanmax(cprofll)+1))
-        plt.plot(cgrid, cprofll2.T, color='grey', alpha=0.5, linewidth=0.3)
+        plt.ylim((-10, 1))
+        plt.plot(cgrid, cprofll2.T - np.nanmax(cprofll), color='grey', alpha=0.5, linewidth=0.3)
         plt.xticks(ticks=[0, 1], labels=[0, 1], fontsize=cbar_ticklabelsize); #plt.xlabel(r'$c$', labelpad=-6, fontsize=cbar_ticklabelsize)
         plt.yticks(fontsize=cbar_ticklabelsize)
         plt.title(r'profile $\ell$ for $c$', fontsize=1.2*cbar_font_size)
@@ -701,7 +702,7 @@ class Viz(object):
         lb = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 2)[0][-1]
         plt.axvline(cgrid[lb], color='red', ls='--', linewidth=self.obs_node_linewidth) 
         plt.axvline(cgrid[ub], color='red', ls='--', linewidth=self.obs_node_linewidth)
-        print(cgrid[lb], cgrid[ub])
+
         # lb = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][0]; ub = np.where(cprofll >= np.nanmax(cprofll) - 5)[0][-1]
         # plt.axvline(cgrid[lb], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6) 
         # plt.axvline(cgrid[ub], color='red', ls='dotted', linewidth=self.obs_node_linewidth, alpha=0.6)
@@ -710,14 +711,46 @@ class Viz(object):
         self.c_axins = inset_axes(self.ax, 
                                   loc = lbar_loc, 
                                   width = str(lbar_width)+'%', 
-                                  height = str(lbar_height)+'%')
-        self.c_axins.set_title(r"scaled $\ell$", fontsize = 0.9*cbar_font_size)
+                                  height = str(lbar_height)+'%', borderpad=2)
+        self.c_axins.set_title(r"scaled $\ell$", fontsize = 1.1*cbar_font_size)
         # self.c_cbar = plt.colorbar(plt.cm.ScalarMappable(norm=clr.Normalize(levels-1,0), cmap=ll.reversed()), boundaries=np.arange(levels-1,1), cax=self.c_axins, shrink=0.1, orientation='horizontal'); self.c_cbar.set_ticks([levels,0]);
-        self.c_cbar = plt.colorbar(mappable=plt.cm.ScalarMappable(norm=norm, cmap=custom_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=bounds);
+        self.c_cbar = plt.colorbar(mappable=plt.cm.ScalarMappable(norm=norm, cmap=custom_cmap), cax=self.c_axins, shrink=0.1, orientation='horizontal', ticks=bounds, extendfrac=0.2);
         self.c_cbar.set_ticklabels(ticklabels=['≤-200','-50','-10','-2','0'])
         # self.c_axins.set_xscale('function', functions=(lambda x: -np.log1p(np.abs(x)), lambda x: np.exp(-x) - 1))
-        self.c_cbar.ax.tick_params(labelsize=0.6*cbar_ticklabelsize, rotation=45, pad=3)
+        self.c_cbar.ax.tick_params(labelsize=0.8*cbar_ticklabelsize, rotation=45, pad=3)
 
+    def draw_LREs(
+        self,
+        seq_results,
+        exclude=None,
+        magnifier=1,
+    ):
+        """Viz function to draw the LREs from the fitted object.
+        Required:
+            seq_results (:obj:`dict`): dictionary containing the output of sp_graph.sequential_fit(...)
+            
+        Optional: 
+            exclude (:obj:`list`): list of indices indicating which LREs to exclude from final fit (1-index based, default is None)
+            magnifier (:obj:`float`): magnifier on the size of the arrows of the LREs
+
+        Returns:
+            None
+        """
+
+        idx = range(1, len(seq_results))
+        if exclude is not None:
+            idx = set(range(1,len(seq_results)))-set(demes)
+            alldemes = [seq_results[i]['deme'] for i in set(range(1,len(seq_results)))-set(demes)]
+        else:
+            alldemes = [seq_results[i]['deme'] for i in range(1,len(seq_results))]
+
+        mut_scale = magnifier*np.logspace(-0.5,0.5,len(seq_results))[::-1]
+
+        for i in idx: 
+            self.draw_arrow([seq_results[i]['joint_surface_df']['(source, dest.)'].iloc[seq_results[i]['joint_surface_df']['log-lik'].argmax()]], 
+                            seq_results[i]['joint_surface_df']['admix. prop.'].iloc[seq_results[i]['joint_surface_df']['log-lik'].argmax()],
+                            mutation_scale=mut_scale[i-1])  
+    
 
 def draw_FEEMSmix_surface(
     v,
@@ -725,20 +758,20 @@ def draw_FEEMSmix_surface(
     demes=None,
     draw_arrow=True,
     draw_c_surface=False,
-    mutation_scale=1,
-    dpi=200,
+    magnifier=1,
+    dpi=300,
     figsize=(4,10)
 ):
     """Wrapper function to plot the entire suite of fits from separately fitting each edge
     Required:
         v (:obj:`feems.Viz`): Viz object created previously 
-        ind_results (:obj:`dict`): output from sp_graph.independent_fit(...)
+        ind_results (:obj:`dict`): output from sp_graph.sequential_fit(...)
         
     Optional:
         demes (:obj:`int` or `list`): number or list of edge indices to plot (for any single index, use e.g., [980])
         draw_c_surface (:obj:`Bool`): whether to include a surface of the admixture proportions
-        draw_edges_mle (:obj:`Bool`): whether to draw edge weights at MLE
-        mutation_scale (:obj:`float`): scaler on the size of the arrow with 1 being a magnification of 1x
+        draw_arrow (:obj:`Bool`): whether to draw LREs as arrows
+        magnifier (:obj:`float`): scaler on the size of the arrows 
         dpi (:obj:`int`): resolution of figure
         figsize (:obj:`tuple`): (width, height) of matplotlib plot 
 
@@ -759,12 +792,11 @@ def draw_FEEMSmix_surface(
     vall.ax = axs; vall.draw_map()
     vall.draw_edges(use_weights=True)
     vall.draw_obs_nodes()
+
+    mut_scale = magnifier*np.logspace(-0.5,0.5,len(ind_results))[::-1]
     for i in range(1, len(ind_results)):
         vall.draw_arrow([ind_results[i]['joint_surface_df']['(source, dest.)'].iloc[ind_results[i]['joint_surface_df']['log-lik'].argmax()]], ind_results[i]['joint_surface_df']['admix. prop.'].iloc[ind_results[i]['joint_surface_df']['log-lik'].argmax()],
-                            # tw=mag*0.2*v.obs_node_size, 
-                            # hw=mag*0.4*v.obs_node_size, 
-                            # hl=mag*0.5*v.obs_node_size, 
-                       mutation_scale=mutation_scale)            
+                       mutation_scale=mut_scale[i-1])   
     
     if hasattr(demes, '__len__'):
         matches = [alldemes.index(i)+1 for i in demes]
@@ -787,7 +819,7 @@ def draw_FEEMSmix_surface(
                 vnew.ax = ax_list[-1]
                 vnew.draw_map() 
                 vnew.edge_alpha=0.; vnew.draw_edges(use_weights=False)
-                vnew.draw_loglik_surface(df, draw_arrow=draw_arrow)
+                vnew.draw_loglik_surface(df, draw_arrow=draw_arrow, loglik_node_size=v.obs_node_size)
                 vnew.draw_obs_nodes(use_ids=False)
                 
                 vnewnew = copy(v)
@@ -805,20 +837,21 @@ def draw_FEEMSmix_surface(
                 ax_list[-1].set_title('log-likelihood surface for deme {:d}'.format(ind_results[idx]['deme']))
                 vnew.ax = ax_list[-1]
                 vnew.draw_map() 
-                # TODO is there a way to get limits without adding edges?
                 vnew.edge_alpha=0.; vnew.draw_edges(use_weights=False)
-                vnew.draw_loglik_surface(df, draw_arrow=draw_arrow)
+                vnew.draw_loglik_surface(df, draw_arrow=draw_arrow, loglik_node_size=v.obs_node_size)
                 vnew.draw_obs_nodes(use_ids=False)
 
 def plot_FEEMSmix_summary(
     diag_results, 
+    sequential,
     dpi=200, 
     figsize=(6,3),
     inset_frac=0.4,
 ):
     """Wrapper function to plot the diagnostic fits from the results of the independent or sequential fits.
     Required:
-        diag_results (dict): output from sp_graph.independent_fit or sp_graph.sequential_fit
+        diag_results (dict): output from sp_graph.sequential_fit(...) or sp_graph.independent_fit(...)
+        sequential (bool): flag to indicate whether results from from a sequential_fit or not
 
     Optional: 
         dpi (int): resolution of figure
@@ -826,106 +859,120 @@ def plot_FEEMSmix_summary(
         inset_frac (float): size of inset plot as a fraction of larger plot (default: 0.4)
     """
 
-    fig, axs = plt.subplots(1, 2, dpi=dpi, figsize=figsize, constrained_layout=True)
-    axs[0].plot(range(len(diag_results)),[linregress(diag_results[i]['fit_dist'],diag_results[0]['emp_dist'])[2]**2 for i in range(len(diag_results))], '-o', color='royalblue')
-    axs[0].yaxis.set_major_locator(plt.MaxNLocator(4))
-    axs[0].set_ylabel(r'$R^2$'); axs[0].set_xlabel('edge ID (deme ID)') 
-    axs[0].set_xticks(range(len(diag_results)),['baseline']+['{:d} ('.format(i)+str(diag_results[i]['deme'])+')' for i in range(1,len(diag_results))],rotation=45); axs[0].grid()
+    if sequential: 
+        fig, axs = plt.subplots(1, 2, dpi=dpi, figsize=figsize, constrained_layout=True)
+        axs[0].plot(range(len(diag_results)),[linregress(diag_results[i]['fit_dist'],diag_results[0]['emp_dist'])[2]**2 for i in range(len(diag_results))], '-o', color='royalblue')
+        axs[0].yaxis.set_major_locator(plt.MaxNLocator(4))
+        axs[0].set_ylabel(r'$R^2$'); axs[0].set_xlabel('# of added edges (deme ID)') 
+        axs[0].set_xticks(range(len(diag_results)),['baseline']+['{:d} ('.format(i)+str(diag_results[i]['deme'])+')' for i in range(1,len(diag_results))],rotation=45); axs[0].grid()
+    
+        emp_dist = diag_results[0]['emp_dist']; fit_dist = diag_results[0]['fit_dist']
+        logratio = np.log(emp_dist/fit_dist)
+        bh = [np.where(np.round(logratio,5)==np.round(diag_results[0]['outliers_df']['scaled diff.'].iloc[i],5))[0][0] for i in range(len(diag_results[0]['outliers_df']))]
+        
+        X = add_constant(diag_results[len(diag_results)-1]['fit_dist'])
+        mod = OLS(emp_dist, X)
+        res = mod.fit()
+        muhat, betahat = res.params
+        
+        x_range = axs[1].get_xlim()[1] - axs[1].get_xlim()[0]
+        y_range = axs[1].get_ylim()[1] - axs[1].get_ylim()[0]
+        
+        # Inset dimensions based on data range
+        inset_width = inset_frac * x_range / y_range  # Adjust size relative to aspect ratio
+        inset_height = inset_frac
+        inset_x = 1 - inset_width - 0.025  # Adjust margins as needed
+        inset_y = 0.025
+        
+        # Generalized R² position: top-left of the plot
+        r2_x = 0.1  
+        r2_y = 0.85
+        
+        axs[1].plot(diag_results[len(diag_results)-1]['fit_dist'], emp_dist, '.k', alpha=0.7, markersize=6); 
+        axs[1].axline((np.min(fit_dist),np.min(fit_dist)*betahat+muhat), slope=betahat, color='orange', ls='--', lw=2.5)
+        axs[1].yaxis.set_major_locator(plt.MaxNLocator(3)); axs[1].xaxis.set_major_locator(plt.MaxNLocator(3))
+        axs[1].plot(diag_results[len(diag_results)-1]['fit_dist'][bh], emp_dist[bh], '.', color='r', markersize=8)
+        axs[1].set_ylabel('Genetic distance'); axs[1].set_xlabel(r'Fitted distance');
+        # axs.text(0.2, 1., "R²={:.3f}".format(res.rsquared), fontsize=12); 
+        axs[1].text(r2_x, r2_y, f"R²={res.rsquared:.3f}", fontsize=10, transform=axs[1].transAxes); 
+        
+        axins = axs[1].inset_axes([inset_x, inset_y, inset_width, inset_height])
+        # axins = axs.inset_axes([0.5, 0.03, 0.45, 0.4])
+        X = add_constant(fit_dist)
+        mod = OLS(emp_dist, X)
+        res = mod.fit()
+        muhat, betahat = res.params
+        axins.plot(fit_dist, emp_dist, '.k', alpha=0.5, markersize=6*inset_frac); 
+        axins.axline((np.min(fit_dist),np.min(fit_dist)*betahat+muhat), slope=betahat, color='orange', ls='--', lw=3*inset_frac)
+        axins.plot(fit_dist[bh], emp_dist[bh], '.', color='r', markersize=8*inset_frac); 
+        axins.yaxis.set_major_locator(plt.MaxNLocator(2)); axins.xaxis.set_major_locator(plt.MaxNLocator(2))
+        # axins.text(0.2, 1, "R²={:.3f}".format(res.rsquared), fontsize=10); 
+        axins.text(r2_x-0.05, r2_y-0.1, f"R²={res.rsquared:.3f}", fontsize=7, transform=axins.transAxes)
+        axins.set_xticklabels([]); axins.tick_params(axis='y',direction='in');
+        axins.set_yticklabels([]); axins.tick_params(axis='x',direction='in');
+    else:
+        cols = min(len(diag_results), 5)  # Keep it column-heavy, max 4 columns
+        rows = (len(diag_results) + cols - 1) // cols  # Compute required rows
+        
+        # Create figure and gridspec
+        fig = plt.figure(figsize=(cols * 3.5, (rows + 1) * 3.5))  # Adjust figure size
+        spec = GridSpec(rows + 1, cols, figure=fig, height_ratios=[1.5] + [1] * rows)
 
-    emp_dist = diag_results[0]['emp_dist']; fit_dist = diag_results[0]['fit_dist']
-    logratio = np.log(emp_dist/fit_dist)
-    bh = [np.where(np.round(logratio,5)==np.round(diag_results[0]['outliers_df']['scaled diff.'].iloc[i],5))[0][0] for i in range(len(diag_results[0]['outliers_df']))]
-    
-    X = add_constant(diag_results[len(diag_results)-1]['fit_dist'])
-    mod = OLS(emp_dist, X)
-    res = mod.fit()
-    muhat, betahat = res.params
-    
-    x_range = axs[1].get_xlim()[1] - axs[1].get_xlim()[0]
-    y_range = axs[1].get_ylim()[1] - axs[1].get_ylim()[0]
-    
-    # Inset dimensions based on data range
-    inset_width = inset_frac * x_range / y_range  # Adjust size relative to aspect ratio
-    inset_height = inset_frac
-    inset_x = 1 - inset_width - 0.025  # Adjust margins as needed
-    inset_y = 0.025
-    
-    # Generalized R² position: top-left of the plot
-    r2_x = 0.1  
-    r2_y = 0.85
-    
-    axs[1].plot(diag_results[len(diag_results)-1]['fit_dist'], emp_dist, '.k', alpha=0.7, markersize=6); 
-    axs[1].axline((np.min(fit_dist),np.min(fit_dist)*betahat+muhat), slope=betahat, color='orange', ls='--', lw=2.5)
-    axs[1].yaxis.set_major_locator(plt.MaxNLocator(4)); axs[1].xaxis.set_major_locator(plt.MaxNLocator(4))
-    axs[1].plot(diag_results[len(diag_results)-1]['fit_dist'][bh], emp_dist[bh], '.', color='r', markersize=8)
-    axs[1].set_ylabel('Genetic distance'); axs[1].set_xlabel(r'Fitted distance');
-    # axs.text(0.2, 1., "R²={:.3f}".format(res.rsquared), fontsize=12); 
-    axs[1].text(r2_x, r2_y, f"R²={res.rsquared:.3f}", fontsize=12, transform=axs[1].transAxes); 
-    
-    axins = axs[1].inset_axes([inset_x, inset_y, inset_width, inset_height])
-    # axins = axs.inset_axes([0.5, 0.03, 0.45, 0.4])
-    X = add_constant(fit_dist)
-    mod = OLS(emp_dist, X)
-    res = mod.fit()
-    muhat, betahat = res.params
-    axins.plot(fit_dist, emp_dist, '.k', alpha=0.5, markersize=6*inset_frac); 
-    axins.axline((np.min(fit_dist),np.min(fit_dist)*betahat+muhat), slope=betahat, color='orange', ls='--', lw=3*inset_frac)
-    axins.plot(fit_dist[bh], emp_dist[bh], '.', color='r', markersize=8*inset_frac); 
-    axins.yaxis.set_major_locator(plt.MaxNLocator(2)); axins.xaxis.set_major_locator(plt.MaxNLocator(2))
-    # axins.text(0.2, 1, "R²={:.3f}".format(res.rsquared), fontsize=10); 
-    axins.text(r2_x-0.05, r2_y-0.1, f"R²={res.rsquared:.3f}", fontsize=8, transform=axins.transAxes)
-    axins.set_xticklabels([])
-    axins.set_yticklabels([])
+        # Compute start and end columns for centering the summary plot
+        summary_col_start = max(0, cols // 4)
+        summary_col_end = min(cols, summary_col_start + cols // 2)
+        
+        # Create the summary plot (spans full width)
+        ax_summary = fig.add_subplot(spec[0, summary_col_start:summary_col_end])
+        ax_summary.plot(range(len(diag_results)),[linregress(diag_results[i]['fit_dist'],diag_results[0]['emp_dist'])[2]**2 for i in range(len(diag_results))], '-o', color='royalblue')
+        ax_summary.yaxis.set_major_locator(plt.MaxNLocator(4))
+        ax_summary.set_ylabel(r'$R^2$'); ax_summary.set_xlabel('edge to deme ID') 
+        ax_summary.set_xticks(range(len(diag_results)),['baseline']+[str(diag_results[i]['deme']) for i in range(1,len(diag_results))],rotation=45); ax_summary.grid()
+        ax_summary.axhline(linregress(diag_results[0]['fit_dist'],diag_results[0]['emp_dist'])[2]**2, color='k', linestyle='--')
 
-    # if len(diag_results) < 6:
-    #     fig, axs = plt.subplots(1, len(diag_results), dpi=dpi, figsize=figsize, sharey=True, constrained_layout=True)
-    # else:
-    #     fig, axs = plt.subplots(len(diag_results)//6+1, 6, dpi=dpi, figsize=figsize, sharey=True, sharex=True, constrained_layout=True)
-    #     axs = axs.flatten()
-    
-    # X = add_constant(diag_results[0]['fit_dist'])
-    # mod = OLS(diag_results[0]['emp_dist'], X)
-    # res = mod.fit()
-    # muhat, betahat = res.params
-    # bh
-    # axs[0].scatter(diag_results[0]['fit_dist'], diag_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
-    # # bh = benjamini_hochberg(diag_results[0]['emp_dist'], diag_results[0]['fit_dist'], fdr=diag_results[0]['fdr'])
-    # # axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
-    # x_ = np.linspace(np.min(diag_results[0]['fit_dist']), np.max(diag_results[0]['fit_dist']), 12);
-    # axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2);
-    # axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
-    # axs[0].set_title('Baseline\nLL = {:.1f}'.format(diag_results[0]['log-lik']))
-    # fig.supxlabel('fitted distance'); fig.supylabel('genetic distance');
-    
-    # for i in range(1, len(diag_results)):
-    #     X = add_constant(diag_results[i]['fit_dist'])
-    #     mod = OLS(diag_results[0]['emp_dist'], X)
-    #     res = mod.fit()
-    #     muhat, betahat = res.params
-    #     # bh = np.where(np.abs(diag_results[i]['fit_dist'] - diag_results[i-1]['fit_dist']) >= 0.21 * (np.max(diag_results[0]['fit_dist'])-np.min(diag_results[0]['fit_dist'])))[0]
-    #     axs[i].scatter(diag_results[i]['fit_dist'], diag_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
-    #     axs[i].scatter(diag_results[i]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='.', color='r', s=20, alpha=0.8)
-    #     axs[i].scatter(diag_results[i-1]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='x', color='r', s=20, alpha=0.8)
-    #     for il in range(len(bh)):
-    #     # for il in range(np.sum(bh)):
-    #         axs[i].annotate(
-    #             '',  # No text
-    #             xy=(diag_results[i-1]['fit_dist'][bh][il], diag_results[0]['emp_dist'][bh][il]),  # Arrow end (head)
-    #             xytext=(diag_results[i]['fit_dist'][bh][il], diag_results[0]['emp_dist'][bh][il]),  # Arrow start (tail)
-    #             arrowprops=dict(
-    #                 arrowstyle="<-",  # Arrow style
-    #                 color='r',  # Color of the arrow
-    #                 linewidth=1  # Width of the arrow line
-    #             )
-    #         )
-    #     x_ = np.linspace(np.min(diag_results[i]['fit_dist']), np.max(diag_results[i]['fit_dist']), 12); 
-    #     axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2); 
-    #     axs[i].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
-    #     axs[i].set_title('On fitting deme {:d}\nLL = {:.1f}'.format(diag_results[i]['deme'],diag_results[i]['log-lik']))
+        # Create individual fit plots
+        axs = []
+        for i in range(len(diag_results)):
+            row = (i // cols) + 1  # Start from row index 1 (row 0 is for summary)
+            col = i % cols
+            ax = fig.add_subplot(spec[row, col], sharex=axs[0] if axs else None, sharey=axs[0] if axs else None)
+            axs.append(ax)
 
-    # # Hide any extra subplots
-    # for i in range(len(diag_results), len(axs)):
-    #     axs[i].set_visible(False)
+        # Adjust layout for better spacing
+        plt.subplots_adjust(hspace=0.5)  # Increased vertical space
+
+        emp_dist = diag_results[0]['emp_dist']; fit_dist = diag_results[0]['fit_dist']
+        logratio = np.log(emp_dist/fit_dist)
+        bh = np.argsort(logratio)[:len(diag_results[0]['outliers_df'])]
+        X = add_constant(fit_dist)
+        mod = OLS(emp_dist, X)
+        res = mod.fit()
+        muhat, betahat = res.params
+        
+        axs[0].scatter(diag_results[0]['fit_dist'], diag_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
+        
+        x_ = np.linspace(np.min(diag_results[0]['fit_dist']), np.max(diag_results[0]['fit_dist']), 12);
+        axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2);
+        axs[0].yaxis.set_major_locator(plt.MaxNLocator(3)); axs[0].xaxis.set_major_locator(plt.MaxNLocator(3))
+        axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='o', color='r', s=20, alpha=0.8)
+        axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
+        axs[0].set_title('Baseline\nLL = {:.1f}'.format(diag_results[0]['log-lik']))
+        fig.supxlabel('Fitted distance'); fig.supylabel('Genetic distance');
+        
+        for i in range(1, len(diag_results)):
+            X = add_constant(diag_results[i]['fit_dist'])
+            mod = OLS(diag_results[0]['emp_dist'], X)
+            res = mod.fit()
+            muhat, betahat = res.params
+            # bh = np.where(np.abs(diag_results[i]['fit_dist'] - diag_results[i-1]['fit_dist']) >= 0.21 * (np.max(diag_results[0]['fit_dist'])-np.min(diag_results[0]['fit_dist'])))[0]
+            axs[i].scatter(diag_results[i]['fit_dist'], diag_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
+            axs[i].scatter(diag_results[i]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='o', color='r', s=20, alpha=0.8)
+            x_ = np.linspace(np.min(diag_results[i]['fit_dist']), np.max(diag_results[i]['fit_dist']), 12); 
+            axs[i].yaxis.set_major_locator(plt.MaxNLocator(3)); axs[i].xaxis.set_major_locator(plt.MaxNLocator(3))
+            axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2); 
+            axs[i].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[i].transAxes, size='large')
+            axs[i].set_title('LRE to {:d}\nLL = {:.1f}'.format(diag_results[i]['deme'],diag_results[i]['log-lik']))
+
         
 def recover_nnz_entries(sp_graph):
     """Permute W matrix and vectorize according to the CSC index format"""

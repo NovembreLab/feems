@@ -252,12 +252,6 @@ class SpatialGraph(nx.Graph):
         
         self.q_prox = 10**interpolate_q(np.log10(1/self.q), Rmatdo, Rmatoo)
 
-        # for s in self.perm_idx[self.n_observed_nodes:]:
-        #     # self.proxs[s] = np.argmin([nx.shortest_path_length(self, source=s, target=d, weight=self._get_dist) for d in self.perm_idx[:self.n_observed_nodes]])
-        #     _, distances = nx.dijkstra_predecessor_and_distance(self, s, weight=self._get_dist)
-        #     target_distances = {node: dist for node, dist in distances.items() if node in set(self.perm_idx[:self.n_observed_nodes])}
-        #     self.proxs[s] = np.where(self.perm_idx==min(target_distances.items(), key=lambda x: x[1])[0])[0][0]
-    
     def inv_triu(self, w, perm=True):
         """Take upper triangular vector as input and return symmetric weight
         sparse matrix
@@ -284,7 +278,6 @@ class SpatialGraph(nx.Graph):
         elif "matrix" in str(type(weight)):
             self.W = weight
         else:
-            # TODO: decide to raise error here?
             print("inaccurate argument")
         W_rowsum = np.array(self.W.sum(axis=1)).reshape(-1)
         self.D = sp.diags(W_rowsum).tocsc()
@@ -407,7 +400,7 @@ class SpatialGraph(nx.Graph):
         optimize_q='n-dim',
         fraction_of_pairs=0.1,
         nedges=None,
-        top=0.05,
+        top=0.01,
         exclude_boundary=True,
         maxls=50,
         m=10,
@@ -427,7 +420,7 @@ class SpatialGraph(nx.Graph):
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
             fraction_of_pairs (:obj:`float`): fraction of pairs with largest negative residual to use when compiling list of putative recipient demes 
             pval (:obj:`float`): p-value for assessing whether adding a long-range edge significantly increases log-likelihood over previous fit
-            nedges (:obj:`int`): number of long-range edges to add sequentially 
+            nedges (:obj:`int`): number of long-range edges to add (default: # of putative recipient demes identified from baseline fit)
             exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes from fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
             alpha_q (:obj:`float`): penalty strength on log residual variances
@@ -453,9 +446,9 @@ class SpatialGraph(nx.Graph):
         results = {}
         
         # passing in dummy variables just to initialize the procedure
-        args = {}
+        args = {}; args['mode'] = 'compute'
         nllnull = obj.eems_neg_log_lik(None, args)
-        print('Log-likelihood of initial fit: {:.1f}\n'.format(nllnull))
+        print('Log-likelihood of initial fit: {:.1f}\n'.format(-nllnull))
 
         fit_cov, _, emp_cov = comp_mats(obj)
         fit_dist = cov_to_dist(fit_cov)[np.tril_indices(self.n_observed_nodes, k=-1)]
@@ -471,12 +464,13 @@ class SpatialGraph(nx.Graph):
 
         if nedges is None:
             nedges = len(dest)
+        elif nedges > len(dest):
+            nedges = len(dest)
 
         cnt = 1
         
         while cnt <= nedges:
             print('\nFitting long-range edge to deme {:d}:'.format(dest[cnt-1]))
-            self._update_graph(usew, uses2)
             
             # get the log-lik surface across the landscape
             if search_area=='radius':
@@ -492,7 +486,8 @@ class SpatialGraph(nx.Graph):
             joint_df = joint_df.replace([np.inf, -np.inf], np.nan)
 
             print('\n  MLE edge found from source {:d} to destination {:d} with strength {:.2f}'.format(joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])][0], dest[cnt-1], joint_df['admix. prop.'].iloc[np.nanargmax(joint_df['log-lik'])]))
-            print('\n  Log-likelihood after adding MLE edge: {:.1f} (p-val = {:.2e})\n'.format(np.nanmax(joint_df['log-lik']),chi2.sf(2*(np.nanmax(joint_df['log-lik'])-nllnull),df=1)))
+            print('  Log-likelihood after fitting deme {:d}: {:.1f}'.format(dest[cnt-1], np.nanmax(joint_df['log-lik'])))
+            # print('\n  Log-likelihood after adding MLE edge: {:.1f} (p-val = {:.2e})\n'.format(np.nanmax(joint_df['log-lik']),chi2.sf(2*(np.nanmax(joint_df['log-lik'])-nllnull),df=1)))
 
             args['edge'] = [joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])]]; args['mode'] = 'update'
             obj.eems_neg_log_lik([joint_df['admix. prop.'].iloc[np.nanargmax(joint_df['log-lik'])]], opts=args)
@@ -509,6 +504,10 @@ class SpatialGraph(nx.Graph):
                            'pval': chi2.sf(2*(-np.nanmax(joint_df['log-lik'])-nllnull), df=1)}
             cnt += 1
 
+            # reset the graph to baseline before fitting next LRE
+            self.edge = []; self.c = []
+            self._update_graph(usew, uses2)
+
         print("Exiting independent fitting algorithm after adding {:d} edge(s).".format(cnt-1))
         
         return results
@@ -523,7 +522,7 @@ class SpatialGraph(nx.Graph):
         fraction_of_pairs=0.05, 
         nedges_to_same_deme=2,
         pval=0.05,
-        top=0.05,
+        top=0.01,
         # numdraws=100,
         exclude_boundary=True,
         maxls=50,
@@ -546,6 +545,7 @@ class SpatialGraph(nx.Graph):
             optimize_q (:obj:'str'): indicator for method of optimizing residual variances (one of 'n-dim', '1-dim' or None)
             fraction_of_pairs (:obj:`float`): fractions of pairs with largest negative residual to use when compiling list of putative recipient demes
             pval (:obj:`float`): p-value for assessing whether adding a long-range edge significantly increases log-likelihood over previous fit
+            top (:obj:`float`): what is the top fraction or number of demes to choose when fitting the joint surface? (default: 0.01)
             nedges_to_same_deme (:obj: `int`): how many long-range edges to allow for same recipient deme? (default: 2)
             exclude_boundary (:obj:`Bool`): whether to exclude boundary nodes in fitting procedure
             alpha (:obj:`float`): penalty strength on log weights
@@ -657,8 +657,7 @@ class SpatialGraph(nx.Graph):
             previdx = [i+1 for i, x in enumerate(destid[:-1]) if x==destid[-1]]
             if len(previdx) == 1:
                 # the deme already has one previous edge to it
-                # compute overlap based on top 10% of surface_df instead of joint_surface_df
-                overlap = len(set(joint_df['(source, dest.)']) & set(results[previdx[0]]['joint_surface_df']['(source, dest.)'])) / len(set(joint_df['(source, dest.)']) | set(results[previdx[0]]['joint_surface_df']['(source, dest.)']))
+                overlap = len(set(joint_df['(source, dest.)']) & set(results[previdx[0]]['surface_df']['(source, dest.)'])) / len(set(joint_df['(source, dest.)']) | set(results[previdx[0]]['surface_df']['(source, dest.)']))
                 print("Overlap in coverage source area between current and previous fit to deme {:d} is {:d}%.\n".format(destid[-1], int(overlap*100)))
 
                 # print(joint_df['(source, dest.)'].iloc[np.nanargmax(joint_df['log-lik'])], results[previdx[0]]['joint_surface_df']['(source, dest.)'].iloc[np.nanargmax(results[previdx[0]]['joint_surface_df']['log-lik'])])
@@ -795,7 +794,8 @@ class SpatialGraph(nx.Graph):
         """
         # check inputs
         assert isinstance(lamb, (numbers.Real,)) and lamb >= 0, "lamb must be a float >=0"
-        assert isinstance(lamb_q, (numbers.Real,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
+        if optimize_q is not None:
+            assert isinstance(lamb_q, (numbers.Real,)) and lamb_q >= 0, "lamb_q must be a float >= 0"
         assert isinstance(maxls, (numbers.Integral,)), "maxls must be int"
         assert maxls > 0, "maxls must be at least 1"
         assert isinstance(m, (numbers.Integral,)), "m must be int"
@@ -864,13 +864,6 @@ class SpatialGraph(nx.Graph):
                 approx_grad=False,
             )
 
-            # update the dict with proxy sources
-            # for s in self.perm_idx[self.n_observed_nodes:]:
-            #     # self.proxs[s] = np.argmin([nx.shortest_path_length(self, source=s, target=d, weight=self._get_dist) for d in self.perm_idx[:self.n_observed_nodes]])
-            #     _, distances = nx.dijkstra_predecessor_and_distance(self, s, weight=self._get_dist)
-            #     target_distances = {node: dist for node, dist in distances.items() if node in set(self.perm_idx[:self.n_observed_nodes])}
-            #     self.proxs[s] = np.where(self.perm_idx==min(target_distances.items(), key=lambda x: x[1])[0])[0][0]
-
         else: 
             if alpha is None:
                 alpha = 1.0 / self.w.mean()
@@ -914,7 +907,7 @@ class SpatialGraph(nx.Graph):
                 Rmatdo = -2 * obj.Linv[self.n_observed_nodes:, :self.n_observed_nodes] + obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes].diagonal() + obj.Linv_diag[self.n_observed_nodes:, np.newaxis]
                 Rmatoo = -2*obj.Linv[:self.n_observed_nodes, :self.n_observed_nodes] + np.broadcast_to(np.diag(obj.Linv),(self.n_observed_nodes, self.n_observed_nodes)).T + np.broadcast_to(np.diag(obj.Linv), (self.n_observed_nodes, self.n_observed_nodes))
 
-                self.q_prox = 1/interpolate_q(self.q, Rmatdo, Rmatoo)
+                self.q_prox = 10**interpolate_q(np.log10(1/self.q), Rmatdo, Rmatoo)
             else:    
                 self.w = np.exp(res[0])
                 
@@ -952,7 +945,6 @@ class SpatialGraph(nx.Graph):
 
         obj = Objective(self)
         # computing pairwise covariance & distances between demes
-        # TODO check if inv_cov needs to be computed here and set to False for speed-up
         fit_cov, _, emp_cov = comp_mats(obj)
         emp_dist = cov_to_dist(emp_cov)[np.tril_indices(self.n_observed_nodes, k=-1)]
         if res_dist is None:
@@ -1121,7 +1113,7 @@ class SpatialGraph(nx.Graph):
         lamb, 
         lamb_q,
         optimize_q='n-dim',
-        top=0.05, 
+        top=0.01, 
         exclude_boundary=True, 
         usew=None, uses2=None
     ):
@@ -1135,7 +1127,6 @@ class SpatialGraph(nx.Graph):
             (:obj:`pandas.DataFrame`)
         """
 
-        # TODO potentially pass in obj as an object (low priority)
         obj = Objective(self); obj.inv(); obj.grad(reg=False)
         obj.Linv_diag = obj._comp_diag_pinv()
 
@@ -1368,10 +1359,6 @@ def coordinate_descent(
     # flag to optimize admixture proportion
     optimc = True
 
-    # TODO check if this is required
-    # if len(obj.sp_graph.edge) == 1:
-    #     obj.sp_graph.c = [np.random.uniform(0, 0.2)]
-
     for bigiter in range(maxiter):
         # first fit admix. prop. c given the weights
         # resc = minimize(obj.eems_neg_log_lik, x0=np.random.random(len(obj.sp_graph.edge)), args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)]*len(obj.sp_graph.edge))
@@ -1379,7 +1366,7 @@ def coordinate_descent(
         resc = minimize(obj.eems_neg_log_lik, x0=obj.sp_graph.c, args={'edge':obj.sp_graph.edge,'mode':'compute'}, method='L-BFGS-B', bounds=[(0,1)]*len(obj.sp_graph.edge))
 
         if resc.status != 0:
-            print(' (warning: admix. prop. optimization failed for deme {:d}, increase factr slightly or change optimization parameters) '.format(obj.sp_graph.edge[-1][0]))
+            # print(' (warning: admix. prop. optimization failed for deme {:d}, increase factr slightly or change optimization parameters) '.format(obj.sp_graph.edge[-1][0]))
             return None
 
         if obj.sp_graph.c is not None:

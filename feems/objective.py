@@ -230,7 +230,6 @@ class Objective(object):
                         resmat[did, i] = resmat[i, did]
             
         # convert distance matrix to covariance matrix for use in FEEMS
-        # TODO check if you can use the same machinery as FEEMS by computing the covariance matrix from resmat instead of
         Sigma = dist_to_cov(resmat)
 
         # Eqn 18 in Marcus et al 2021 
@@ -369,17 +368,18 @@ class Objective(object):
                     assert did < self.sp_graph.n_observed_nodes, "ensure that the destination is a sampled deme (check ID from the map or from output of extract_outliers)"
                     opts['lre'].append((sid,did))
 
-            # TODO speed up matrix multiplications seeing if C @ dd @ C.T can be done wiht faster vector ops
             if opts['mode'] != 'update':
                 dd = self._compute_delta_matrix(c, opts)
                 try:
-                    nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -(self.C @ dd @ self.C.T)/self.sp_graph.n_snps)
+                    res = dd[1:,1:] + dd[0,0] - dd[0,1:].reshape(1,-1) - dd[1:,0].reshape(-1,1) 
+                    nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -res/self.sp_graph.n_snps)
                 except: 
                     nll = np.inf
             else:
                 opts['delta'] = self._compute_delta_matrix(c, opts)
                 try:
-                    nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -(self.C @ opts['delta'] @ self.C.T)/self.sp_graph.n_snps)
+                    res = opts['delta'][1:,1:] + opts['delta'][0,0] - opts['delta'][0,1:].reshape(1,-1) - opts['delta'][1:,0].reshape(-1,1) 
+                    nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -res/self.sp_graph.n_snps)
                 except:
                     nll = np.inf
         else:
@@ -389,7 +389,8 @@ class Objective(object):
                     opts['delta'] = dd
             
             try:
-                nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -(self.C @ dd @ self.C.T)/self.sp_graph.n_snps)
+                res = dd[1:,1:] + dd[0,0] - dd[0,1:].reshape(1,-1) - dd[1:,0].reshape(-1,1)
+                nll = -wishart.logpdf(-self.CDCt, self.sp_graph.n_snps, -res/self.sp_graph.n_snps)
             except:
                 nll = np.inf
                    
@@ -442,14 +443,6 @@ class Objective(object):
                     resmat[i, target] += - c * Rmat[i, target] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
                                          - c * Q1mat[target, target] + c * self.sp_graph.q_prox[source - self.sp_graph.n_observed_nodes]
                     resmat[target, i] = resmat[i, target]
-
-                ## testing with proxs framing 
-                ## proxs = np.argmin([nx.shortest_path_length(self.sp_graph, source=source,target=d) for d in set([k for k, v in nx.get_node_attributes(self.sp_graph,'n_samples').items() if v>0])-set([source])])
-                # for i in set(range(self.sp_graph.n_observed_nodes)) - {source, target} - set(neighs):
-                #     Ri1 = -2 * self.Linv[source, i] + self.Linv[i, i] + self.Linv_diag[source]
-                #     resmat[i, target] += - c * Rmat[i, target] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
-                #                          - c * Q1mat[target, target] + c * Q1mat[self.sp_graph.proxs[source], self.sp_graph.proxs[source]]
-                #     resmat[target, i] = resmat[i, target]
 
         return np.array(resmat)
 
