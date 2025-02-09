@@ -18,7 +18,7 @@ _This method is still currently under review, so there may be some changes along
 
 **F**ast **E**stimation of **E**ffective **M**igration **S**urfaces + ad**mix**ture (`FEEMSmix`) 
 is built on top of `FEEMS`, and is a method for representing long-range gene flow 
-on a background migration surface estimated by `FEEMS`. 
+on a background migration surface estimated by `FEEMS`. Currently, `FEEMSmix` can only be installed via the `git clone` mechanism listed below. Upon publication of the manuscript detailing the method, `FEEMSmix` will be integrated into the `FEEMS` package and can be installed via pip or conda. 
 
 The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. 
 
