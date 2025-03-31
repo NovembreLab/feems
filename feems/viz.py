@@ -957,7 +957,7 @@ def plot_FEEMSmix_summary(
         axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='o', color='r', s=20, alpha=0.8)
         axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
         axs[0].set_title('Baseline\nLL = {:.1f}'.format(diag_results[0]['log-lik']))
-        fig.supxlabel('Fitted distance'); fig.supylabel('Genetic distance');
+        axs[1].set_ylabel('Genetic distance'); fig.supxlabel('Fitted distance');
         
         for i in range(1, len(diag_results)):
             X = add_constant(diag_results[i]['fit_dist'])

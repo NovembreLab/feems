@@ -20,7 +20,7 @@ _This method is still currently under review, so there may be some changes along
 is built on top of `FEEMS`, and is a method for representing long-range gene flow 
 on a background migration surface estimated by `FEEMS`. Currently, `FEEMSmix` can only be installed via the `git clone` mechanism listed below. Upon publication of the manuscript detailing the method, `FEEMSmix` will be integrated into the `FEEMS` package and can be installed via pip or conda. 
 
-The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. 
+The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. for details on the method see our [preprint](https://doi.org/10.1101/2025.02.10.637386).  
 
 #### Jump to [RUNNING `FEEMS`](https://github.com/VivaswatS/feems/blob/main/README.md#running-feems) to get started right away!  
 
@@ -77,7 +77,7 @@ np.savetxt('edgew.csv', np.vstack((np.array(sp_graph.edges).T, sp_graph.w)).T, d
 # write the deme coordinates + sample size (node attributes) out into a csv file
 np.savetxt('nodepos.csv', np.vstack((sp_graph.node_pos.T, [sp_graph.nodes[n]['n_samples'] for n in range(len(sp_graph.nodes))])).T, delimiter=',')
 
-# (if using FEEMSmix, print the MLE source & admix. prop.)
+# (if using `FEEMSmix`,` print the MLE source & admix. prop.)
 contour_df = sp_graph.calc_joint_contour(...) 
 print(contour_df.iloc[np.argmax(contour_df['scaled log-lik'])])
 ```
@@ -114,7 +114,7 @@ then install `FEEMS` using the [Bioconda recipe][bioconda-recipe]:
 conda install -c bioconda feems -c conda-forge
 ```
 
-See the next section for alternative ways to install FEEMS, or if 
+See the next section for alternative ways to install `FEEMS`, or if 
 "conda install" worked for you, skip ahead to "Running `FEEMS`". 
 
 ## Alternative installation instructions (Python >=3.8)
