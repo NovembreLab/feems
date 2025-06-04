@@ -27,6 +27,8 @@ setup(
     include_package_data=True,
     package_data={
         "": [
+            "data/grid_500.shp",
+            "data/grid_500.shx"
             "data/grid_250.shp",
             "data/grid_250.shx",
             "data/grid_100.shp",

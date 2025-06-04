@@ -318,12 +318,12 @@ def simulate_genotypes(
         ]
 
     if asymmetric:
-        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+        migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
         for id, node in enumerate(long_range_nodes):
             migmat[node[1], node[0]] = long_range_edges[id]
             migmat[node[0], node[1]] = 0.
     else:
-        migmat = np.array(nx.adj_matrix(graph, weight="w").toarray().tolist())
+        migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
 
     # plt.imshow(migmat,cmap='Greys'); plt.colorbar()
 

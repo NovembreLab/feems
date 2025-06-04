@@ -72,6 +72,7 @@ def run_cv(
                 alpha = float(alpha)
                 sp_graph_train.fit(
                     lamb=lamb,
+                    optimize_q=None,
                     w_init=w_init,
                     s2_init=s2_init,  
                     alpha=alpha,

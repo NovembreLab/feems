@@ -1,6 +1,6 @@
 [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/NovembreLab/feems/main)
 
-This repository contains software to run both `FEEMS` and `FEEMSmix`. Since `FEEMSmix` is built on top of `FEEMS` and as an extension, only a _single_ installation is required to run both methods. 
+This repository contains software to run both `FEEMS` and `FEEMSmix`. Since `FEEMSmix` is built as an extension on top of `FEEMS`, only a _single_ installation is required to run both methods. 
 
 # `FEEMS`
 

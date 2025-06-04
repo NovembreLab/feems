@@ -16,7 +16,7 @@ import pandas as pd
 from statsmodels.distributions.empirical_distribution import ECDF
 
 from .objective import Objective, loss_wrapper, neg_log_lik_w0_s2, comp_mats, interpolate_q
-from .utils import cov_to_dist, dist_to_cov, benjamini_hochberg, get_robust_normal_pvals_lower, parametric_bootstrap
+from .utils import cov_to_dist, dist_to_cov, benjamini_hochberg, get_robust_normal_pvals_lower, parametric_bootstrap, left_tail_gauss_outliers
 
 class SpatialGraph(nx.Graph):
     def __init__(self, genotypes, sample_pos, node_pos, edges, scale_snps=True):
@@ -412,6 +412,7 @@ class SpatialGraph(nx.Graph):
         opts=None
     ):
         """Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (`alternate method`).
+        
         Required:
             lamb (:obj:`float`): penalty strength on weights
             lamb_q (:obj:`float`): penalty strength on the residual variances
@@ -535,6 +536,7 @@ class SpatialGraph(nx.Graph):
         opts=None
     ):
         """Function to iteratively fit a long range gene flow event to the graph until there are no more outliers (`alternate method`).
+        
         Required:
             outliers_df (:obj:`pandas.DataFrame`): outlier DataFrame as output by the sp_graph.extract_outliers() function
             lamb (:obj:`float`): penalty strength on weights
@@ -596,19 +598,27 @@ class SpatialGraph(nx.Graph):
         print('Log-likelihood of initial fit: {:.1f}\n'.format(-nll[-1]))
             
         # choice to pick the deme with the largest number of implicated outliers
-        concat = pd.concat([outliers_df['dest.']]).value_counts()
-        print('Deme ID and # of times it was implicated as an outlier:')
-        print(concat.iloc[:5])
+        # concat = pd.concat([outliers_df['dest.']]).value_counts()
+        # print('Deme ID and # of times it was implicated as an outlier:')
+        # print(concat.iloc[:5])
 
-        # resolving ties if any...
-        maxidx = outliers_df['dest.'].value_counts()[outliers_df['dest.'].value_counts() == outliers_df['dest.'].value_counts().max()].index.tolist()
-        if len(maxidx) > 1:
-            # sort based on p-values
-            min_pval = outliers_df[outliers_df['dest.'].isin(maxidx)].groupby('dest.')['scaled diff.'].min()
-            maxidx[0] = min_pval[min_pval == min_pval.min()].index[0]
-            print("Multiple putative outlier demes found, but only adding largest outlier: deme {:d}".format(maxidx[0]))
-        destid.append(maxidx[0])
-        super_destid.append(maxidx[0])
+        # # resolving ties if any...
+        # maxidx = outliers_df['dest.'].value_counts()[outliers_df['dest.'].value_counts() == outliers_df['dest.'].value_counts().max()].index.tolist()
+        # if len(maxidx) > 1:
+        #     # sort based on p-values
+        #     min_pval = outliers_df[outliers_df['dest.'].isin(maxidx)].groupby('dest.')['scaled diff.'].min()
+        #     maxidx[0] = min_pval[min_pval == min_pval.min()].index[0]
+        #     print("Multiple putative outlier demes found, but only adding largest outlier: deme {:d}".format(maxidx[0]))
+        # destid.append(maxidx[0])
+        # super_destid.append(maxidx[0])
+
+        softmin_stat = lambda group: np.sum(group * np.exp(-group)) / np.sum(np.exp(-group))
+        print('Deme ID and aggregate deviation statistic:')
+        print(outliers_df.groupby('dest.')['scaled diff.'].apply(softmin_stat).sort_values(ascending=True).iloc[:5])
+
+        maxidx = outliers_df.groupby('dest.')['scaled diff.'].apply(softmin_stat).sort_values(ascending=True).keys()[0]
+        destid.append(maxidx)
+        super_destid.append(maxidx)
 
         fit_cov, _, emp_cov = comp_mats(obj)
         fit_dist = cov_to_dist(fit_cov)[np.tril_indices(self.n_observed_nodes, k=-1)]
@@ -717,10 +727,10 @@ class SpatialGraph(nx.Graph):
                 
                 self.edge = self.edge[:-1]; self.c = self.c[:-1]
 
-            maxidx = outliers_df.groupby('dest.').agg({'dest.': 'count', 'scaled diff.': 'min'}).rename(columns={'dest.': 'count'}).sort_values(['count', 'scaled diff.'], ascending=[False, True]).index.tolist()
+            maxidx = list(outliers_df.groupby('dest.')['scaled diff.'].apply(softmin_stat).sort_values(ascending=True).keys())
 
-            print('Deme ID and # of times it was implicated as an outlier:')
-            print(pd.concat([outliers_df['dest.']]).value_counts().iloc[:5])
+            print('Deme ID and aggregate deviation statistic:')
+            print(outliers_df.groupby('dest.')['scaled diff.'].apply(softmin_stat).sort_values(ascending=True).iloc[:5])
 
             # include a way of skipping over the most recent deme if it is picked again (was experiencing some weird refitting issues)
             if super_destid[-1] in maxidx:
@@ -961,11 +971,12 @@ class SpatialGraph(nx.Graph):
         
         # bh = benjamini_hochberg(emp_dist, fit_dist, fraction_of_pairs=fraction_of_pairs)
         # print('{:d} outlier pairs found'.format(np.sum(bh)))
+        bh = left_tail_gauss_outliers(emp_dist, fit_dist, )
 
-        logratio = np.log(emp_dist/fit_dist)
+        logratio = np.log(emp_dist/fit_dist) - np.mean(np.log(emp_dist/fit_dist))
                 
-        # for k in np.where(bh)[0]:
-        for k in np.argsort(logratio)[:int(len(logratio)*fraction_of_pairs)]:
+        for k in np.where(bh)[0]:
+        # for k in np.argsort(logratio)[:int(len(logratio)*fraction_of_pairs)]:
             # code to convert single index to matrix indices
             x.append(np.floor(np.sqrt(2*k+0.25)-0.5).astype('int')+1); y.append(int(k - 0.5*x[-1]*(x[-1]-1)))
 
@@ -1012,13 +1023,19 @@ class SpatialGraph(nx.Graph):
             return None
         else:
             # print('{:d} outlier deme pairs found'.format(len(df)))
+            softmin_stat = lambda group: np.sum(group * np.exp(-group)) / np.sum(np.exp(-group))
             if verbose:
                 print(df.sort_values(by='scaled diff.').to_string(index=False))
-                print('  Putative recipient demes (and # of times the deme appears as an outlier): ')
-                print(df['dest.'].value_counts())
+                # print('  Putative recipient demes (and # of times the deme appears as an outlier): ')
+                # print(df['dest.'].value_counts())
+                print('  Putative recipient demes (and aggregate deviation statistic): ')
+                # print(df.groupby('dest.')['scaled diff.'].sum().sort_values(ascending=True))
+                print(df.groupby('dest.')['scaled diff.'].apply(softmin_stat).sort_values(ascending=True))
             else:
-                b, c = np.unique(df['dest.'], return_counts=True)
-                print('  Putative recipient demes: {}'.format(b[np.argsort(-c)]))
+                # b, c = np.unique(df['dest.'], return_counts=True)
+                # print('  Putative recipient demes: {}'.format(b[np.argsort(-c)]))
+                # print('  Putative recipient demes: {}'.format(df.groupby('dest.')['scaled diff.'].sum().sort_values(ascending=True).keys().tolist()))
+                print('  Putative recipient demes: {}'.format(df.groupby('dest.')['scaled diff.'].apply(softmin_stat).sort_values(ascending=True).keys().tolist()))
             return df.sort_values('scaled diff.', ascending=True)
 
     def extract_outliers_boot(

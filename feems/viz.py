@@ -648,8 +648,8 @@ class Viz(object):
         custom_cmap = clr.ListedColormap(colors)
         norm = clr.BoundaryNorm(bounds, custom_cmap.N, extend='min')
         
-        # only display points that have scaled log-lik > levels
-        for idx, row in df.loc[df['scaled log-lik']>=np.nanmin(df['scaled log-lik'])].iterrows():
+        # for idx, row in df.loc[df['scaled log-lik']>=np.nanmin(df['scaled log-lik'])].iterrows():
+        for idx, row in df.loc[df['scaled log-lik']>=-200].iterrows():
             self.ax.scatter(self.grid[row['(source, dest.)'][0],0], self.grid[row['(source, dest.)'][0],1], 
                             c=row['scaled log-lik'],
                             marker='h', zorder=2, edgecolors='white', cmap=custom_cmap, norm=norm, edgecolor='grey',
