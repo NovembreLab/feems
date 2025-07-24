@@ -247,7 +247,7 @@ class Viz(object):
                         verticalalignment="center",
                         size=self.obs_node_textsize,
                         zorder=self.obs_node_zorder,
-                        color='#707070'
+                        color='#8D8F8F'
                     )
                 else:    
                     self.ax.text(
@@ -258,7 +258,7 @@ class Viz(object):
                         verticalalignment="center",
                         size=self.obs_node_textsize,
                         zorder=self.obs_node_zorder,
-                        color='k'
+                        color='#4A6FA5'
                     )
         else:
             self.ax.scatter(
@@ -396,8 +396,9 @@ class Viz(object):
         )
         self.edge_cbar.ax.tick_params(labelsize=self.cbar_ticklabelsize)
 
-    def draw_arrow(self, lre, c, hw=5, hl=8, tw=2, mutation_scale=1, ax=None):
+    def draw_arrow(self, lre, c, hw=5, hl=8, tw=2, mutation_scale=1, chiSq=20, ax=None):
         """Viz function to draw an arrow between two nodes on the graph & colored by an admixture proportion c between 0 and 1 (grey-scale, with 0 being white). Typically, an internal function, but can also be called externally.  
+        
         Required:
             lre (:obj:`list of tuple`): [(source, destination)] ID as displayed by baseline FEEMS viz
             c (:obj:`float`): admixture proportion of LRE
@@ -412,13 +413,22 @@ class Viz(object):
         """
         
         style = "Simple, tail_width={}, head_width={}, head_length={}".format(tw, hw, hl)
-        kw = dict(arrowstyle=style, 
-                  edgecolor='k', 
-                  facecolor=self.c_cmap(c), 
-                  zorder=3, 
-                  linewidth=0.2*tw)
+        if chiSq >= 11:
+            kw = dict(arrowstyle=style, 
+                      edgecolor='k', 
+                      facecolor=self.c_cmap(c), 
+                      zorder=3, 
+                      linestyle='-',
+                      linewidth=0.2*tw) 
+        else:
+            kw = dict(arrowstyle=style, 
+                      edgecolor='k', 
+                      facecolor=self.c_cmap(c), 
+                      zorder=3, 
+                      linewidth=0.2*tw,
+                      linestyle=(5, (5, 5)))
 
-        arrow = patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw, mutation_scale=mutation_scale, alpha=0.8)
+        arrow = patches.FancyArrowPatch((self.grid[lre[0][0],0],self.grid[lre[0][0],1]), (self.grid[lre[0][1],0],self.grid[lre[0][1],1]), connectionstyle="arc3,rad=-.3", **kw, mutation_scale=mutation_scale, alpha=0.9)
         self.ax.add_patch(arrow)
 
     def draw_admixture_pies(
@@ -571,14 +581,18 @@ class Viz(object):
 
         if linewidth is None:
             linewidth = 2*self.obs_node_linewidth
-            
+
+        softmin_stat = lambda group: np.log(-np.sum(group * np.exp(-group)))
+        oser = outliers_df.groupby('dest.')['scaled diff.'].apply(softmin_stat)
         for i in range(outliers_df.shape[0]): 
             self.ax.plot([self.grid[outliers_df['source'].iloc[i],0], self.grid[outliers_df['dest.'].iloc[i],0]],
                          [self.grid[outliers_df['source'].iloc[i],1], self.grid[outliers_df['dest.'].iloc[i],1]], 
                          linewidth=linewidth, color='grey')
         for dest in np.unique(outliers_df['dest.']):
-            self.ax.plot(self.grid[dest, 0], self.grid[dest, 1], 'o', 
-                         color='dodgerblue', markersize=10*np.log10(np.sum(outliers_df['dest.']==dest)+self.obs_node_size), alpha=0.5)      
+            # self.ax.plot(self.grid[dest, 0], self.grid[dest, 1], 'o', 
+            #              color='dodgerblue', markersize=10*np.log10(np.sum(outliers_df['dest.']==dest)+self.obs_node_size), alpha=0.5)      
+            self.ax.plot(self.grid[dest, 0], self.grid[dest, 1], 'o',
+                         color='dodgerblue', markersize=3*self.obs_node_size**(oser.loc[dest]/oser.max()), alpha=0.5)
     
     def draw_loglik_surface(
         self, 
@@ -739,17 +753,18 @@ class Viz(object):
 
         idx = range(1, len(seq_results))
         if exclude is not None:
-            idx = set(range(1,len(seq_results)))-set(demes)
-            alldemes = [seq_results[i]['deme'] for i in set(range(1,len(seq_results)))-set(demes)]
+            idx = set(range(1,len(seq_results)))-set(exclude)
+            alldemes = [seq_results[i]['deme'] for i in set(range(1,len(seq_results)))-set(exclude)]
         else:
             alldemes = [seq_results[i]['deme'] for i in range(1,len(seq_results))]
 
         mut_scale = magnifier*np.logspace(-0.5,0.5,len(seq_results))[::-1]
 
-        for i in idx: 
+        for i in list(idx)[::-1]: 
             self.draw_arrow([seq_results[i]['joint_surface_df']['(source, dest.)'].iloc[seq_results[i]['joint_surface_df']['log-lik'].argmax()]], 
                             seq_results[i]['joint_surface_df']['admix. prop.'].iloc[seq_results[i]['joint_surface_df']['log-lik'].argmax()],
-                            mutation_scale=mut_scale[i-1])  
+                            mutation_scale=mut_scale[i-1],
+                            chiSq=seq_results[i-1]['chiSq'])  
     
 
 def draw_FEEMSmix_surface(
@@ -867,8 +882,9 @@ def plot_FEEMSmix_summary(
         axs[0].set_xticks(range(len(diag_results)),['baseline']+['{:d} ('.format(i)+str(diag_results[i]['deme'])+')' for i in range(1,len(diag_results))],rotation=45); axs[0].grid()
     
         emp_dist = diag_results[0]['emp_dist']; fit_dist = diag_results[0]['fit_dist']
-        logratio = np.log(emp_dist/fit_dist)
-        bh = [np.where(np.round(logratio,5)==np.round(diag_results[0]['outliers_df']['scaled diff.'].iloc[i],5))[0][0] for i in range(len(diag_results[0]['outliers_df']))]
+        logratio = (np.log(emp_dist/fit_dist) - np.mean(np.log(emp_dist/fit_dist)))/np.std(np.log(emp_dist/fit_dist))
+        # bh = [np.where(np.round(logratio,5)==np.round(diag_results[0]['outliers_df']['scaled diff.'].iloc[i],5))[0][0] for i in range(len(diag_results[0]['outliers_df']))]
+        bh = np.argsort(logratio)[:len(diag_results[0]['outliers_df'])//2]
         
         X = add_constant(diag_results[len(diag_results)-1]['fit_dist'])
         mod = OLS(emp_dist, X)
@@ -891,7 +907,7 @@ def plot_FEEMSmix_summary(
         axs[1].plot(diag_results[len(diag_results)-1]['fit_dist'], emp_dist, '.k', alpha=0.7, markersize=6); 
         axs[1].axline((np.min(fit_dist),np.min(fit_dist)*betahat+muhat), slope=betahat, color='orange', ls='--', lw=2.5)
         axs[1].yaxis.set_major_locator(plt.MaxNLocator(3)); axs[1].xaxis.set_major_locator(plt.MaxNLocator(3))
-        axs[1].plot(diag_results[len(diag_results)-1]['fit_dist'][bh], emp_dist[bh], '.', color='r', markersize=8)
+        axs[1].plot(diag_results[len(diag_results)-1]['fit_dist'][bh], emp_dist[bh], '.', color='r', markersize=8, alpha=0.5)
         axs[1].set_ylabel('Genetic distance'); axs[1].set_xlabel(r'Fitted distance');
         # axs.text(0.2, 1., "R²={:.3f}".format(res.rsquared), fontsize=12); 
         axs[1].text(r2_x, r2_y, f"R²={res.rsquared:.3f}", fontsize=10, transform=axs[1].transAxes); 
@@ -904,7 +920,7 @@ def plot_FEEMSmix_summary(
         muhat, betahat = res.params
         axins.plot(fit_dist, emp_dist, '.k', alpha=0.5, markersize=6*inset_frac); 
         axins.axline((np.min(fit_dist),np.min(fit_dist)*betahat+muhat), slope=betahat, color='orange', ls='--', lw=3*inset_frac)
-        axins.plot(fit_dist[bh], emp_dist[bh], '.', color='r', markersize=8*inset_frac); 
+        axins.plot(fit_dist[bh], emp_dist[bh], '.', color='r', markersize=8*inset_frac, alpha=0.5); 
         axins.yaxis.set_major_locator(plt.MaxNLocator(2)); axins.xaxis.set_major_locator(plt.MaxNLocator(2))
         # axins.text(0.2, 1, "R²={:.3f}".format(res.rsquared), fontsize=10); 
         axins.text(r2_x-0.05, r2_y-0.1, f"R²={res.rsquared:.3f}", fontsize=7, transform=axins.transAxes)
@@ -942,7 +958,7 @@ def plot_FEEMSmix_summary(
         plt.subplots_adjust(hspace=0.5)  # Increased vertical space
 
         emp_dist = diag_results[0]['emp_dist']; fit_dist = diag_results[0]['fit_dist']
-        logratio = np.log(emp_dist/fit_dist)
+        logratio = (np.log(emp_dist/fit_dist) - np.mean(np.log(emp_dist/fit_dist)))/np.std(np.log(emp_dist/fit_dist))
         bh = np.argsort(logratio)[:len(diag_results[0]['outliers_df'])]
         X = add_constant(fit_dist)
         mod = OLS(emp_dist, X)
@@ -954,7 +970,7 @@ def plot_FEEMSmix_summary(
         x_ = np.linspace(np.min(diag_results[0]['fit_dist']), np.max(diag_results[0]['fit_dist']), 12);
         axs[0].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2);
         axs[0].yaxis.set_major_locator(plt.MaxNLocator(3)); axs[0].xaxis.set_major_locator(plt.MaxNLocator(3))
-        axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='o', color='r', s=20, alpha=0.8)
+        axs[0].scatter(diag_results[0]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='o', color='r', s=20, alpha=0.5)
         axs[0].text(0.6, 0.2, "R²={:.3f}".format(res.rsquared), transform=axs[0].transAxes, size='large')
         axs[0].set_title('Baseline\nLL = {:.1f}'.format(diag_results[0]['log-lik']))
         axs[1].set_ylabel('Genetic distance'); fig.supxlabel('Fitted distance');
@@ -966,7 +982,7 @@ def plot_FEEMSmix_summary(
             muhat, betahat = res.params
             # bh = np.where(np.abs(diag_results[i]['fit_dist'] - diag_results[i-1]['fit_dist']) >= 0.21 * (np.max(diag_results[0]['fit_dist'])-np.min(diag_results[0]['fit_dist'])))[0]
             axs[i].scatter(diag_results[i]['fit_dist'], diag_results[0]['emp_dist'], marker=".", alpha=0.8, zorder=0, color="k", s=20)
-            axs[i].scatter(diag_results[i]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='o', color='r', s=20, alpha=0.8)
+            axs[i].scatter(diag_results[i]['fit_dist'][bh], diag_results[0]['emp_dist'][bh], marker='o', color='r', s=20, alpha=0.5)
             x_ = np.linspace(np.min(diag_results[i]['fit_dist']), np.max(diag_results[i]['fit_dist']), 12); 
             axs[i].yaxis.set_major_locator(plt.MaxNLocator(3)); axs[i].xaxis.set_major_locator(plt.MaxNLocator(3))
             axs[i].plot(x_, muhat + betahat * x_, zorder=2, color="orange", linestyle='--', linewidth=2); 

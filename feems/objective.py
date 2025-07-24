@@ -209,21 +209,11 @@ class Objective(object):
                         resmat[did, i] = resmat[i, did]
                 # if source deme is unsampled
                 else:
-                    neighs = list(self.sp_graph.neighbors(nx.get_node_attributes(self.sp_graph, 'permuted_idx')[sid]))
-                    neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph, 'n_samples')[s] > 0]
-        
                     R1d = -2 * self.Linv[sid, did] + self.Linv_diag[sid] + self.Linv[did, did]
                     R1 = np.array(-2 * self.Linv[sid, :self.sp_graph.n_observed_nodes].T + np.diag(self.Linv) + self.Linv_diag[sid])
-        
-                    # Update for neighboring sampled demes
-                    for n in neighs:
-                        s = [k for k, v in nx.get_node_attributes(self.sp_graph, 'permuted_idx').items() if v == n][0]
-                        resmat[s, did] += - c * Rmat[s, did] + 0.5 * (c**2 - c) * R1d + \
-                                          - c * Q1mat[s, s] + c * Q1mat[did, did]
-                        resmat[did, s] = resmat[s, did]
-        
+                    
                     # Update for non-neighboring demes
-                    for i in set(range(self.sp_graph.n_observed_nodes)) - {sid, did} - set(neighs):
+                    for i in set(range(self.sp_graph.n_observed_nodes)) - {sid, did}:
                         Ri1 = -2 * self.Linv[sid, i] + self.Linv_diag[i] + self.Linv_diag[sid]
                         resmat[i, did] += - c * Rmat[i, did] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
                                           - c * Q1mat[did, did] + c * self.sp_graph.q_prox[sid - self.sp_graph.n_observed_nodes]
@@ -427,18 +417,9 @@ class Objective(object):
                     resmat[target, i] = resmat[i, target]
             else:
                 # Case where source is an unsampled deme
-                neighs = list(self.sp_graph.neighbors(self.sp_graph.perm_idx[source]))
-                neighs = [s for s in neighs if nx.get_node_attributes(self.sp_graph, 'n_samples')[s] > 0]
-                
                 R1d = -2 * self.Linv[source, target] + self.Linv_diag[source] + self.Linv[target, target]
     
-                for n in neighs:
-                    s = [k for k, v in nx.get_node_attributes(self.sp_graph, 'permuted_idx').items() if v == n][0]
-                    resmat[s, target] += - c * Rmat[s, target] + 0.5 * (c**2 - c) * R1d + \
-                                         - c * Q1mat[s, s] + c * Q1mat[target, target]
-                    resmat[target, s] = resmat[s, target]
-    
-                for i in set(range(self.sp_graph.n_observed_nodes)) - {source, target} - set(neighs):
+                for i in set(range(self.sp_graph.n_observed_nodes)) - {source, target}: 
                     Ri1 = -2 * self.Linv[source, i] + self.Linv[i, i] + self.Linv_diag[source]
                     resmat[i, target] += - c * Rmat[i, target] + c * Ri1 + 0.5 * (c**2 - c) * R1d + \
                                          - c * Q1mat[target, target] + c * self.sp_graph.q_prox[source - self.sp_graph.n_observed_nodes]
@@ -448,6 +429,7 @@ class Objective(object):
 
 def neg_log_lik_w0_s2(z, obj):
     """Computes negative log likelihood for a constant w and residual variance"""
+    z = np.clip(z, -20, 20)
     theta = np.exp(z)
     obj.lamb = 0.0
     obj.alpha = 1.0
@@ -466,6 +448,7 @@ def loss_wrapper(z, obj):
     (v2.0: changed to include node-specific variances as parameters)"""                
     n_edges = obj.sp_graph.size()
     if obj.sp_graph.optimize_q is not None:
+        z = np.clip(z, -20, 20)
         theta = np.exp(z)
         theta0 = theta[:n_edges]
         obj.sp_graph.comp_graph_laplacian(theta0)
@@ -473,6 +456,7 @@ def loss_wrapper(z, obj):
         theta1 = theta[n_edges:]
         obj.sp_graph.comp_precision(s2=theta1)
     else:
+        z = np.clip(z, -20, 20)
         theta = np.exp(z)
         obj.sp_graph.comp_graph_laplacian(theta)
     obj.inv()
@@ -526,6 +510,9 @@ def exponential_variogram(h, nugget, sill, rangep):
     return nugget + sill * (1 - np.exp(-h / rangep))
 
 def fit_variogram(distances, values):
+    """Function to return paramters from fitting an exponential variogram on the 
+    estimated q values inferred by FEEMS
+    """
     def objective(params):
         nugget, sill, rangep = params
         h = distances.flatten()
@@ -537,12 +524,14 @@ def fit_variogram(distances, values):
     return result.x
 
 def interpolate_q(observed_values, distances_to_observed, distances_between_observed):
+    """Function to interpolate the q values across the entire grid given the 
+    fit variogram 
+    """
     n_observed = len(observed_values)
     n_target = distances_to_observed.shape[0]
     
     # Fit variogram
     nugget, sill, rangep = fit_variogram(distances_between_observed, observed_values)
-    # nugget = res[0]; sill = res[1]; rangep = res[2]
     
     # Construct kriging matrices
     K = exponential_variogram(distances_between_observed, nugget, sill, rangep)

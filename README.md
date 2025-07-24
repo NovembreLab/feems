@@ -26,7 +26,7 @@ The `FEEMSmix` method and software was developed by Vivaswat Shastry and John No
 
 # INSTALLATION
 
-Note: MS Windows users will struggle to install `FEEMS` directly in a 
+Note: MS Windows users *might* struggle to install `FEEMS` directly in a 
 Windows environment because at least one of the dependencies does not
 have a Windows port. A virtual Linux machine should be preferable if 
 you are on a Windows machine. 
@@ -76,8 +76,8 @@ conda install -c conda-forge scikit-sparse suitesparse
 conda install -c conda-forge cartopy
 ```
 
-Jupyter and jupyterlab are also needed to explore the example notebooks but 
-are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package (you could also use `brew`, if you want it to be available outside the environment):
+Jupyter and jupyterlab are only needed to explore the example notebooks but 
+are *not* required for the functioning of the `FEEMS`/`FEEMSmix` package. You could also use `brew`, if you want it to be available outside the environment:
 
 ```bash
 pip install notebook

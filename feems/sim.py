@@ -425,11 +425,26 @@ def simulate_genotypes_w_admixture(
         population_configurations = [
             msprime.PopulationConfiguration(sample_size=sample_sizes[i], initial_size=n_e) for i in range(d)
         ]
-        
+
+    # if we want to simulate low migration around destination 
+    migmat = np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist())
+    # migmat[32,33] = 0.001; migmat[33,32] = 0.001
+    # migmat[32,44] = 0.001; migmat[44,32] = 0.001
+    # migmat[32,43] = 0.001; migmat[43,32] = 0.001
+    # migmat[33,44] = 0.001; migmat[44,33] = 0.001
+    # migmat[33,45] = 0.001; migmat[45,33] = 0.001
+    # migmat[43,44] = 0.001; migmat[44,43] = 0.001
+    # migmat[43,56] = 0.001; migmat[56,43] = 0.001
+    # migmat[44,45] = 0.001; migmat[45,44] = 0.001
+    # migmat[44,56] = 0.001; migmat[56,44] = 0.001
+    # migmat[44,57] = 0.001; migmat[57,44] = 0.001
+    # migmat[45,57] = 0.001; migmat[57,45] = 0.001
+    # migmat[56,57] = 0.001; migmat[57,56] = 0.001
+    
     # tree sequences
     ts = msprime.simulate(
         population_configurations=population_configurations,
-        migration_matrix=np.array(nx.adjacency_matrix(graph, weight="w").toarray().tolist()),
+        migration_matrix=migmat,
         demographic_events=[msprime.MassMigration(time_of_adm[i], source=long_range_nodes[i][1], dest=long_range_nodes[i][0], proportion=admixture_props[i]) for i in range(len(admixture_props))],
         length=chrom_length,
         mutation_rate=mu,
