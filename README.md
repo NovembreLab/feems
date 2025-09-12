@@ -46,7 +46,7 @@ this worked for you, skip ahead to "Running `FEEMS`".
 
 ## Alternative installation mechanisms
 
-### using pip (Python >=3.8)
+### 1. using pip (Python >=3.8)
 
 As an alternative way to get started, setup a `conda` 
 environment:
@@ -87,22 +87,22 @@ Once the `conda` environment has
 been setup with these dependencies, we can install `FEEMS`/`FEEMSmix`:
 
 ```bash
-pip install git+https://github.com/VivaswatS/feems
+pip install git+https://github.com/NovembreLab/feems
 ```
 
-### from source
+### 2. from source
 
 You can also install `FEEMS`/`FEEMSmix` locally by cloning the repo by:
 
 ```bash
-git clone https://github.com/VivaswatS/feems
+git clone https://github.com/NovembreLab/feems
 cd feems/
 pip install .
 ```
 
 NOTE: Some users have reported a compatibility error arising at this step with the installation of shapely v1.7.1 (specificed in requirements.txt).  If this arises, recreate the `feems_e` conda environment, and run `pip install shapely --no-binary shapely` before the `pip install feems` command above. 
 
-### using the `.yml` file
+### 3. using the `.yml` file
 
 Another easy option is also to use the `feems.yml` file from this repo as a blueprint for the installation and setup of the appropriate conda environment. 
 
@@ -117,19 +117,19 @@ This will create an environment called `feems_e` which will contain all the depe
 
 # RUNNING `FEEMS`
 
-To help get your analysis started (and to verify appropriate installation), we provide an example workflow in the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). _This is a minimal workflow with only the most necessary functions with sparse interpretation of the results, we highly recommend going through [further-exploration.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/further-exploration.ipynb) for a more detailed explanation (same for `FEEMSmix`)._ 
+To help get your analysis started (and to verify appropriate installation), we provide an example workflow in the [getting-started.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/getting-started.ipynb) notebook. The notebook analyzes empirical data from North American gray wolves populations published in [Schweizer et al. 2015](https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA:o_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW). _This is a minimal workflow with only the most necessary functions with sparse interpretation of the results, we highly recommend going through [further-exploration.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/further-exploration.ipynb) for a more detailed explanation (same for `FEEMSmix`)._ 
 
-We also provide an alternative Python script here: [run.py](https://github.com/VivaswatS/feems/blob/main/run.py) for use on a cluster environment when running notebooks interactively are not an option. However, we _caution_ users to be mindful of default flag choices when using this script because it automates most of the analyses. 
+We also provide an alternative Python script here: [run.py](https://github.com/NovembreLab/feems/blob/main/run.py) for use on a cluster environment when running notebooks interactively are not an option. However, we _caution_ users to be mindful of default flag choices when using this script because it automates most of the analyses. 
 
-An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
+An example workflow using a λ value estimated from a cross-validation procedure is highlighted in [cross-validation.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/cross-validation.ipynb). We recommend using this procedure in choosing an appropriate λ value for the fit. 
 
 *NOTE:* We have not tested working with `plink == v2.0` format for input files.  
 
 # RUNNING `FEEMSmix`
 
-Since `FEEMSmix` is built on top of `FEEMS`, this analysis will start where the previous section left off (i.e., after the initial `FEEMS` fit). We will also use the data from North American gray wolves to illustrate the working of this method, provided at the bottom of the [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) and [further-exploration.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/further-exploration.ipynb). 
+Since `FEEMSmix` is built on top of `FEEMS`, this analysis will start where the previous section left off (i.e., after the initial `FEEMS` fit). We will also use the data from North American gray wolves to illustrate the working of this method, provided at the bottom of the [getting-started.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/getting-started.ipynb) and [further-exploration.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/further-exploration.ipynb). 
 
-Just like above, `FEEMSmix` can also be run using the Python script here: [run.py](https://github.com/VivaswatS/feems/blob/main/run.py). 
+Just like above, `FEEMSmix` can also be run using the Python script here: [run.py](https://github.com/NovembreLab/feems/blob/main/run.py). 
 
 # IMPORTANT UPDATES (since v1.0)
 
@@ -139,7 +139,7 @@ Please read the following changes carefully as we have updated older functionali
 
 In the original publication above, `FEEMS` only fit the edge weights on the graph and kept the node-specific parameters (proportional to heterozygosities) fixed at a constant value. However, in the latest version, we change the default functionality to be one in which we fit node-specific parameters under the model. This will increase both model fit and runtime, however, we've found this to be a worthy trade-off, especially when looking for long-range gene flow events on a baseline `FEEMS` grid. The old functionality can still be used by setting `sp_graph.fit(..., optimize_q=None)`. 
 
-This new map of deme-specific variance values (roughly proportional to effective population size, $N$) can also be visualized across the grid. See [getting-started.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/getting-started.ipynb) for an example of how to plot this and [cross-validation.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/cross-validation.ipynb) for more techincal details on this mode. 
+This new map of deme-specific variance values (roughly proportional to effective population size, $N$) can also be visualized across the grid. See [getting-started.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/getting-started.ipynb) for an example of how to plot this and [cross-validation.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/cross-validation.ipynb) for more techincal details on this mode. 
 
 ### Inclusion of a shape file with coarser resolution (`grid_500.sh*`)
 
@@ -188,21 +188,21 @@ np.savetxt('nodepos.csv', np.vstack((sp_graph.node_pos.T, [sp_graph.nodes[n]['n_
 contour_df = sp_graph.calc_joint_contour(...) 
 print(contour_df.iloc[np.argmax(contour_df['scaled log-lik'])])
 ```
-and then you can use this script [ggplot_feems.R](https://github.com/VivaswatS/feems/blob/main/feems/data/ggplot_feems.R) to plot both the baseline `FEEMS` weights *and* the long-range edges from `FEEMSmix` in R. With the figure in `ggplot2` format, you will also be able to add any extra features as you see fit (e.g., sample locations, ecological gradients, topographical features, etc.)
+and then you can use this script [ggplot_feems.R](https://github.com/NovembreLab/feems/blob/main/feems/data/ggplot_feems.R) to plot both the baseline `FEEMS` weights *and* the long-range edges from `FEEMSmix` in R. With the figure in `ggplot2` format, you will also be able to add any extra features as you see fit (e.g., sample locations, ecological gradients, topographical features, etc.)
 
-For example, see the figure produced from this script [here](https://github.com/VivaswatS/feems/blob/main/feems/data/ggplot_wolves.jpeg). 
+For example, see the figure produced from this script [here](https://github.com/NovembreLab/feems/blob/main/feems/data/ggplot_wolves.jpeg). 
 
 ### Inclusion of spatial prediction as a feature
 
-With `FEEMSmix`, we also provide the functionality of predicting the location of samples on a migration surface estimated with `FEEMS`. We observe comparable performance to another state-of-the-art deep learning method called `Locator` ([Battey _et al_ 2020](https://doi.org/10.7554/eLife.54507)) and believe it could be a useful tool for the spatial population genetics community. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
+With `FEEMSmix`, we also provide the functionality of predicting the location of samples on a migration surface estimated with `FEEMS`. We observe comparable performance to another state-of-the-art deep learning method called `Locator` ([Battey _et al_ 2020](https://doi.org/10.7554/eLife.54507)) and believe it could be a useful tool for the spatial population genetics community. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
 
 ### Visualization of admixture pies on `FEEMS` map
 
-We provide a basic function to overlay admixture proportions from an `admixture`/`STRUCTURE`-like model as pie charts on an underlying `FEEMS` map. This has proven useful as a visualization tool when interpreting both `FEEMS` and `FEEMSmix` results (especially, the latter). See example code in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
+We provide a basic function to overlay admixture proportions from an `admixture`/`STRUCTURE`-like model as pie charts on an underlying `FEEMS` map. This has proven useful as a visualization tool when interpreting both `FEEMS` and `FEEMSmix` results (especially, the latter). See example code in [miscellaneous-functions.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
 
 ### Visualization of model fits with PCA and `admixture` ([Alexander _et al_ 2009](https://genome.cshlp.org/content/19/9/1655.long))
 
-We provide functions to visualize fits of two widely-used models (Principal Components Analysis and `admixture`) to the observed genetic data and plot the outliers on a geographic map (akin to a `FEEMSmix` analysis). For PCA, we compute the principal components in-house, whereas for `admixture`, we ask you provide the .P & .Q matrices for different $K$ values. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/VivaswatS/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
+We provide functions to visualize fits of two widely-used models (Principal Components Analysis and `admixture`) to the observed genetic data and plot the outliers on a geographic map (akin to a `FEEMSmix` analysis). For PCA, we compute the principal components in-house, whereas for `admixture`, we ask you provide the .P & .Q matrices for different $K$ values. This functionality can be found in [miscellaneous-functions.ipynb](https://github.com/NovembreLab/feems/blob/main/docsrc/notebooks/miscellaneous-functions.ipynb).
 
 [anaconda]: https://www.anaconda.com/products/distribution
 [miniconda]: https://docs.conda.io
