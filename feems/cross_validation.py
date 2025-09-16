@@ -2,24 +2,24 @@ import math
 from copy import deepcopy
 
 import numpy as np
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, GroupKFold
 
 from .objective import Objective, comp_mats
 from .spatial_graph import query_node_attributes
-
+from .utils import cov_to_dist
 
 def run_cv(
     sp_graph,
     lamb_grid,
     alpha_grid=None,
-    n_folds=5,
+    n_folds=None,
     lb=1e-6,
     ub=1e6,
     factr=1e10,
     random_state=500,
     outer_verbose=True,
     inner_verbose=False,
-    alpha_fact=1.0
+    alpha_fact=1.0, 
 ):
     """Run cross-validation."""
     # s2 initialization
@@ -28,6 +28,10 @@ def run_cv(
     s2 = sp_graph.s2
     if alpha_grid is None:
         alpha_grid = np.array([alpha_fact / w0[0]])
+
+    # default is None i.e., leave-one-out CV
+    if n_folds is None:
+        n_folds = sp_graph.n_observed_nodes
 
     # setup cv indicies
     is_train = setup_k_fold_cv(sp_graph, n_folds, random_state=random_state)
@@ -40,7 +44,7 @@ def run_cv(
     # loop
     for fold in range(n_folds):
         if outer_verbose:
-            print("\n fold=", fold)
+            print("\n fold: ", fold)
 
         # partition into train and test sets
         if sp_graph.factor is not None:
@@ -68,9 +72,198 @@ def run_cv(
                 alpha = float(alpha)
                 sp_graph_train.fit(
                     lamb=lamb,
+                    optimize_q=None,
                     w_init=w_init,
-                    s2_init=s2_init,
+                    s2_init=s2_init,  
                     alpha=alpha,
+                    factr=factr,
+                    lb=math.log(lb),
+                    ub=math.log(ub),
+                    verbose=inner_verbose,
+                )
+
+                # evaluate on the validation set
+                _, err = predict_snps(sp_graph, sp_graph_train, sp_graph_test)
+    
+                cv_err[fold, i, a] = err
+
+                w_init = deepcopy(sp_graph_train.w)
+                if i == 0:
+                    init_list.append(w_init)
+
+    return cv_err
+
+def run_cv_joint(
+    sp_graph,
+    lamb_grid,
+    lamb_q_grid,
+    alpha_cv=None,
+    alpha_q=None,
+    n_folds=None,
+    lb=1e-6,
+    ub=1e6,
+    factr=1e10,
+    random_state=500,
+    outer_verbose=True,
+    inner_verbose=False,
+    alpha_fact=1.0
+): 
+    """Run cross validation on lamb & lamb_q, but holding alpha & alpha_q fixed at constant values (best-fit from constant model)"""
+    # s2 initialization
+    sp_graph.fit_null_model(verbose=inner_verbose)
+    w0 = sp_graph.w0
+    s2 = sp_graph.s2
+    if alpha_cv is None:
+        alpha_cv = alpha_fact / w0.mean()
+
+    # set alpha_q to inverse of mean heterozygosity (similar to weight penalty scheme)
+    if alpha_q is None:
+        alpha_q = alpha_fact / sp_graph.s2.mean()
+
+    # default is None i.e., leave-one-out CV
+    if n_folds is None:
+        n_folds = sp_graph.n_observed_nodes
+
+    # setup cv indicies
+    is_train = setup_k_fold_cv(sp_graph, n_folds, random_state=random_state)
+
+    n_lamb = lamb_grid.shape[0]
+    n_lamb_q = lamb_q_grid.shape[0]
+    cv_err = np.empty((n_folds, n_lamb_q, n_lamb))
+
+    # loop
+    for fold in range(n_folds):
+        if outer_verbose:
+            print("\n fold: ", fold)
+
+        # partition into train and test sets
+        if sp_graph.factor is not None:
+            sp_graph.factor = None
+        sp_graph_train, sp_graph_test = train_test_split(
+            sp_graph, 
+            is_train[:, fold]
+        )
+
+        # set of initialization for warmstart
+        init_w_list = [w0] 
+        init_s2_list = [s2]
+        
+        for i, lw in enumerate(lamb_grid):
+        # for iq, lq in enumerate(lamb_q_grid):
+            w_init = init_w_list[-1]
+            # for i, lw in enumerate(lamb_grid):
+            for iq, lq in enumerate(lamb_q_grid):
+                s2_init = init_s2_list[-1]
+                if outer_verbose:
+                    print(
+                        "\riteration lambda={}/{} lambda_q={}/{}".format(
+                            i + 1, n_lamb, iq + 1, n_lamb_q
+                        ),
+                        end="",
+                    )
+                # fit on train set
+                try: 
+                    sp_graph_train.fit(
+                        lamb=float(lw),
+                        lamb_q=float(lq), 
+                        optimize_q='n-dim', 
+                        w_init=w_init,
+                        s2_init=s2_init, 
+                        alpha_q=float(alpha_q), 
+                        alpha=float(alpha_cv),
+                        factr=factr,
+                        lb=math.log(lb),
+                        ub=math.log(ub),
+                        verbose=inner_verbose,
+                    )
+                    _, err = predict_snps(sp_graph, sp_graph_train, sp_graph_test)
+                    cv_err[fold, iq, i] = err
+                except: 
+                    cv_err[fold, iq, i] = np.nan 
+
+                w_init = deepcopy(sp_graph_train.w)
+                s2_init = deepcopy(sp_graph_train.s2)
+                if i == 0:
+                    init_w_list.append(w_init)
+                    init_s2_list.append(s2_init)
+
+    return cv_err
+
+def run_cvq(
+    sp_graph,
+    lamb_q_grid,
+    alpha_q_grid=None,
+    lamb_cv=None,
+    alpha_cv=None,
+    n_folds=None,
+    lb=1e-6,
+    ub=1e6,
+    factr=1e10,
+    random_state=500,
+    outer_verbose=True,
+    inner_verbose=False,
+    alpha_fact=1.0
+): 
+    """Run cross validation on lamb_q & alpha_q, but holding lamb & alpha constant at previously found values."""
+    
+    assert lamb_cv is not None, "provide CV lambda value as float"
+    assert lamb_cv >= 0.0, "lambda must be non-negative"
+
+    # s2 initialization
+    sp_graph.fit_null_model(verbose=inner_verbose)
+    w0 = sp_graph.w0
+    s2 = sp_graph.s2
+    if alpha_cv is None:
+        alpha_cv = alpha_fact / w0.mean()
+
+    # default is None i.e., leave-one-out CV
+    if n_folds is None:
+        n_folds = sp_graph.n_observed_nodes
+
+    # setup cv indicies
+    is_train = setup_k_fold_cv(sp_graph, n_folds, random_state=random_state)
+
+    # set alpha_q to inverse of mean heterozygosity (similar to weight penalty scheme)
+    if alpha_q_grid is None:
+        alpha_q_grid = alpha_fact / sp_graph.s2.mean()
+
+    n_lamb = lamb_q_grid.shape[0]
+    n_alpha = alpha_q_grid.shape[0]
+    cv_err = np.empty((n_folds, n_lamb, n_alpha))
+
+    # loop
+    for fold in range(n_folds):
+        if outer_verbose:
+            print("\n fold=", fold)
+
+        # partition into train and test sets
+        if sp_graph.factor is not None:
+            sp_graph.factor = None
+        sp_graph_train, sp_graph_test = train_test_split(
+            sp_graph, 
+            is_train[:, fold]
+        )
+
+        # set of initialization for warmstart
+        init_list = [w0]
+        for a, alpha in enumerate(alpha_q_grid):
+            w_init = init_list[-1]
+            s2_init = s2
+            for i, lamb in enumerate(lamb_q_grid):
+                if outer_verbose:
+                    print(
+                        "\riteration lambda={}/{} alpha={}/{}".format(
+                            i + 1, n_lamb, a + 1, n_alpha
+                        ),
+                        end="",
+                    )
+                # fit on train set
+                sp_graph_train.fit(
+                    lamb=float(lamb_cv),
+                    w_init=w_init,
+                    s2_init=s2_init, 
+                    optimize_q='n-dim', lamb_q=lamb, alpha_q=float(alpha), 
+                    alpha=float(alpha_cv),
                     factr=factr,
                     lb=math.log(lb),
                     ub=math.log(ub),
@@ -86,7 +279,6 @@ def run_cv(
                     init_list.append(w_init)
 
     return cv_err
-
 
 def setup_k_fold_cv(sp_graph, n_splits=5, random_state=12):
     """Setup cross-validation indicies.
@@ -121,7 +313,6 @@ def setup_k_fold_cv(sp_graph, n_splits=5, random_state=12):
                 is_train[i, k] = True
 
     return is_train
-
 
 def copy_spatial_graph(sp_graph, subsample_idx):
     """Copy SpatialGraph object and reassign spatial positions for subsamples
@@ -231,3 +422,4 @@ def predict_snps(sp_graph, sp_graph_train, sp_graph_test):
     ) ** 2 / (len(test_ids) * n_snps)
 
     return pred_frequencies, l2_err
+

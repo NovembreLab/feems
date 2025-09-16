@@ -1,0 +1,37 @@
+name: feems_e
+channels:
+  - conda-forge
+  - defaults
+  - bioconda
+dependencies:
+  - python=3.12
+  - numpy
+  - scipy
+  - matplotlib-base
+  - pandas
+  - scikit-learn
+  - cartopy
+  - geos
+  - proj
+  - shapely
+  - fiona
+  - pyproj
+  - msprime
+  - networkx
+  - tqdm
+  - openpyxl
+  - xlrd
+  - scikit-sparse
+  - suitesparse
+  - pytest
+  - flake8
+  - jupyter
+  - pip
+  - pip:
+    - tskit
+    - demes
+    - pandas-plink
+    - pandera
+    - xarray
+    - dask
+    - "--editable=git+https://github.com/VivaswatS/feems#egg=feems"
