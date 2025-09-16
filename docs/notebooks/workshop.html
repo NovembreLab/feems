@@ -1,0 +1,1186 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Getting Started with feems &#8212; feems  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css" />
+    <link rel="stylesheet" href="../_static/style.css" type="text/css" />
+    <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "document", "processHtmlClass": "math|output_area"}}</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt *,
+div.nbinput.container div.input_area pre,
+div.nboutput.container div.output_area pre,
+div.nbinput.container div.input_area .highlight,
+div.nboutput.container div.output_area .highlight {
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+div.nbinput.container > div[class*=highlight],
+div.nboutput.container > div[class*=highlight] {
+    margin: 0;
+}
+
+div.nbinput.container div.prompt *,
+div.nboutput.container div.prompt * {
+    background: none;
+}
+
+div.nboutput.container div.output_area .highlight,
+div.nboutput.container div.output_area pre {
+    background: unset;
+}
+
+div.nboutput.container div.output_area div.highlight {
+    color: unset;  /* override Pygments text color */
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    /*background: #f5f5f5;*/
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+    margin: 0;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="section" id="Getting-Started-with-feems">
+<h1>Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code><a class="headerlink" href="#Getting-Started-with-feems" title="Permalink to this headline">¶</a></h1>
+<p>This notebook illustrates a minimal example of how to run <code class="docutils literal notranslate"><span class="pre">feems</span></code> on a dataset of North American gray wolves published in <a class="reference external" href="https://onlinelibrary.wiley.com/doi/full/10.1111/mec.13364?casa_token=idW0quVPOU0AAAAA%3Ao_ll85b8rDbnW3GtgVeeBUB4oDepm9hQW3Y445HI84LC5itXsiH9dGO-QYGPMsuz0b_7eNkRp8Mf6tlW">Schweizer et al. 2015</a>.</p>
+<div class="section" id="Imports">
+<h2>Imports<a class="headerlink" href="#Imports" title="Permalink to this headline">¶</a></h2>
+<p>First we import the required packages and <code class="docutils literal notranslate"><span class="pre">feems</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[191]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># base</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pkg_resources</span>
+<span class="kn">from</span> <span class="nn">sklearn.impute</span> <span class="k">import</span> <span class="n">SimpleImputer</span>
+<span class="kn">from</span> <span class="nn">pandas_plink</span> <span class="k">import</span> <span class="n">read_plink</span>
+<span class="kn">from</span> <span class="nn">sklearn.metrics.pairwise</span> <span class="k">import</span> <span class="n">haversine_distances</span>
+<span class="kn">from</span> <span class="nn">scipy.spatial.distance</span> <span class="k">import</span> <span class="n">pdist</span><span class="p">,</span> <span class="n">squareform</span>
+<span class="kn">import</span> <span class="nn">statsmodels.api</span> <span class="k">as</span> <span class="nn">sm</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="c1"># viz</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">gridspec</span>
+<span class="kn">import</span> <span class="nn">cartopy.crs</span> <span class="k">as</span> <span class="nn">ccrs</span>
+
+<span class="c1"># feems</span>
+<span class="kn">from</span> <span class="nn">feems.utils</span> <span class="k">import</span> <span class="n">prepare_graph_inputs</span>
+<span class="kn">from</span> <span class="nn">feems</span> <span class="k">import</span> <span class="n">SpatialGraph</span><span class="p">,</span> <span class="n">Viz</span><span class="p">,</span> <span class="n">Objective</span><span class="p">,</span> <span class="n">query_node_attributes</span>
+<span class="kn">from</span> <span class="nn">feems.cross_validation</span> <span class="k">import</span> <span class="n">run_cv</span><span class="p">,</span> <span class="n">comp_mats</span>
+
+
+<span class="c1"># change matplotlib fonts</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.family&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="p">[</span><span class="s2">&quot;font.sans-serif&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;Arial&quot;</span>
+
+<span class="k">def</span> <span class="nf">cov_to_dist</span><span class="p">(</span><span class="n">S</span><span class="p">):</span>
+    <span class="n">s2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">s2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">s2</span> <span class="o">@</span> <span class="n">ones</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">ones</span> <span class="o">@</span> <span class="n">s2</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">S</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Data">
+<h2>Data<a class="headerlink" href="#Data" title="Permalink to this headline">¶</a></h2>
+<p>Note we have packaged this example dataset in the <code class="docutils literal notranslate"><span class="pre">feems</span></code> package and use the <code class="docutils literal notranslate"><span class="pre">pkg_resources</span></code> package to find the path of those files:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">data_path</span> <span class="o">=</span> <span class="n">pkg_resources</span><span class="o">.</span><span class="n">resource_filename</span><span class="p">(</span><span class="s2">&quot;feems&quot;</span><span class="p">,</span> <span class="s2">&quot;data/&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Next we read the <code class="docutils literal notranslate"><span class="pre">plink</span></code> formatted genotype data and impute any missing SNPs with the mean at each SNP:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># read the genotype data and mean impute missing data</span>
+<span class="p">(</span><span class="n">bim</span><span class="p">,</span> <span class="n">fam</span><span class="p">,</span> <span class="n">G</span><span class="p">)</span> <span class="o">=</span> <span class="n">read_plink</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/wolvesadmix&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">data_path</span><span class="p">))</span>
+<span class="n">imp</span> <span class="o">=</span> <span class="n">SimpleImputer</span><span class="p">(</span><span class="n">missing_values</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+<span class="n">genotypes</span> <span class="o">=</span> <span class="n">imp</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">G</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+<span class="n">n</span><span class="p">,</span> <span class="n">p</span> <span class="o">=</span> <span class="n">genotypes</span><span class="o">.</span><span class="n">shape</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;n_samples=</span><span class="si">{}</span><span class="s2">, n_snps=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">genotypes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">genotypes</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+Mapping files: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:00&lt;00:00, 49.77it/s]
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+n_samples=111, n_snps=17729
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+
+</pre></div></div>
+</div>
+<p>As we can see we have 111 samples and 17,729 SNPs. For preparing the graph inputs to run <code class="docutils literal notranslate"><span class="pre">feems</span></code> you have two options:</p>
+<ul class="simple">
+<li><p>Prepare your own input files</p></li>
+<li><p>Use the <code class="docutils literal notranslate"><span class="pre">feems</span></code> function <code class="docutils literal notranslate"><span class="pre">prepare_graph_inputs</span></code> which intersects a discrete global grid (DGG) with the sample range</p></li>
+</ul>
+<p>We’ll show off the later option. We read the sample coordinates (<code class="docutils literal notranslate"><span class="pre">coords</span></code>), coordinates of the outer polygon that defines the habitat of the sample (<code class="docutils literal notranslate"><span class="pre">outer</span></code>) and a discrete global grid file which has laid down a triangular grid that is uniformly spaced on earth (<code class="docutils literal notranslate"><span class="pre">grid_path</span></code>). We then intersect this global grid with the outer file to define the graph that we use to optimize (<code class="docutils literal notranslate"><span class="pre">edges</span></code> and <code class="docutils literal notranslate"><span class="pre">grid</span></code>):</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%%time</span>
+<span class="c1"># setup graph</span>
+<span class="n">coord</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/wolvesadmix.coord&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">data_path</span><span class="p">))</span>  <span class="c1"># sample coordinates</span>
+<span class="n">outer</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">loadtxt</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/wolvesadmix.outer&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">data_path</span><span class="p">))</span>  <span class="c1"># outer coordinates</span>
+<span class="n">grid_path</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{}</span><span class="s2">/grid_100.shp&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">data_path</span><span class="p">)</span>  <span class="c1"># path to discrete global grid</span>
+
+<span class="c1"># graph input files</span>
+<span class="n">outer</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">prepare_graph_inputs</span><span class="p">(</span><span class="n">coord</span><span class="o">=</span><span class="n">coord</span><span class="p">,</span>
+                                             <span class="n">ggrid</span><span class="o">=</span><span class="n">grid_path</span><span class="p">,</span>
+                                             <span class="n">translated</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                             <span class="n">buffer</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                                             <span class="n">outer</span><span class="o">=</span><span class="n">outer</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+CPU times: user 5.18 s, sys: 70.2 ms, total: 5.25 s
+Wall time: 5.28 s
+</pre></div></div>
+</div>
+<p>Lets take a peek at each of these inputs:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">outer</span><span class="p">[:</span><span class="mi">5</span><span class="p">,</span> <span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[-126.2547116,   48.6329086],
+       [-127.5731488,   49.1817034],
+       [-128.9351421,   50.1205781],
+       [-130.2099765,   50.930738 ],
+       [-131.8797738,   51.8900539]])
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">edges</span><span class="p">[:</span><span class="mi">5</span><span class="p">,</span> <span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[838, 839],
+       [357, 386],
+       [605, 637],
+       [536, 537],
+       [136, 158]])
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">grid</span><span class="p">[:</span><span class="mi">5</span><span class="p">,</span> <span class="p">]</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[-166.637,   59.732],
+       [-166.585,   60.675],
+       [-166.529,   61.623],
+       [-168.75 ,   62.088],
+       [-166.467,   62.576]])
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Setup-the-SpatialGraph-object">
+<h2>Setup the <code class="docutils literal notranslate"><span class="pre">SpatialGraph</span></code> object<a class="headerlink" href="#Setup-the-SpatialGraph-object" title="Permalink to this headline">¶</a></h2>
+<p>We then setup the <code class="docutils literal notranslate"><span class="pre">SpatialGraph</span></code> object which is the core workhorse of <code class="docutils literal notranslate"><span class="pre">feems</span></code>. <code class="docutils literal notranslate"><span class="pre">SpatialGraph</span></code> specifies the graph, allele frequency data, and runs the optimizers to fit the edge weights of the graph:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%%time</span>
+<span class="n">sp_graph</span> <span class="o">=</span> <span class="n">SpatialGraph</span><span class="p">(</span><span class="n">genotypes</span><span class="p">,</span> <span class="n">coord</span><span class="p">,</span> <span class="n">grid</span><span class="p">,</span> <span class="n">edges</span><span class="p">,</span> <span class="n">scale_snps</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+CPU times: user 1min 51s, sys: 2.94 s, total: 1min 54s
+Wall time: 1min 54s
+</pre></div></div>
+</div>
+<p>This might take a few minutes to construct at first b/c it initializing a number of graph matrices that are slow to build. First, before any fitting we’ll visualize the graph and samples. Let’s setup the projection we’ll be using for this dataset:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[57]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">projection</span> <span class="o">=</span> <span class="n">ccrs</span><span class="o">.</span><span class="n">EquidistantConic</span><span class="p">(</span><span class="n">central_longitude</span><span class="o">=-</span><span class="mf">108.842926</span><span class="p">,</span> <span class="n">central_latitude</span><span class="o">=</span><span class="mf">66.037547</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>Now lets make a map of the sample coordinates, graph and observed nodes:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[58]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">Viz</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span> <span class="n">edge_width</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">edge_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">edge_zorder</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sample_pt_size</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
+        <span class="n">obs_node_size</span><span class="o">=</span><span class="mf">7.5</span><span class="p">,</span> <span class="n">sample_pt_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">cbar_font_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_map</span><span class="p">()</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_samples</span><span class="p">()</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edges</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_obs_nodes</span><span class="p">(</span><span class="n">use_ids</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_21_0.png" src="../_images/notebooks_workshop_21_0.png" />
+</div>
+</div>
+<p>The black points are the observed locations for each sample and the gray points show the nodes that samples were assigned to. The gray lines represent the graph that will be fitted.</p>
+<div class="section" id="Initial-test-run-of-feems-with-\lambda-=1">
+<h3>Initial test run of <code class="docutils literal notranslate"><span class="pre">feems</span></code> with <span class="math notranslate nohighlight">\(\lambda =1\)</span><a class="headerlink" href="#Initial-test-run-of-feems-with-\lambda-=1" title="Permalink to this headline">¶</a></h3>
+<p>To test everything is working, let’s make an initial run of <code class="docutils literal notranslate"><span class="pre">feems</span></code> with the regularization parameter <span class="math notranslate nohighlight">\(\lambda\)</span> set to 1.</p>
+<p>If you see an initial <code class="docutils literal notranslate"><span class="pre">feems</span></code> output map, continue onwards to help choose <span class="math notranslate nohighlight">\(\lambda\)</span> using cross-validation and to inspect your outputs more carefully.</p>
+<p>If using your own data (rather than the wolf data), and you get an error at this point, it may be because your input data may have pecularities (e.g. duplicate individuals, monomorphic loci, pairs of loci that are in complete LD). One check on this is to inspect the sample covariance matrix and make sure there are no negative eigenvalues (see the ‘Miscellaneous’ section below).</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[196]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%%time</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">spec</span> <span class="o">=</span> <span class="n">gridspec</span><span class="o">.</span><span class="n">GridSpec</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="n">fig</span><span class="p">)</span>
+
+<span class="n">lamb</span><span class="o">=</span><span class="mf">2.0</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">lamb</span> <span class="o">=</span> <span class="n">lamb</span><span class="p">)</span>
+
+
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">Viz</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span> <span class="n">edge_width</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">edge_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">edge_zorder</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sample_pt_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">obs_node_size</span><span class="o">=</span><span class="mf">7.5</span><span class="p">,</span> <span class="n">sample_pt_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">cbar_font_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_map</span><span class="p">()</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edges</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_obs_nodes</span><span class="p">(</span><span class="n">use_ids</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edge_colorbar</span><span class="p">()</span>
+
+
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+lambda=2.0000000, alpha=0.8354260, converged in 86 iterations, train_loss=2767069.6406216
+CPU times: user 9.46 s, sys: 1.25 s, total: 10.7 s
+Wall time: 3.67 s
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_24_1.png" src="../_images/notebooks_workshop_24_1.png" />
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="Fit-feems-with-cross-validation">
+<h2>Fit <code class="docutils literal notranslate"><span class="pre">feems</span></code> with cross-validation<a class="headerlink" href="#Fit-feems-with-cross-validation" title="Permalink to this headline">¶</a></h2>
+<p>We’ll fit FEEMS across a grid of possible regularization values and choose the one that minimizes the cross-validation error. This will take approximately 15 minutes on a single CPU. If you want to skip this step for time reasons, you can set ‘LoadCVFromDisk’ in the second code block (or set lamb_cv to 0.77 manually) and skip ahead past this code block and the next.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%%time</span>
+<span class="n">LoadCVFromDisk</span> <span class="o">=</span> <span class="kc">True</span>
+
+<span class="c1"># define grid</span>
+<span class="c1"># Publication grid for this dataset</span>
+<span class="c1">#lamb_grid = np.geomspace(1e-6, 1e2, 20)[::-1]</span>
+<span class="c1"># Exploratory grid:</span>
+<span class="n">lamb_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">geomspace</span><span class="p">(</span><span class="mf">1e-4</span><span class="p">,</span> <span class="mf">1e1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="c1"># run cross-validation</span>
+<span class="k">if</span> <span class="ow">not</span> <span class="n">LoadCVFromDisk</span><span class="p">:</span>
+    <span class="n">cv_err</span> <span class="o">=</span> <span class="n">run_cv</span><span class="p">(</span><span class="n">sp_graph</span><span class="p">,</span> <span class="n">lamb_grid</span><span class="p">,</span> <span class="n">n_folds</span><span class="o">=</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="n">factr</span><span class="o">=</span><span class="mf">1e10</span><span class="p">)</span>
+    <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">cv_err</span><span class="p">,</span><span class="nb">open</span><span class="p">(</span><span class="s2">&quot;cv_err.pkl&quot;</span><span class="p">,</span><span class="s2">&quot;wb&quot;</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+CPU times: user 237 µs, sys: 29 µs, total: 266 µs
+Wall time: 243 µs
+</pre></div></div>
+</div>
+<p>Now we plot the CV error:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">LoadCVFromDisk</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">if</span> <span class="n">LoadCVFromDisk</span><span class="p">:</span>
+    <span class="n">cv_err</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="s2">&quot;cv_err.pkl&quot;</span><span class="p">,</span><span class="s2">&quot;rb&quot;</span><span class="p">))</span>
+
+<span class="c1"># average over folds</span>
+<span class="n">mean_cv_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cv_err</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># argmin of cv error</span>
+<span class="n">lamb_cv</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lamb_grid</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">mean_cv_err</span><span class="p">)])</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lamb_grid</span><span class="p">),</span> <span class="n">mean_cv_err</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;log10(lambda)&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;L2 CV Error&quot;</span><span class="p">);</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">lamb_cv</span><span class="p">),</span> <span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;orange&quot;</span><span class="p">)</span>
+<span class="n">lamb_cv</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+0.7742636826811278
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_29_1.png" src="../_images/notebooks_workshop_29_1.png" />
+</div>
+</div>
+<p>And then we can refit the model the lambda we found above that minimizes the cross-validation error (‘lamb_cv’), and plot the result.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[213]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+
+<span></span><span class="c1"># re-fit</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">lamb_cv</span><span class="p">)</span>
+
+<span class="c1"># Plot the FEEMS result</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">Viz</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span> <span class="n">edge_width</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">edge_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">edge_zorder</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sample_pt_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">obs_node_size</span><span class="o">=</span><span class="mf">7.5</span><span class="p">,</span> <span class="n">sample_pt_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">cbar_font_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_map</span><span class="p">()</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edges</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_obs_nodes</span><span class="p">(</span><span class="n">use_ids</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edge_colorbar</span><span class="p">()</span>
+
+
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+lambda=0.7700000, alpha=0.8354260, converged in 97 iterations, train_loss=2761102.8933011
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_31_1.png" src="../_images/notebooks_workshop_31_1.png" />
+</div>
+</div>
+</div>
+<div class="section" id="Comparing-the-fitted-distances-model-to-geographic-distances-and-a-“simple”-isolation-by-distance-mdoel">
+<h2>Comparing the fitted distances model to geographic distances and a “simple” isolation-by-distance mdoel<a class="headerlink" href="#Comparing-the-fitted-distances-model-to-geographic-distances-and-a-“simple”-isolation-by-distance-mdoel" title="Permalink to this headline">¶</a></h2>
+<p>We next want to inspect how these spatial models perform in terms of representing the genetic distances in the data. Let’s produce a figure showing observed genetic distances vs great circle geographic distances, vs distances in a model fit with constant migration weights (w), and vs the distances fitted in the model with varying w and regularization matching our cross-validation chosen value of <span class="math notranslate nohighlight">\(\lambda\)</span>.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[192]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+
+<span></span><span class="k">def</span> <span class="nf">cov_to_dist</span><span class="p">(</span><span class="n">S</span><span class="p">):</span>
+    <span class="n">s2</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">S</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">ones</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="n">s2</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">s2</span> <span class="o">@</span> <span class="n">ones</span><span class="o">.</span><span class="n">T</span> <span class="o">+</span> <span class="n">ones</span> <span class="o">@</span> <span class="n">s2</span><span class="o">.</span><span class="n">T</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">S</span>
+    <span class="k">return</span><span class="p">(</span><span class="n">D</span><span class="p">)</span>
+
+<span class="c1"># Initialize figure</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">spec</span> <span class="o">=</span> <span class="n">gridspec</span><span class="o">.</span><span class="n">GridSpec</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="n">fig</span><span class="p">)</span>
+
+<span class="c1"># (A) Genetic distance vs geographic distance</span>
+<span class="n">D_geno</span> <span class="o">=</span> <span class="n">squareform</span><span class="p">(</span><span class="n">pdist</span><span class="p">(</span><span class="n">genotypes</span><span class="p">,</span> <span class="n">metric</span><span class="o">=</span><span class="s2">&quot;sqeuclidean&quot;</span><span class="p">))</span> <span class="o">/</span> <span class="n">p</span>
+<span class="n">coord_rad</span> <span class="o">=</span> <span class="n">coord</span><span class="p">[:,::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="mf">180.0</span>
+<span class="n">D_geo</span> <span class="o">=</span> <span class="n">haversine_distances</span><span class="p">(</span><span class="n">coord_rad</span><span class="p">)</span> <span class="o">*</span> <span class="mi">6371000</span><span class="o">/</span><span class="mi">1000</span>
+<span class="n">tril_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril_indices</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">x</span> <span class="o">=</span> <span class="n">D_geo</span><span class="p">[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">D_geno</span><span class="p">[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">add_constant</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+<span class="n">mod</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">mod</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">muhat</span><span class="p">,</span> <span class="n">betahat</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">params</span>
+
+<span class="n">ax_00</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">ax_00</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">ax_00</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>
+              <span class="n">y</span><span class="p">,</span>
+              <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+              <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+              <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+              <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+              <span class="n">s</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">x_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">x</span><span class="p">),</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">ax_00</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span> <span class="n">muhat</span> <span class="o">+</span> <span class="n">betahat</span> <span class="o">*</span> <span class="n">x_</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;orange&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax_00</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mi">3500</span><span class="p">,</span> <span class="o">.</span><span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;R²=</span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">rsquared</span><span class="p">))</span>
+<span class="n">ax_00</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;great circle distance (km)&quot;</span><span class="p">)</span>
+<span class="n">ax_00</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;genetic distance&quot;</span><span class="p">)</span>
+
+<span class="c1"># (B) Genetic distance vs fitted distance for constant w model</span>
+<span class="n">tril_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril_indices</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax_01</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">ax_01</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;B&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit_null_model</span><span class="p">()</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_graph_laplacian</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+
+<span class="n">obj</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span><span class="n">sp_graph</span><span class="p">)</span>
+<span class="n">fit_cov</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">comp_mats</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+<span class="n">fit_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">fit_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">emp_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">add_constant</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">)</span>
+<span class="n">mod</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span><span class="n">emp_dist</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">mod</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">muhat</span><span class="p">,</span> <span class="n">betahat</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">params</span>
+<span class="n">ax_01</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">,</span>
+              <span class="n">emp_dist</span><span class="p">,</span>
+              <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+              <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+              <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+              <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+              <span class="n">s</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">x_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">ax_01</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span> <span class="n">muhat</span> <span class="o">+</span> <span class="n">betahat</span> <span class="o">*</span> <span class="n">x_</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;orange&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax_01</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">4.2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;R²=</span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">rsquared</span><span class="p">))</span>
+<span class="n">ax_01</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;fitted distance (constant w)&quot;</span><span class="p">)</span>
+
+<span class="c1"># (C) Genetic distance vs fitted distance for lambda = lambda_cv</span>
+<span class="n">tril_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril_indices</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax_10</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">])</span>
+<span class="n">ax_10</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">lamb</span> <span class="o">=</span> <span class="n">lamb_cv</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="n">lamb</span><span class="p">,</span>
+             <span class="n">lb</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">),</span>
+             <span class="n">ub</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1e+6</span><span class="p">))</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_graph_laplacian</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+
+<span class="n">obj</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span><span class="n">sp_graph</span><span class="p">)</span>
+<span class="n">fit_cov</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">comp_mats</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+<span class="n">fit_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">fit_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">emp_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">add_constant</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">)</span>
+<span class="n">mod</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span><span class="n">emp_dist</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">mod</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">muhat</span><span class="p">,</span> <span class="n">betahat</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">params</span>
+<span class="n">ax_10</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">,</span>
+              <span class="n">emp_dist</span><span class="p">,</span>
+              <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+              <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+              <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+              <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+              <span class="n">s</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">x_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">ax_10</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span> <span class="n">muhat</span> <span class="o">+</span> <span class="n">betahat</span> <span class="o">*</span> <span class="n">x_</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;orange&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax_10</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">4.2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;R²=</span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">rsquared</span><span class="p">))</span>
+<span class="n">ax_10</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;fitted distance ($\lambda = \lambda_</span><span class="si">{CV}</span><span class="s2">$)&quot;</span><span class="p">)</span>
+<span class="n">ax_10</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;genetic distance&quot;</span><span class="p">)</span>
+
+<span class="c1"># (D) Genetic distance vs fitted distance for lambda = 1e-3*lambda_cv</span>
+<span class="n">tril_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tril_indices</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="n">k</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax_11</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="n">spec</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">])</span>
+<span class="n">ax_11</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;left&#39;</span><span class="p">)</span>
+<span class="n">lamb</span> <span class="o">=</span> <span class="mf">0.001</span><span class="o">*</span><span class="n">lamb_cv</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">lamb</span><span class="o">=</span><span class="n">lamb</span><span class="p">,</span>
+             <span class="n">lb</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1e-6</span><span class="p">),</span>
+             <span class="n">ub</span><span class="o">=</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">1e+6</span><span class="p">))</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_graph_laplacian</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+
+<span class="n">obj</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span><span class="n">sp_graph</span><span class="p">)</span>
+<span class="n">fit_cov</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">comp_mats</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+<span class="n">fit_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">fit_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">emp_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">add_constant</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">)</span>
+<span class="n">mod</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span><span class="n">emp_dist</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+<span class="n">res</span> <span class="o">=</span> <span class="n">mod</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+<span class="n">muhat</span><span class="p">,</span> <span class="n">betahat</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">params</span>
+<span class="n">ax_11</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">,</span>
+              <span class="n">emp_dist</span><span class="p">,</span>
+              <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+              <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+              <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+              <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+              <span class="n">s</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="n">x_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="mi">20</span><span class="p">)</span>
+<span class="n">ax_11</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span> <span class="n">muhat</span> <span class="o">+</span> <span class="n">betahat</span> <span class="o">*</span> <span class="n">x_</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;orange&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax_11</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">4.2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;R²=</span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">rsquared</span><span class="p">))</span>
+<span class="n">ax_11</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;fitted distance ($\lambda = \lambda_</span><span class="si">{CV}</span><span class="s2">\cdot 10^{-3}$)&quot;</span><span class="p">)</span>
+<span class="n">ax_11</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;genetic distance&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+lambda=0.7700000, alpha=0.8354260, converged in 96 iterations, train_loss=2761102.8751542
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+lambda=0.0007700, alpha=0.8354260, converged in 1585 iterations, train_loss=2744773.8668649
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[192]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Text(0, 0.5, &#39;genetic distance&#39;)
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_33_2.png" src="../_images/notebooks_workshop_33_2.png" />
+</div>
+</div>
+<ul class="simple">
+<li><p>While comparing the <span class="math notranslate nohighlight">\(R^2\)</span> values of a linear fit is an informal exercise, what is the relative ordering of the different predictors of genetic distance in terms of their <span class="math notranslate nohighlight">\(R^2\)</span> values?</p></li>
+<li><p>In the final panel we decreased the value of <span class="math notranslate nohighlight">\(\lambda\)</span> below <span class="math notranslate nohighlight">\(\lambda_{CV}\)</span> and got a higher <span class="math notranslate nohighlight">\(R^2\)</span>, but how should the two values of the cross-validation error compare?</p></li>
+</ul>
+</div>
+<div class="section" id="Inspect-the-observed-vs-fitted-covariances-on-sampled-demes">
+<h2>Inspect the observed vs fitted covariances on sampled demes<a class="headerlink" href="#Inspect-the-observed-vs-fitted-covariances-on-sampled-demes" title="Permalink to this headline">¶</a></h2>
+<p>It’s helpful to see what pairs of demes may not be fit by the model well. Let’s look at the fitted and observed demic covariance matrices and plot pairs of demes with the largest residuals. We use the variable <span class="math notranslate nohighlight">\(K\)</span> belowo to affect how many pairs we will look at.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[227]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">K</span> <span class="o">=</span> <span class="mi">50</span>
+
+<span class="c1"># Plot Observed vs Fitted Covariances and residuals</span>
+<span class="n">obj</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span><span class="n">sp_graph</span><span class="p">)</span>
+<span class="n">fit_cov</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">comp_mats</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+<span class="c1"># Set diagonals to zero to focus on covariances</span>
+<span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">fit_cov</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+<span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="c1"># Plot matrices</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span> <span class="o">=</span> <span class="p">[</span><span class="mi">15</span><span class="p">,</span><span class="mi">5</span><span class="p">])</span>
+<span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">141</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+<span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;empirical covariance&quot;</span><span class="p">)</span>
+<span class="n">ax2</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">142</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">fit_cov</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;fitted covariance&quot;</span><span class="p">)</span>
+<span class="n">ax3</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">143</span><span class="p">)</span>
+<span class="n">ax3</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">emp_cov</span><span class="o">-</span><span class="n">fit_cov</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+<span class="n">ax3</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;residuals&quot;</span><span class="p">)</span>
+<span class="n">ax4</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">144</span><span class="p">)</span>
+<span class="n">ax4</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">emp_cov</span><span class="o">.</span><span class="n">flatten</span><span class="p">())</span>
+<span class="n">ax4</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;empirical covariance&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Min empirical covariance </span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;25th percentile empirical covariance </span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span><span class="mf">0.25</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;75th percentile empirical covariance </span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">percentile</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">,</span><span class="mf">0.75</span><span class="p">)))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Max empirical covariance </span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)))</span>
+
+
+
+
+<span class="c1"># Plot the map with top K poorly fit covariances highlighted</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">Viz</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span> <span class="n">edge_width</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">edge_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">edge_zorder</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sample_pt_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">obs_node_size</span><span class="o">=</span><span class="mf">7.5</span><span class="p">,</span> <span class="n">sample_pt_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">cbar_font_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_map</span><span class="p">()</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_obs_nodes</span><span class="p">(</span><span class="n">use_ids</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edges</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="c1">#v.draw_edge_colorbar()</span>
+
+<span class="c1"># Compute matrix of residuals and order them</span>
+<span class="n">res_mat</span> <span class="o">=</span> <span class="n">emp_cov</span><span class="o">-</span><span class="n">fit_cov</span>
+<span class="n">iu1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">triu_indices</span><span class="p">(</span><span class="n">res_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<span class="n">res_mat</span><span class="p">[</span><span class="n">iu1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">abs_res_mat</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">res_mat</span><span class="p">)</span>
+
+<span class="n">res_ord</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">abs_res_mat</span><span class="p">,</span><span class="n">axis</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+
+<span class="n">permuted_idx</span> <span class="o">=</span> <span class="n">query_node_attributes</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">sp_graph</span><span class="p">,</span> <span class="s2">&quot;permuted_idx&quot;</span><span class="p">)</span>
+<span class="n">obs_perm_ids</span> <span class="o">=</span> <span class="n">permuted_idx</span><span class="p">[:</span> <span class="n">v</span><span class="o">.</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">]</span>
+<span class="n">obs_grid</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">grid</span><span class="p">[</span><span class="n">obs_perm_ids</span><span class="p">,</span> <span class="p">:]</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="n">K</span><span class="p">):</span>
+    <span class="n">pair</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unravel_index</span><span class="p">(</span><span class="n">res_ord</span><span class="p">[</span><span class="o">-</span><span class="n">i</span><span class="p">],</span> <span class="n">res_mat</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+
+    <span class="n">v</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">],</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="mi">0</span><span class="p">]],</span>
+        <span class="p">[</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="mi">1</span><span class="p">]],</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="s1">&#39;gray&#39;</span><span class="p">,</span> <span class="n">linewidth</span> <span class="o">=</span> <span class="mf">0.5</span>
+    <span class="p">)</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+        <span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">],</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+        <span class="n">horizontalalignment</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">verticalalignment</span><span class="o">=</span><span class="s2">&quot;bottom&quot;</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">obs_node_textsize</span><span class="o">*</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">obs_node_zorder</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+        <span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">],</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span> <span class="nb">str</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span>
+        <span class="n">horizontalalignment</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span> <span class="n">verticalalignment</span><span class="o">=</span><span class="s2">&quot;bottom&quot;</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">obs_node_textsize</span><span class="o">*</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">obs_node_zorder</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">v</span><span class="o">.</span><span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">],</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">0</span><span class="p">]]),</span>
+        <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">],</span><span class="n">obs_grid</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">1</span><span class="p">]]),</span>
+        <span class="nb">str</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{:.1f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res_mat</span><span class="p">[</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span><span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">]])),</span>
+        <span class="n">horizontalalignment</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
+        <span class="n">verticalalignment</span><span class="o">=</span><span class="s2">&quot;center&quot;</span><span class="p">,</span>
+        <span class="n">size</span><span class="o">=</span><span class="n">v</span><span class="o">.</span><span class="n">obs_node_textsize</span><span class="o">*</span><span class="mf">0.7</span>
+    <span class="p">)</span>
+
+
+
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Min empirical covariance -0.19
+25th percentile empirical covariance -0.16
+75th percentile empirical covariance -0.15
+Max empirical covariance 1.04
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_36_1.png" src="../_images/notebooks_workshop_36_1.png" />
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_36_2.png" src="../_images/notebooks_workshop_36_2.png" />
+</div>
+</div>
+<p>From this plot we can see that the genetic simlarity among pairs of locations in the far northwest (e.g. Alaska) are the most difficult to model and the fitted covariances tend to be too large (negative residuals, i.e. there is less empirical covariance than the feems model conveys). There are also some poorly modeled pairs in Baffin Island that have higher empirical covariance than the model conveys. There are also a few sporadic pairs with more covariance than the model conveys.</p>
+</div>
+<div class="section" id="Varying-the-regularization">
+<h2>Varying the regularization<a class="headerlink" href="#Varying-the-regularization" title="Permalink to this headline">¶</a></h2>
+<p>Here’s a code block for running a single fit with a pre-specified value of ‘lambda’. Experiment with changing lambda to see the impact of stronger or weaker regularization. There is also an optional portion of the code block to check the cross-validation error for a given <span class="math notranslate nohighlight">\(\lambda\)</span> value.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[201]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%%time</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">constrained_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">spec</span> <span class="o">=</span> <span class="n">gridspec</span><span class="o">.</span><span class="n">GridSpec</span><span class="p">(</span><span class="n">ncols</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">nrows</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">figure</span><span class="o">=</span><span class="n">fig</span><span class="p">)</span>
+
+<span class="n">lamb</span><span class="o">=</span><span class="mi">10</span>
+<span class="n">sp_graph</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">lamb</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">lamb</span><span class="p">))</span>
+
+
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">)</span>
+<span class="n">v</span> <span class="o">=</span> <span class="n">Viz</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">sp_graph</span><span class="p">,</span> <span class="n">projection</span><span class="o">=</span><span class="n">projection</span><span class="p">,</span> <span class="n">edge_width</span><span class="o">=.</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">edge_alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">edge_zorder</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">sample_pt_size</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">obs_node_size</span><span class="o">=</span><span class="mf">7.5</span><span class="p">,</span> <span class="n">sample_pt_color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+        <span class="n">cbar_font_size</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_map</span><span class="p">()</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edges</span><span class="p">(</span><span class="n">use_weights</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_obs_nodes</span><span class="p">(</span><span class="n">use_ids</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+<span class="n">v</span><span class="o">.</span><span class="n">draw_edge_colorbar</span><span class="p">()</span>
+
+<span class="n">fittedVsObserved</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="k">if</span> <span class="n">fittedVsObserved</span><span class="p">:</span>
+    <span class="n">ax1</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">sp_graph</span><span class="o">.</span><span class="n">comp_graph_laplacian</span><span class="p">(</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">w</span><span class="p">)</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">Objective</span><span class="p">(</span><span class="n">sp_graph</span><span class="p">)</span>
+    <span class="n">fit_cov</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">emp_cov</span> <span class="o">=</span> <span class="n">comp_mats</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+    <span class="n">fit_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">fit_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+    <span class="n">emp_dist</span> <span class="o">=</span> <span class="n">cov_to_dist</span><span class="p">(</span><span class="n">emp_cov</span><span class="p">)[</span><span class="n">tril_idx</span><span class="p">]</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">add_constant</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">)</span>
+    <span class="n">mod</span> <span class="o">=</span> <span class="n">sm</span><span class="o">.</span><span class="n">OLS</span><span class="p">(</span><span class="n">emp_dist</span><span class="p">,</span> <span class="n">X</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">mod</span><span class="o">.</span><span class="n">fit</span><span class="p">()</span>
+    <span class="n">muhat</span><span class="p">,</span> <span class="n">betahat</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">params</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">,</span>
+                  <span class="n">emp_dist</span><span class="p">,</span>
+                  <span class="n">marker</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">,</span>
+                  <span class="n">alpha</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                  <span class="n">zorder</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                  <span class="n">color</span><span class="o">=</span><span class="s2">&quot;black&quot;</span><span class="p">,</span>
+                  <span class="n">s</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">fit_dist</span><span class="p">),</span> <span class="mi">20</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x_</span><span class="p">,</span> <span class="n">muhat</span> <span class="o">+</span> <span class="n">betahat</span> <span class="o">*</span> <span class="n">x_</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;orange&quot;</span><span class="p">,</span> <span class="n">linestyle</span><span class="o">=</span><span class="s1">&#39;--&#39;</span><span class="p">,</span> <span class="n">linewidth</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">4.2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s2">&quot;R²=</span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">rsquared</span><span class="p">))</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;fitted distance&quot;</span><span class="p">)</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;genetic distance&quot;</span><span class="p">)</span>
+
+<span class="n">CVerr</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="k">if</span> <span class="n">CVerr</span><span class="p">:</span>
+    <span class="n">lamb_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">lamb</span><span class="p">,</span><span class="n">lamb</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">cv_err_0</span> <span class="o">=</span> <span class="n">run_cv</span><span class="p">(</span><span class="n">sp_graph</span><span class="p">,</span> <span class="n">lamb_grid</span><span class="p">,</span> <span class="n">n_folds</span><span class="o">=</span><span class="n">sp_graph</span><span class="o">.</span><span class="n">n_observed_nodes</span><span class="p">,</span> <span class="n">factr</span><span class="o">=</span><span class="mf">1e10</span><span class="p">)</span>
+    <span class="n">mean_cv_err_0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">cv_err_0</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">mean_cv_err_0</span>
+    <span class="n">ax1</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">4.2</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="s2">&quot;CV error=</span><span class="si">{:.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">mean_cv_err_0</span><span class="p">)))</span>
+
+
+
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+constant-w/variance fit, converged in 132 iterations, train_loss=2795677.6543430
+lambda=10.0000000, alpha=0.8354260, converged in 67 iterations, train_loss=2779012.3618279
+CPU times: user 8.92 s, sys: 1.42 s, total: 10.3 s
+Wall time: 3.76 s
+</pre></div></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/notebooks_workshop_39_1.png" src="../_images/notebooks_workshop_39_1.png" />
+</div>
+</div>
+<div class="section" id="Challenge-exercises">
+<h3>Challenge exercises<a class="headerlink" href="#Challenge-exercises" title="Permalink to this headline">¶</a></h3>
+<ul class="simple">
+<li><p>Run admixture and PCA on these data and compare the insights to population structure gained from each approach. (Hint: Also see the original Schweizer et al paper and supporting figures in Marcus et al).</p></li>
+<li><p>Selectively drop samples from the dataset and see how it impacts the results.</p></li>
+<li><p>Subsample SNPs and see how it impacts the results.</p></li>
+</ul>
+</div>
+<div class="section" id="Closing">
+<h3>Closing<a class="headerlink" href="#Closing" title="Permalink to this headline">¶</a></h3>
+<p>With this workshop you’ve gained some initial experience using <code class="docutils literal notranslate"><span class="pre">feems</span></code>. While the cross-validation is time-consuming - individual fits are quick. We encourage experimenting with inclusion/exclusion of samples or markers (and other perturbations) so that you can understand the method better and what signals are robustly found in your data. If you develop interestig ways of parsing the outputs, let us know via email or a pull request!</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="../index.html">
+              <img class="logo" src="../_static/logo.png" alt="Logo"/>
+            </a></p>
+<h1 class="logo"><a href="../index.html">feems</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">User Guide</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../cite.html">Citing <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Notebooks</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started with <code class="docutils literal notranslate"><span class="pre">feems</span></code></a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API Documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../feems.html">Public API: <code class="docutils literal notranslate"><span class="pre">feems</span></code> package</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2020, Joseph Marcus, Wooseok Ha, Rina Foygel Barber and John Novembre.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 4.1.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/notebooks/workshop.ipynb.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

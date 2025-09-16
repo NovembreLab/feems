@@ -32,7 +32,6 @@ def run_cv(
     # default is None i.e., leave-one-out CV
     if n_folds is None:
         n_folds = sp_graph.n_observed_nodes
-
     # setup cv indicies
     is_train = setup_k_fold_cv(sp_graph, n_folds, random_state=random_state)
 
