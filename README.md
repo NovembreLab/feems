@@ -16,13 +16,11 @@ For details on the method see our [publication](https://doi.org/10.7554/eLife.61
 
 # `FEEMSmix`
 
-_This method is still currently under review, so there may be some changes along the way. Please make sure to always pull the latest version._
-
 **F**ast **E**stimation of **E**ffective **M**igration **S**urfaces + ad**mix**ture (`FEEMSmix`) 
 is built on top of `FEEMS`, and is a method for representing long-range gene flow 
 on a background migration surface estimated by `FEEMS`. Currently, `FEEMSmix` can only be installed via the `git clone` mechanism listed below. Upon publication of the manuscript detailing the method, `FEEMSmix` will be integrated into the `FEEMS` package and can be installed via pip or conda. 
 
-The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. For details on the method see our [preprint](https://doi.org/10.1101/2025.02.10.637386).  
+The `FEEMSmix` method and software was developed by Vivaswat Shastry and John Novembre. For details on the method see our [publication](https://doi.org/10.1371/journal.pgen.1011612).  
 
 # INSTALLATION
 
@@ -31,7 +29,7 @@ Windows environment because at least one of the dependencies does not
 have a Windows port. A virtual Linux machine should be preferable if 
 you are on a Windows machine. 
 
-## Quick start using bioconda (preferred, but not available for `FEEMSmix` yet)
+## Quick start using bioconda
 
 Typically, the simplest way to get started with `FEEMS` is to install 
 [Anaconda][anaconda] or [Miniconda][miniconda] or [mamba][mamba], 
