@@ -34,4 +34,4 @@ dependencies:
     - pandera
     - xarray
     - dask
-    - "--editable=git+https://github.com/VivaswatS/feems#egg=feems"
+    - "--editable=git+https://github.com/NovembreLab/feems#egg=feems"
